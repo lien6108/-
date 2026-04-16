@@ -6,18 +6,21 @@ NLP Agent — 呼叫本地 Ollama 模型進行語意解析
 import re
 import httpx
 import json
-from config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from config import CF_ACCOUNT_ID, CF_API_TOKEN, CF_MODEL
 
 
 class NLPAgent:
     """
     角色：語意解析專員
-    負責透過地端 LLM (Ollama) 解析使用者訊息，擷取費用相關資訊。
+    負責透過 Cloudflare Workers AI 解析使用者訊息，擷取費用相關資訊。
     """
 
     def __init__(self):
-        self.base_url = OLLAMA_BASE_URL
-        self.model = OLLAMA_MODEL
+        self.account_id = CF_ACCOUNT_ID
+        self.api_token = CF_API_TOKEN
+        self.model = CF_MODEL
+        self.cf_url = f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}/ai/run/{self.model}"
+        self.headers = {"Authorization": f"Bearer {self.api_token}"}
 
     async def parse_expense_message(self, text: str) -> dict | None:
         """
@@ -40,27 +43,30 @@ class NLPAgent:
             except ValueError:
                 pass
 
-        # ── Ollama LLM 解析（複雜格式 fallback）──────────────────
+        # ── Cloudflare Workers AI 解析（複雜格式 fallback）──────────────────
         return await self._llm_parse(text)
 
     async def _llm_parse(self, text: str) -> dict | None:
-        """呼叫 Ollama 本地模型解析"""
-        prompt = f"""你是一個費用解析助手。請從以下訊息中擷取費用項目名稱和金額。
-只回傳 JSON 格式，例如：{{"description": "晚餐", "amount": 350.0}}
-若無法判斷金額則回傳：{{"error": "無法解析"}}
-
-訊息：{text}
-
-JSON:"""
+        """呼叫 Cloudflare Workers AI 模型解析"""
+        system_prompt = """你是一個費用解析助手。請從訊息中擷取費用項目名稱和金額。
+只回傳 JSON 格式，例如：{"description": "晚餐", "amount": 350.0}
+若無法判斷金額則回傳：{"error": "無法解析"}"""
+        
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json={"model": self.model, "prompt": prompt, "stream": False}
+                    self.cf_url,
+                    headers=self.headers,
+                    json={
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": text}
+                        ]
+                    }
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                raw = data.get("response", "").strip()
+                raw = data.get("result", {}).get("response", "").strip()
                 # 擷取 JSON 區塊
                 json_match = re.search(r'\{.*?\}', raw, re.DOTALL)
                 if json_match:
@@ -68,7 +74,7 @@ JSON:"""
                     if "error" not in parsed and "amount" in parsed:
                         return parsed
         except Exception as e:
-            print(f"[NLPAgent] LLM 解析失敗: {e}")
+            print(f"[NLPAgent] CF LLM 解析失敗: {e}")
         return None
 
     async def classify_intent(self, text: str) -> str:
@@ -102,32 +108,46 @@ JSON:"""
         return await self._llm_classify(text)
 
     async def _llm_classify(self, text: str) -> str:
-        prompt = f"""將以下訊息分類為其中一個意圖，只回傳意圖名稱：
-expense, settle, join, leave, list, help, unknown
-
-訊息：{text}
-
-意圖："""
+        system_prompt = """將使用者訊息分類為以下其中一個意圖，只回傳意圖名稱，不要有其他文字：
+expense, settle, join, leave, list, help, unknown"""
+        
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json={"model": self.model, "prompt": prompt, "stream": False}
+                    self.cf_url,
+                    headers=self.headers,
+                    json={
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": text}
+                        ]
+                    }
                 )
                 resp.raise_for_status()
-                raw = resp.json().get("response", "unknown").strip().lower()
+                data = resp.json()
+                raw = data.get("result", {}).get("response", "unknown").strip().lower()
                 for intent in ["expense", "settle", "join", "leave", "list", "help"]:
                     if intent in raw:
                         return intent
         except Exception as e:
-            print(f"[NLPAgent] 意圖分類失敗: {e}")
+            print(f"[NLPAgent] CF 意圖分類失敗: {e}")
         return "unknown"
 
-    async def check_ollama_health(self) -> bool:
-        """檢查 Ollama 是否在線"""
+    async def check_cf_ai_health(self) -> bool:
+        """檢查 Cloudflare AI 設定有效性（透過輕量級請求）"""
+        if not self.account_id or not self.api_token:
+            return False
+            
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                resp = await client.get(f"{self.base_url}/api/tags")
+                resp = await client.post(
+                    self.cf_url,
+                    headers=self.headers,
+                    json={
+                        "messages": [{"role": "user", "content": "hi"}],
+                        "max_tokens": 1
+                    }
+                )
                 return resp.status_code == 200
         except Exception:
             return False
