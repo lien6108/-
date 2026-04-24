@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+splitbill.db
+cloudflared.log
+cloudflared_err.log
+cloudflared.exe
