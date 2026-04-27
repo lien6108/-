@@ -312,6 +312,35 @@ export class MainAgent {
     return null;
   }
 
+  async processPostback(groupId: string, userId: string, displayName: string, data: string): Promise<string | messagingApi.Message | null> {
+    const maintenance = await this.crud.isMaintenanceMode();
+    if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) return null;
+
+    await this.member.ensureMember(groupId, userId, displayName);
+    const member = await this.crud.getMember(groupId, userId);
+    const isParticipating = member?.is_participating === 1;
+    const params = new URLSearchParams(data);
+    const action = params.get('action');
+
+    if (action === 'start_add') {
+      if (!isParticipating) return '雿??芸??亙?撣喉?隢?頛詨???乓?';
+      const trip = await this.crud.getCurrentTrip(groupId);
+      if (!trip) return this.wizard.startTripNaming(groupId, userId);
+      return this.wizard.start(groupId, userId);
+    }
+
+    if (action === 'start_edit') {
+      if (!isParticipating) return '雿??芸??亙?撣喉?隢?頛詨???乓?';
+      return this.wizard.startModifyWizard(groupId, userId);
+    }
+
+    const session = await this.crud.getSession(userId);
+    if (session) {
+      return this.wizard.handlePostback(session, data, displayName);
+    }
+    return null;
+  }
+
   async handleBotJoinGroup(): Promise<string> {
     return '大家好，我是你的分帳小幫手🐕\n請先輸入「加入」來加入分帳，後續只要@我就可以使用嘍！';
   }

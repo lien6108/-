@@ -117,8 +117,29 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
       footer: {
         type: 'box',
         layout: 'vertical',
+        spacing: 'md',
         contents: [
-          { type: 'text', text: '點擊下方快捷進行結算或修改', size: 'xs', color: '#aaaaaa', align: 'center' }
+          {
+            type: 'box',
+            layout: 'horizontal',
+            spacing: 'md',
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                color: '#2f6fed',
+                height: 'sm',
+                action: { type: 'postback', label: '新增', data: 'action=start_add', displayText: '新增' }
+              },
+              {
+                type: 'button',
+                style: 'secondary',
+                height: 'sm',
+                action: { type: 'postback', label: '修改', data: 'action=start_edit', displayText: '修改' }
+              }
+            ]
+          },
+          { type: 'text', text: '可用快捷進行後續操作', size: 'xs', color: '#aaaaaa', align: 'center' }
         ]
       }
     }
