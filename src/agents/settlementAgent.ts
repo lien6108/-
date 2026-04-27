@@ -51,13 +51,7 @@ export class SettlementAgent {
 
     return {
       type: 'text',
-      text: `已完成結算並封存本單，共 ${count} 筆記帳。\n下次第一筆記帳前會先詢問這趟旅遊名稱。`,
-      quickReply: {
-        items: [
-          { type: 'action', action: { type: 'message', label: '加入分帳', text: '加入' } },
-          { type: 'action', action: { type: 'message', label: '查看說明', text: 'help' } }
-        ]
-      }
+      text: `已完成結算並封存本單，共 ${count} 筆記帳。`
     };
   }
 }

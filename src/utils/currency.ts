@@ -12,12 +12,12 @@ const CURRENCY_ALIASES: Record<string, string> = {
   日幣: 'JPY', 日币: 'JPY', 日本: 'JPY', 美金: 'USD', 美元: 'USD', 美國: 'USD', 美国: 'USD',
   韓元: 'KRW', 韩元: 'KRW', 韓國: 'KRW', 韩国: 'KRW', 歐元: 'EUR', 欧元: 'EUR',
   英鎊: 'GBP', 英镑: 'GBP', 英國: 'GBP', 英国: 'GBP', 港幣: 'HKD', 港币: 'HKD', 香港: 'HKD',
-  人民幣: 'CNY', 人民币: 'CNY', 中國: 'CNY', 中国: 'CNY', 泰銖: 'THB', 泰国: 'THB',
-  越南盾: 'VND', 印尼盾: 'IDR', 馬幣: 'MYR', 马币: 'MYR', 新幣: 'SGD', 新币: 'SGD',
-  菲律賓披索: 'PHP', 菲律賓比索: 'PHP', 纽币: 'NZD', 紐幣: 'NZD',
+  人民幣: 'CNY', 人民币: 'CNY', 中國: 'CNY', 中国: 'CNY', 泰銖: 'THB', 泰國: 'THB', 泰国: 'THB',
+  越南盾: 'VND', 越南: 'VND', 印尼盾: 'IDR', 印尼: 'IDR', 馬幣: 'MYR', 马币: 'MYR', 馬來西亞: 'MYR', 马来西亚: 'MYR',
+  新幣: 'SGD', 新币: 'SGD', 新加坡: 'SGD', 菲律賓披索: 'PHP', 菲律賓比索: 'PHP', 菲律賓: 'PHP', 菲律宾: 'PHP',
+  纽币: 'NZD', 紐幣: 'NZD', 紐西蘭: 'NZD', 新西兰: 'NZD', 澳幣: 'AUD', 澳洲: 'AUD', 加幣: 'CAD', 加拿大: 'CAD',
+  瑞郎: 'CHF', 瑞士: 'CHF',
 };
-
-const ALLOWED_CURRENCIES = new Set<string>(Object.values(CURRENCY_ALIASES));
 
 function normalizeKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, '');
@@ -29,7 +29,7 @@ export function resolveCurrency(input: string): string | null {
 
   const iso = cleaned.toUpperCase();
   if (/^[A-Z]{3}$/.test(iso)) {
-    return ALLOWED_CURRENCIES.has(iso) ? iso : null;
+    return iso;
   }
 
   return CURRENCY_ALIASES[normalizeKey(cleaned)] || null;
@@ -48,7 +48,7 @@ export function isExpenseFormat(text: string): boolean {
 }
 
 export async function fetchExchangeRates(env: Env): Promise<void> {
-  console.log('Fetching exchange rates from Bank of Taiwan...');
+  console.log('Fetching all exchange rates from Bank of Taiwan...');
   try {
     const res = await fetch('https://rate.bot.com.tw/xrt/flcsv/0/day');
     if (!res.ok) {
@@ -65,7 +65,11 @@ export async function fetchExchangeRates(env: Env): Promise<void> {
       if (parts.length < 14) continue;
 
       const currency = parts[0].trim();
-      if (currency === '幣別') continue;
+      if (currency === '幣別' || !currency) continue;
+
+      // Extract numeric ISO code if present (e.g. "USD (美元)")
+      const match = currency.match(/([A-Z]{3})/);
+      const isoCode = match ? match[1] : currency;
 
       const cashRateStr = parts[12]?.trim();
       const spotRateStr = parts[13]?.trim();
@@ -75,8 +79,8 @@ export async function fetchExchangeRates(env: Env): Promise<void> {
         rate = parseFloat(spotRateStr);
       }
 
-      if (!isNaN(rate) && rate > 0 && ALLOWED_CURRENCIES.has(currency)) {
-        rates[currency] = rate;
+      if (!isNaN(rate) && rate > 0) {
+        rates[isoCode] = rate;
       }
     }
 
@@ -89,7 +93,7 @@ export async function fetchExchangeRates(env: Env): Promise<void> {
 
     if (statements.length > 0) {
       await env.DB.batch(statements);
-      console.log(`Saved ${statements.length} exchange rates to DB.`);
+      console.log(`Saved ${statements.length} exchange rates to DB: ${Object.keys(rates).join(', ')}`);
     }
   } catch (e) {
     console.error('Error fetching exchange rates:', e);
