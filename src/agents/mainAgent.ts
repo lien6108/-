@@ -7,21 +7,34 @@ import { MemberAgent } from './memberAgent';
 import { ExpenseAgent } from './expenseAgent';
 import { SettlementAgent } from './settlementAgent';
 import { WizardAgent, WizardStep } from './wizardAgent';
+import { getStandardQuickReply } from '../utils/ui';
 
 const HELP_TEXT = [
-  '分帳神器指令',
-  '- 加入 / 退出',
-  '- 開始記帳（精靈）',
-  '- 記帳 [幣別] [金額] [項目]',
-  '- 代墊 @付款人 [幣別] [金額] [項目]',
-  '- 清單 / 成員 / 結算 / 確認結算',
-  '- 刪除（會跳快捷）',
-  '- 修改（會跳快捷）',
-  '- 修改金額 #題號 金額',
-  '- 修改幣別 #題號 幣別',
-  '- 回饋 [內容]（或輸入回饋後直接打字）',
-  '- 歷史（查看最近旅程）',
-  '- 暫停分帳 / 啟用分帳',
+  '✨ 分帳神器 指令教學 ✨',
+  '------------------------',
+  '🔹 基礎功能',
+  '- 「加入」：開始參與本次分帳',
+  '- 「開始記帳」：依照精靈引導輸入',
+  '- 「清單」：查看所有未結算項目 (表格顯示)',
+  '- 「結算」：計算每人應收/應付金額',
+  '- 「成員」：查看目前參與人員',
+  '',
+  '🔹 快速記帳 (進階)',
+  '- 「記帳 [幣別] [金額] [項目]」',
+  '  範例：記帳 日幣 1000 拉麵',
+  '- 「代墊 @付款人 [金額] [項目]」',
+  '  範例：代墊 @小明 500 計程車',
+  '',
+  '🔹 修改與刪除',
+  '- 「刪除」：跳出最近項目選擇刪除',
+  '- 「修改」：可修改金額、幣別或成員',
+  '',
+  '🔹 其他',
+  '- 「歷史」：查看過去的旅程紀錄',
+  '- 「回饋」：提供建議給開發者',
+  '- 「退出」：離開本次分帳',
+  '------------------------',
+  '💡 提示：點擊下方的「快捷選單」更方便喔！'
 ].join('\n');
 
 export class MainAgent {
@@ -54,7 +67,7 @@ export class MainAgent {
 
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
-      return '系統維修中，請稍後再試。';
+      return '🐕 系統維修中，小幫手正在休息，請稍後再試。';
     }
 
     if (input === '啟用分帳') {
@@ -88,6 +101,14 @@ export class MainAgent {
     const member = await this.crud.getMember(groupId, userId);
     const isParticipating = member?.is_participating === 1;
 
+    // Group-level lock:
+    // If someone is in an active guided flow, ignore other users' messages
+    // to avoid interruption and chat spam.
+    const groupSession = await this.crud.getGroupActiveSession(groupId);
+    if (groupSession && groupSession.user_id !== userId) {
+      return null;
+    }
+
     const session = await this.crud.getSession(userId);
     if (session) {
       return this.wizard.handleNext(session, input, displayName);
@@ -95,11 +116,36 @@ export class MainAgent {
 
     if (input === '取消') return null;
 
-    if (input === '加入') return this.member.handleJoinGroup(groupId, userId, displayName);
+    if (input === '加入') {
+      const trip = await this.crud.getCurrentTrip(groupId);
+      const joinMsg = await this.member.handleJoinGroup(groupId, userId, displayName);
+      if (!trip) {
+        const namingMsg = await this.wizard.startTripNaming(groupId, userId);
+        if (typeof joinMsg === 'string') {
+          return `${joinMsg}\n\n${(namingMsg as messagingApi.TextMessage).text}`;
+        } else {
+          // If both are objects, we might need to combine or just prioritize one.
+          // For simplicity, we'll return a combined text if possible.
+          return {
+            type: 'text',
+            text: `${(joinMsg as messagingApi.TextMessage).text}\n\n${(namingMsg as messagingApi.TextMessage).text}`,
+            quickReply: namingMsg.quickReply
+          };
+        }
+      }
+      return joinMsg;
+    }
     if (input === '退出') return this.member.requestLeave(groupId, userId, displayName);
     if (input === '確認退出') return this.member.confirmLeave(groupId, userId, displayName);
     if (input === '成員') return this.member.getMemberList(groupId);
     if (input === '說明' || input === 'help' || input === '/help') return HELP_TEXT;
+    if (input === 'GREETING') {
+      return {
+        type: 'text',
+        text: '您好，請問需要什麼服務呢？',
+        quickReply: getStandardQuickReply()
+      };
+    }
 
     if (input === '回饋') return this.wizard.startFeedback(groupId, userId);
     if (input.startsWith('回饋 ')) {
@@ -267,6 +313,6 @@ export class MainAgent {
   }
 
   async handleBotJoinGroup(): Promise<string> {
-    return '大家好，我是分帳神器。\n先輸入「加入」加入分帳，再輸入「開始記帳」或「記帳 ...」。';
+    return '大家好，我是你的分帳小幫手🐕\n請先輸入「加入」來加入分帳，後續只要@我就可以使用嘍！';
   }
 }

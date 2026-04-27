@@ -62,14 +62,9 @@ export class LineEventHandler {
     if (source?.type === 'group') groupId = source.groupId;
     if (source?.type === 'room') groupId = source.roomId;
 
-    // Private DM: only admin control commands are supported
-    if (groupId === 'unknown') {
-      if (userId === this.env.ADMIN_LINE_USER_ID) {
-        const adminReply = await this.handleAdminDM(text);
-        if (adminReply && event.replyToken) await this.reply(event.replyToken, adminReply);
-      } else if (event.replyToken) {
-        await this.reply(event.replyToken, '請在群組中使用分帳功能。');
-      }
+    // Private DM: only admin control commands are supported (already handled globally by ID check)
+    if (groupId === 'unknown' && userId !== this.env.ADMIN_LINE_USER_ID) {
+      if (event.replyToken) await this.reply(event.replyToken, '請在群組中使用分帳功能。');
       return;
     }
 
@@ -80,18 +75,35 @@ export class LineEventHandler {
 
     if (textMessage.mention?.mentionees) {
       const sortedMentions = [...textMessage.mention.mentionees].sort((a, b) => b.index - a.index);
+      
+      // First pass: identify if bot is mentioned and if it's the only content
       for (const mentee of sortedMentions) {
         if (!('userId' in mentee) || !mentee.userId) continue;
         if (mentee.userId === botUserId) {
-          const textWithoutBot = (text.substring(0, mentee.index) + text.substring(mentee.index + mentee.length)).trim();
-          if (textWithoutBot === '') botMentionedOnly = true;
+          const before = text.substring(0, mentee.index);
+          const after = text.substring(mentee.index + mentee.length);
+          if ((before + after).trim() === '') {
+            botMentionedOnly = true;
+          }
+        }
+      }
+
+      // Second pass: process all mentions
+      for (const mentee of sortedMentions) {
+        if (!('userId' in mentee) || !mentee.userId) continue;
+        
+        const isBot = mentee.userId === botUserId;
+        const original = text.substring(mentee.index, mentee.index + mentee.length);
+        const safeMention = original.replace(/\s+/g, '_');
+
+        if (isBot) {
+          text = text.substring(0, mentee.index) + safeMention + text.substring(mentee.index + mentee.length);
+          continue;
         }
 
         try {
           const name = await this.getDisplayName(groupId, mentee.userId);
           await this.crud.upsertMember(groupId, mentee.userId, name);
-          const original = text.substring(mentee.index, mentee.index + mentee.length);
-          const safeMention = original.replace(/\s+/g, '_');
           text = text.substring(0, mentee.index) + safeMention + text.substring(mentee.index + mentee.length);
 
           mentionMap[safeMention] = mentee.userId;
@@ -99,12 +111,21 @@ export class LineEventHandler {
           mentionMap[name] = mentee.userId;
           mentionMap[name.replace(/\s+/g, '_')] = mentee.userId;
         } catch (e) {
-          console.error('Error updating mentioned user', e);
+          console.error('[handleText] Error updating mentioned user:', e);
         }
       }
     }
 
-    if (botMentionedOnly) text = 'help';
+    if (botMentionedOnly) text = 'GREETING';
+
+    // Administrative controls (Maintenance Mode etc.) - ONLY in Private DM
+    if (groupId === 'unknown' && userId === this.env.ADMIN_LINE_USER_ID) {
+      const adminReply = await this.handleAdminDM(text);
+      if (adminReply && event.replyToken) {
+        await this.reply(event.replyToken, adminReply);
+        return;
+      }
+    }
 
     const replyText = await this.mainAgent.processMessage(groupId, userId, displayName, text, mentionMap);
     if (!replyText || !event.replyToken) return;
@@ -148,10 +169,17 @@ export class LineEventHandler {
 
   private async handleFollow(event: webhook.FollowEvent) {
     if (!event.replyToken) return;
-    await this.reply(
-      event.replyToken,
-      '感謝加入分帳神器。\n你可以先把我拉進群組，輸入「加入」後開始分帳。'
-    );
+    const tutorialMsg: messagingApi.Message = {
+      type: 'text',
+      text: '感謝加入「分帳小幫手」！✨\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率並結算的工具。\n\n🚀 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. 輸入「開始記帳」即可開始！\n\n💡 提示：輸入「說明」可查看完整指令清單。',
+      quickReply: {
+        items: [
+          { type: 'action', action: { type: 'message', label: '查看說明', text: '說明' } },
+          { type: 'action', action: { type: 'message', label: '歷史紀錄', text: '歷史' } },
+        ]
+      }
+    };
+    await this.reply(event.replyToken, tutorialMsg);
   }
 
   private async handleAdminDM(text: string): Promise<string | null> {
@@ -172,10 +200,17 @@ export class LineEventHandler {
   }
 
   private async getDisplayName(groupId: string, userId: string): Promise<string> {
+    if (userId === 'unknown') return 'User';
     try {
-      const profile = await this.client.getGroupMemberProfile(groupId, userId);
-      return profile.displayName;
-    } catch {
+      if (groupId === 'unknown') {
+        const profile = await this.client.getProfile(userId);
+        return profile.displayName;
+      } else {
+        const profile = await this.client.getGroupMemberProfile(groupId, userId);
+        return profile.displayName;
+      }
+    } catch (e) {
+      console.error(`[getDisplayName] Failed for user ${userId} in ${groupId}:`, e);
       return `User${userId.slice(-4)}`;
     }
   }

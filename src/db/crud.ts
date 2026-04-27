@@ -421,6 +421,12 @@ export class CRUD {
     return this.db.prepare(`SELECT * FROM sessions WHERE user_id = ?`).bind(userId).first<Session>();
   }
 
+  async getGroupActiveSession(groupId: string): Promise<Session | null> {
+    return this.db.prepare(
+      `SELECT * FROM sessions WHERE group_id = ? ORDER BY updated_at DESC LIMIT 1`
+    ).bind(groupId).first<Session>();
+  }
+
   async upsertSession(userId: string, groupId: string, step: string, data: string): Promise<void> {
     await this.db.prepare(
       `INSERT INTO sessions (user_id, group_id, step, data, updated_at)

@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
-import { getStandardQuickReply } from '../utils/ui';
+import { getStandardQuickReply, createExpenseListFlex } from '../utils/ui';
 
 function nowTag(): string {
   const now = new Date();
@@ -161,29 +161,15 @@ export class ExpenseAgent {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
     if (expenses.length === 0) return '目前沒有未結算記帳。';
 
-    const headers = `${pad('#', 4)} ${pad('時間', 12)} ${pad('項目', 12)} ${pad('金額', 12)} ${pad('付款人', 10)} ${pad('分攤', 4)}`;
-    const sep = '-'.repeat(headers.length);
-
     let total = 0;
-    const lines: string[] = [headers, sep];
     for (const exp of expenses) {
       total += exp.amount;
-      const splits = await this.crud.getExpenseSplits(exp.id);
-      const amountInfo = exp.currency && exp.currency !== 'TWD' && exp.original_amount
-        ? `${exp.currency} ${exp.original_amount}`
-        : `TWD ${exp.amount}`;
-      lines.push(
-        `${pad(`#${exp.group_seq}`, 4)} ${pad(formatDbTs(exp.created_at), 12)} ${pad(exp.description, 12)} ${pad(amountInfo, 12)} ${pad(exp.payer_name, 10)} ${pad(String(splits.length), 4)}`
-      );
     }
-    lines.push(sep);
-    lines.push(`總計：TWD ${Math.round(total * 100) / 100}`);
 
-    return {
-      type: 'text',
-      text: lines.join('\n'),
-      quickReply: getStandardQuickReply({ showSettlePreview: true })
-    };
+    const flex = createExpenseListFlex(expenses, total);
+    flex.quickReply = getStandardQuickReply({ showSettlePreview: true });
+
+    return flex;
   }
 
   async updateExpense(groupId: string, groupSeq: number, newAmount: number, requestName: string): Promise<string | messagingApi.Message> {
