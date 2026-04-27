@@ -1,0 +1,9 @@
+CREATE TABLE exchange_rates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  currency_code TEXT UNIQUE NOT NULL,
+  rate REAL NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE expenses ADD COLUMN currency TEXT DEFAULT 'TWD';
+ALTER TABLE expenses ADD COLUMN original_amount REAL;

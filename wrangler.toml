@@ -1,0 +1,15 @@
+name = "splitbill-worker"
+main = "src/index.ts"
+compatibility_date = "2024-04-05"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["0 1,8 * * *"]
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "splitbill"
+database_id = "39d3588c-0947-4e70-bcee-df0c33e72cd3"

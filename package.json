@@ -1,0 +1,19 @@
+{
+  "name": "splitbill-worker",
+  "version": "1.0.0",
+  "description": "LINE Bot for splitting bills using Cloudflare Workers",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^9.0.0",
+    "hono": "^4.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240405.0",
+    "typescript": "^5.0.4",
+    "wrangler": "^4.85.0"
+  }
+}
