@@ -170,7 +170,7 @@ export class WizardAgent {
           return {
             type: 'text',
             text: '請輸入項目內容（例如：晚餐、車資）。',
-            quickReply: { items: [this.qr('返回選單', '返回選單'), this.qr(CANCEL, CANCEL)] }
+            quickReply: { items: [this.pb('返回選單', 'action=back_to_menu'), this.qr(CANCEL, CANCEL)] }
           };
         }
         if (input === '設定付款人') {
@@ -180,6 +180,10 @@ export class WizardAgent {
         if (input === '設定分攤') {
           await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_SPLIT_MODE, JSON.stringify(data));
           return this.draftSplitModePrompt();
+        }
+        if (input === '返回選單') {
+          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
+          return this.draftMenuPrompt(data, '已返回選單。');
         }
         if (input === '確認送出') {
           const missing: string[] = [];
@@ -231,20 +235,6 @@ export class WizardAgent {
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_CURRENCY: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
-
-        // Allow "其他幣別" path, then user types code/country.
-        if (input === '其他幣別') {
-          return {
-            type: 'text',
-            text: '請輸入幣別（例如：EUR、SGD、歐元、新加坡）。',
-            quickReply: { items: [this.qr('返回選單', '返回選單'), this.qr(CANCEL, CANCEL)] }
-          };
-        }
-
         const resolved = resolveCurrency(input);
         if (!resolved) {
           return {
@@ -253,26 +243,12 @@ export class WizardAgent {
             quickReply: this.draftCurrencyPrompt().quickReply
           };
         }
-
         data.currency = resolved;
         await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
         return this.draftMenuPrompt(data, `已設定幣別：${resolved}`);
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_AMOUNT: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
-
-        if (input === '手動輸入') {
-          return {
-            type: 'text',
-            text: '請輸入金額數字（例如：1250 或 89.5）。',
-            quickReply: { items: [this.qr('返回選單', '返回選單'), this.qr(CANCEL, CANCEL)] }
-          };
-        }
-
         const amount = parseFloat(input.replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) {
           return {
@@ -281,22 +257,17 @@ export class WizardAgent {
             quickReply: this.draftAmountPrompt().quickReply
           };
         }
-
         data.amount = amount;
         await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
         return this.draftMenuPrompt(data, `已設定金額：${amount}`);
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_DESC: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
         if (!input) {
           return {
             type: 'text',
             text: '項目不可空白，請重新輸入。',
-            quickReply: { items: [this.qr('返回選單', '返回選單'), this.qr(CANCEL, CANCEL)] }
+            quickReply: { items: [this.pb('返回選單', 'action=back_to_menu'), this.qr(CANCEL, CANCEL)] }
           };
         }
         data.description = input;
@@ -305,69 +276,50 @@ export class WizardAgent {
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_PAYER: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
-
         if (input === '我') {
           const me = await this.crud.getMember(session.group_id, session.user_id);
           if (!me) return '找不到你的成員資料，請先輸入「加入」。';
           data.payerUserId = me.user_id;
           data.payerName = me.display_name;
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, `已設定付款人：${me.display_name}`);
+        } else {
+          const member = await this.crud.getMemberByDisplayName(session.group_id, input);
+          if (!member) {
+            return {
+              type: 'text',
+              text: `找不到付款人：${input}，請從選單選擇。`,
+              quickReply: (await this.draftPayerPrompt(session.group_id)).quickReply
+            };
+          }
+          data.payerUserId = member.user_id;
+          data.payerName = member.display_name;
         }
-
-        const member = await this.crud.getMemberByDisplayName(session.group_id, input);
-        if (!member) {
-          return {
-            type: 'text',
-            text: `找不到付款人：${input}，請從選單選擇。`,
-            quickReply: (await this.draftPayerPrompt(session.group_id)).quickReply
-          };
-        }
-
-        data.payerUserId = member.user_id;
-        data.payerName = member.display_name;
         await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-        return this.draftMenuPrompt(data, `已設定付款人：${member.display_name}`);
+        return this.draftMenuPrompt(data, `已設定付款人：${data.payerName}`);
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_SPLIT_MODE: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
         if (input === '全部分攤') {
           data.sharerMode = 'ALL';
           data.sharerUserIds = [];
           data.sharerNames = ['全部分攤'];
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已設定分攤：全部分攤');
-        }
-        if (input === '不含付款人') {
+        } else if (input === '不含付款人') {
           data.sharerMode = 'EXCLUDE_PAYER';
           data.sharerUserIds = [];
           data.sharerNames = ['不含付款人'];
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已設定分攤：不含付款人');
-        }
-        if (input === '指定成員') {
+        } else if (input === '指定成員') {
           data.sharerMode = 'CUSTOM';
           data.sharerUserIds = data.sharerUserIds || [];
           data.sharerNames = data.sharerNames || [];
           await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM, JSON.stringify(data));
           return this.draftSplitCustomPrompt(session.group_id, data);
+        } else {
+          return this.draftSplitModePrompt('請從選項選擇分攤方式。');
         }
-        return this.draftSplitModePrompt('請從選項選擇分攤方式。');
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
+        return this.draftMenuPrompt(data, `已設定分攤：${data.sharerNames![0]}`);
       }
 
       case WizardStep.AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM: {
-        if (input === '返回選單') {
-          await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_MENU, JSON.stringify(data));
-          return this.draftMenuPrompt(data, '已返回選單。');
-        }
         if (input === '清除全部') {
           data.sharerUserIds = [];
           data.sharerNames = [];
@@ -526,8 +478,85 @@ export class WizardAgent {
     }
   }
 
+  async handlePostback(session: Session, data: string, displayName: string): Promise<string | messagingApi.Message | null> {
+    const wizardData: WizardData = JSON.parse(session.data || '{}');
+    const params = new URLSearchParams(data);
+    const action = params.get('action');
+
+    switch (action) {
+      case 'set_currency':
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_CURRENCY, JSON.stringify(wizardData));
+        return this.draftCurrencyPrompt();
+      case 'set_amount':
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_AMOUNT, JSON.stringify(wizardData));
+        return this.draftAmountPrompt();
+      case 'set_desc':
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_DESC, JSON.stringify(wizardData));
+        return {
+          type: 'text',
+          text: '請輸入項目內容（例如：晚餐、車資）。',
+          quickReply: { items: [this.pb('返回選單', 'action=back_to_menu'), this.qr(CANCEL, CANCEL)] }
+        };
+      case 'set_payer':
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_PAYER, JSON.stringify(wizardData));
+        return this.draftPayerPrompt(session.group_id);
+      case 'set_split':
+        await this.crud.upsertSession(session.user_id, session.group_id, WizardStep.AWAITING_EXPENSE_DRAFT_SPLIT_MODE, JSON.stringify(wizardData));
+        return this.draftSplitModePrompt();
+      case 'set_currency_val': {
+        const val = params.get('val');
+        if (val) return this.handleNext(session, val, displayName);
+        return null;
+      }
+      case 'set_amount_val': {
+        const val = params.get('val');
+        if (val) return this.handleNext(session, val, displayName);
+        return null;
+      }
+      case 'set_payer_val': {
+        const val = params.get('val');
+        if (val) {
+          const actualVal = val === 'me' ? '我' : val;
+          return this.handleNext(session, actualVal, displayName);
+        }
+        return null;
+      }
+      case 'set_split_mode': {
+        const val = params.get('val');
+        if (val) {
+          if (val === 'CUSTOM') return this.handleNext(session, '指定成員', displayName);
+          if (val === 'ALL') return this.handleNext(session, '全部分攤', displayName);
+          if (val === 'EXCLUDE_PAYER') return this.handleNext(session, '不含付款人', displayName);
+        }
+        return null;
+      }
+      case 'show_draft':
+        return this.showDraft(wizardData);
+      case 'submit_draft':
+        session.step = WizardStep.AWAITING_EXPENSE_DRAFT_MENU;
+        return this.handleNext(session, '確認送出', displayName);
+      case 'toggle_member': {
+        const name = params.get('name');
+        if (name) return this.handleNext(session, name, displayName);
+        return null;
+      }
+      case 'submit_custom_split':
+        return this.handleNext(session, '完成指定', displayName);
+      case 'clear_custom_split':
+        return this.handleNext(session, '清除全部', displayName);
+      case 'back_to_menu':
+        return this.handleNext(session, '返回選單', displayName);
+      default:
+        return '無效的操作。';
+    }
+  }
+
   private qr(label: string, text: string): messagingApi.QuickReplyItem {
     return { type: 'action', action: { type: 'message', label, text } };
+  }
+
+  private pb(label: string, data: string): messagingApi.QuickReplyItem {
+    return { type: 'action', action: { type: 'postback', label, data, displayText: label } };
   }
 
   private draftMenuPrompt(draft: WizardData, title?: string): messagingApi.Message {
@@ -544,13 +573,13 @@ export class WizardAgent {
       text: `${title || '記帳草稿'}\n\n${summary}`,
       quickReply: {
         items: [
-          this.qr('設定幣別', '設定幣別'),
-          this.qr('設定金額', '設定金額'),
-          this.qr('設定項目', '設定項目'),
-          this.qr('設定付款人', '設定付款人'),
-          this.qr('設定分攤', '設定分攤'),
-          this.qr('查看草稿', '查看草稿'),
-          this.qr('確認送出', '確認送出'),
+          this.pb('設定幣別', 'action=set_currency'),
+          this.pb('設定金額', 'action=set_amount'),
+          this.pb('設定項目', 'action=set_desc'),
+          this.pb('設定付款人', 'action=set_payer'),
+          this.pb('設定分攤', 'action=set_split'),
+          this.pb('查看草稿', 'action=show_draft'),
+          this.pb('確認送出', 'action=submit_draft'),
           this.qr(CANCEL, CANCEL),
         ].slice(0, 13)
       }
@@ -563,12 +592,12 @@ export class WizardAgent {
       text: hint || '請選擇幣別。',
       quickReply: {
         items: [
-          this.qr('TWD', 'TWD'),
-          this.qr('USD', 'USD'),
-          this.qr('JPY', 'JPY'),
-          this.qr('KRW', 'KRW'),
+          this.pb('TWD', 'action=set_currency_val&val=TWD'),
+          this.pb('USD', 'action=set_currency_val&val=USD'),
+          this.pb('JPY', 'action=set_currency_val&val=JPY'),
+          this.pb('KRW', 'action=set_currency_val&val=KRW'),
           this.qr('其他幣別', '其他幣別'),
-          this.qr('返回選單', '返回選單'),
+          this.pb('返回選單', 'action=back_to_menu'),
           this.qr(CANCEL, CANCEL),
         ]
       }
@@ -581,14 +610,14 @@ export class WizardAgent {
       text: '請選擇金額，或選擇手動輸入。',
       quickReply: {
         items: [
-          this.qr('100', '100'),
-          this.qr('300', '300'),
-          this.qr('500', '500'),
-          this.qr('1000', '1000'),
-          this.qr('2000', '2000'),
-          this.qr('5000', '5000'),
+          this.pb('100', 'action=set_amount_val&val=100'),
+          this.pb('300', 'action=set_amount_val&val=300'),
+          this.pb('500', 'action=set_amount_val&val=500'),
+          this.pb('1000', 'action=set_amount_val&val=1000'),
+          this.pb('2000', 'action=set_amount_val&val=2000'),
+          this.pb('5000', 'action=set_amount_val&val=5000'),
           this.qr('手動輸入', '手動輸入'),
-          this.qr('返回選單', '返回選單'),
+          this.pb('返回選單', 'action=back_to_menu'),
           this.qr(CANCEL, CANCEL),
         ]
       }
@@ -598,9 +627,9 @@ export class WizardAgent {
   private async draftPayerPrompt(groupId: string): Promise<messagingApi.Message> {
     const members = await this.crud.getParticipatingMembers(groupId);
     const items: messagingApi.QuickReplyItem[] = [
-      this.qr('我', '我'),
-      ...members.slice(0, 9).map(m => this.qr(m.display_name, m.display_name)),
-      this.qr('返回選單', '返回選單'),
+      this.pb('我', 'action=set_payer_val&val=me'),
+      ...members.slice(0, 9).map(m => this.pb(m.display_name, `action=set_payer_val&val=${encodeURIComponent(m.display_name)}`)),
+      this.pb('返回選單', 'action=back_to_menu'),
       this.qr(CANCEL, CANCEL),
     ];
     return { type: 'text', text: '請選擇付款人。', quickReply: { items: items.slice(0, 13) } };
@@ -612,10 +641,10 @@ export class WizardAgent {
       text: hint || '請選擇分攤方式。',
       quickReply: {
         items: [
-          this.qr('全部分攤', '全部分攤'),
-          this.qr('不含付款人', '不含付款人'),
-          this.qr('指定成員', '指定成員'),
-          this.qr('返回選單', '返回選單'),
+          this.pb('全部分攤', 'action=set_split_mode&val=ALL'),
+          this.pb('不含付款人', 'action=set_split_mode&val=EXCLUDE_PAYER'),
+          this.pb('指定成員', 'action=set_split_mode&val=CUSTOM'),
+          this.pb('返回選單', 'action=back_to_menu'),
           this.qr(CANCEL, CANCEL),
         ]
       }
@@ -626,10 +655,10 @@ export class WizardAgent {
     const members = await this.crud.getParticipatingMembers(groupId);
     const selected = draft.sharerNames && draft.sharerNames.length > 0 ? draft.sharerNames.join('、') : '(未選擇)';
     const items: messagingApi.QuickReplyItem[] = [
-      ...members.slice(0, 8).map(m => this.qr(m.display_name, m.display_name)),
-      this.qr('完成指定', '完成指定'),
-      this.qr('清除全部', '清除全部'),
-      this.qr('返回選單', '返回選單'),
+      ...members.slice(0, 8).map(m => this.pb(m.display_name, `action=toggle_member&name=${encodeURIComponent(m.display_name)}`)),
+      this.pb('完成指定', 'action=submit_custom_split'),
+      this.pb('清除全部', 'action=clear_custom_split'),
+      this.pb('返回選單', 'action=back_to_menu'),
       this.qr(CANCEL, CANCEL),
     ];
     return {

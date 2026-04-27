@@ -34,6 +34,8 @@ export class LineEventHandler {
         await this.handleJoin(event as webhook.JoinEvent);
       } else if (event.type === 'follow') {
         await this.handleFollow(event as webhook.FollowEvent);
+      } else if (event.type === 'postback') {
+        await this.handlePostback(event as webhook.PostbackEvent);
       }
     } catch (e) {
       console.error('[LineEventHandler] Event processing error:', e);
@@ -75,7 +77,7 @@ export class LineEventHandler {
 
     if (textMessage.mention?.mentionees) {
       const sortedMentions = [...textMessage.mention.mentionees].sort((a, b) => b.index - a.index);
-      
+
       // First pass: identify if bot is mentioned and if it's the only content
       for (const mentee of sortedMentions) {
         if (!('userId' in mentee) || !mentee.userId) continue;
@@ -91,7 +93,7 @@ export class LineEventHandler {
       // Second pass: process all mentions
       for (const mentee of sortedMentions) {
         if (!('userId' in mentee) || !mentee.userId) continue;
-        
+
         const isBot = mentee.userId === botUserId;
         const original = text.substring(mentee.index, mentee.index + mentee.length);
         const safeMention = original.replace(/\s+/g, '_');
@@ -212,6 +214,23 @@ export class LineEventHandler {
     } catch (e) {
       console.error(`[getDisplayName] Failed for user ${userId} in ${groupId}:`, e);
       return `User${userId.slice(-4)}`;
+    }
+  }
+
+  private async handlePostback(event: webhook.PostbackEvent) {
+    const source = event.source as any;
+    const userId = source?.userId || 'unknown';
+    const data = event.postback.data;
+
+    let groupId = 'unknown';
+    if (source?.type === 'group') groupId = source.groupId;
+    if (source?.type === 'room') groupId = source.roomId;
+
+    const displayName = await this.getDisplayName(groupId, userId);
+    const replyText = await this.mainAgent.processPostback(groupId, userId, displayName, data);
+
+    if (replyText && event.replyToken) {
+      await this.reply(event.replyToken, replyText);
     }
   }
 
