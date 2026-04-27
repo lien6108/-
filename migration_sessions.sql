@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS sessions (
+  user_id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL,
+  step TEXT NOT NULL,
+  data TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
