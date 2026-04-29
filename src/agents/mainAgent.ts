@@ -1,312 +1,247 @@
 import { messagingApi } from '@line/bot-sdk';
-import { Env } from '../env';
 import { CRUD } from '../db/crud';
-import { resolveCurrency, isExpenseFormat } from '../utils/currency';
-import { NLPAgent } from './nlpAgent';
 import { MemberAgent } from './memberAgent';
 import { ExpenseAgent } from './expenseAgent';
 import { SettlementAgent } from './settlementAgent';
-import { WizardAgent, WizardStep } from './wizardAgent';
-import { getStandardQuickReply } from '../utils/ui';
+import { WizardAgent } from './wizardAgent';
+import { resolveCurrency } from '../utils/currency';
+import { Env } from '../env';
+import { getStandardQuickReply, createTemplateGuideMessage } from '../utils/ui';
 
-const HELP_TEXT = [
-  '✨ 分帳神器 指令教學 ✨',
-  '------------------------',
-  '🔹 基礎功能',
-  '- 「加入」：開始參與本次分帳',
-  '- 「開始記帳」：依照精靈引導輸入',
-  '- 「清單」：查看所有未結算項目 (表格顯示)',
-  '- 「結算」：計算每人應收/應付金額',
-  '- 「成員」：查看目前參與人員',
-  '',
-  '🔹 快速記帳 (進階)',
-  '- 「記帳 [幣別] [金額] [項目]」',
-  '  範例：記帳 日幣 1000 拉麵',
-  '- 「代墊 @付款人 [金額] [項目]」',
-  '  範例：代墊 @小明 500 計程車',
-  '',
-  '🔹 修改與刪除',
-  '- 「刪除」：跳出最近項目選擇刪除',
-  '- 「修改」：可修改金額、幣別或成員',
-  '',
-  '🔹 其他',
-  '- 「歷史」：查看過去的旅程紀錄',
-  '- 「回饋」：提供建議給開發者',
-  '- 「退出」：離開本次分帳',
-  '------------------------',
-  '💡 提示：點擊下方的「快捷選單」更方便喔！'
-].join('\n');
+// ─── 模板格式解析 ─────────────────────────────────────────────────────────────
+// 支援：名稱：晚餐　金額：500　幣別：JPY　支付者：Bob　分攤人：@Alice @Carol
+// 所有欄位皆可選，但 名稱 與 金額 至少需要其中一組（配合簡易格式 "晚餐 500"）
+function parseTemplateExpense(input: string): {
+  description?: string;
+  amount?: number;
+  currency?: string;
+  payerName?: string;
+  sharers?: string[];
+} | null {
+  // 必須包含至少一個模板欄位才進入此 parser
+  if (!/[名稱金額幣別支付分攤][：:]/.test(input)) return null;
+
+  // 全形空白轉半形，方便切割
+  const normalized = input.replace(/　/g, ' ');
+  const fields: Record<string, string> = {};
+
+  // 以已知欄位名稱作為切割點
+  const segments = normalized.split(/(?=(?:名稱|金額|幣別|支付者|分攤人)[：:])/);
+  for (const seg of segments) {
+    const m = seg.match(/^(名稱|金額|幣別|支付者|分攤人)[：:]\s*(.+)$/);
+    if (m) fields[m[1]] = m[2].trim();
+  }
+
+  const amount = fields['金額'] ? parseFloat(fields['金額'].replace(/,/g, '')) : NaN;
+  if (!fields['名稱'] || isNaN(amount) || amount <= 0) return null;
+
+  const sharers = fields['分攤人']
+    ? fields['分攤人'].split(/[\s,，、]+/).filter(s => s.length > 0)
+    : undefined;
+
+  return {
+    description: fields['名稱'],
+    amount,
+    currency: fields['幣別'],
+    payerName: fields['支付者'],
+    sharers,
+  };
+}
 
 export class MainAgent {
-  private nlp: NLPAgent;
+  private crud: CRUD;
   private member: MemberAgent;
   private expense: ExpenseAgent;
   private settlement: SettlementAgent;
   private wizard: WizardAgent;
   private env: Env;
-  private crud: CRUD;
 
   constructor(env: Env, crud: CRUD) {
     this.env = env;
     this.crud = crud;
-    this.nlp = new NLPAgent(env);
+    // Initialize sub-agents internally
     this.member = new MemberAgent(crud);
     this.expense = new ExpenseAgent(crud);
     this.settlement = new SettlementAgent(crud);
     this.wizard = new WizardAgent(crud, this.expense);
   }
 
-  async processMessage(
-    groupId: string,
-    userId: string,
-    displayName: string,
-    text: string,
-    mentionMap: Record<string, string> = {}
-  ): Promise<string | messagingApi.Message | null> {
-    const input = text.trim();
-
+  async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Map<string, string>): Promise<string | messagingApi.Message | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
-      return '🐕 系統維修中，小幫手正在休息，請稍後再試。';
-    }
-
-    if (input === '啟用分帳') {
-      await this.crud.setGroupActive(groupId, true);
-      return '已啟用分帳。';
-    }
-
-    const isActive = await this.crud.isGroupActive(groupId);
-    if (!isActive) {
-      if (['help', '說明', '啟用分帳'].includes(input)) {
-        return {
-          type: 'text',
-          text: '目前分帳功能已暫停，輸入「啟用分帳」即可恢復。',
-          quickReply: {
-            items: [
-              { type: 'action', action: { type: 'message', label: '啟用分帳', text: '啟用分帳' } },
-              { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }
-            ]
-          }
-        };
-      }
       return null;
     }
 
-    if (input === '暫停分帳') {
-      await this.crud.setGroupActive(groupId, false);
-      return '已暫停分帳。';
-    }
+    try {
+      await this.member.ensureMember(groupId, userId, displayName);
+      const member = await this.crud.getMember(groupId, userId);
+      const isParticipating = member?.is_participating === 1;
 
-    await this.member.ensureMember(groupId, userId, displayName);
-    const member = await this.crud.getMember(groupId, userId);
-    const isParticipating = member?.is_participating === 1;
+      const session = await this.crud.getSession(userId);
+      if (session) {
+        return await this.wizard.handleNext(session, input, displayName);
+      }
 
-    // Group-level lock:
-    // If someone is in an active guided flow, ignore other users' messages
-    // to avoid interruption and chat spam.
-    const groupSession = await this.crud.getGroupActiveSession(groupId);
-    if (groupSession && groupSession.user_id !== userId) {
-      return null;
-    }
-
-    const session = await this.crud.getSession(userId);
-    if (session) {
-      return this.wizard.handleNext(session, input, displayName);
-    }
-
-    if (input === '取消') return null;
-
-    if (input === '加入') {
-      const trip = await this.crud.getCurrentTrip(groupId);
-      const joinMsg = await this.member.handleJoinGroup(groupId, userId, displayName);
-      if (!trip) {
-        const namingMsg = await this.wizard.startTripNaming(groupId, userId);
-        if (typeof joinMsg === 'string') {
-          return `${joinMsg}\n\n${(namingMsg as messagingApi.TextMessage).text}`;
-        } else {
-          // If both are objects, we might need to combine or just prioritize one.
-          // For simplicity, we'll return a combined text if possible.
-          return {
-            type: 'text',
-            text: `${(joinMsg as messagingApi.TextMessage).text}\n\n${(namingMsg as messagingApi.TextMessage).text}`,
-            quickReply: namingMsg.quickReply
-          };
+      // 處理來自 LIFF 的快速記帳訊息
+      if (input.startsWith('[快速記帳]')) {
+        const parts = input.replace('[快速記帳]', '').trim().split(' ');
+        if (parts.length >= 2) {
+          const category = parts[0];
+          const amount = parseFloat(parts[1]);
+          if (!isNaN(amount)) {
+            return await this.expense.addExpense(groupId, userId, displayName, category, amount);
+          }
         }
       }
-      return joinMsg;
-    }
-    if (input === '退出') return this.member.requestLeave(groupId, userId, displayName);
-    if (input === '確認退出') return this.member.confirmLeave(groupId, userId, displayName);
-    if (input === '成員') return this.member.getMemberList(groupId);
-    if (input === '說明' || input === 'help' || input === '/help') return HELP_TEXT;
-    if (input === 'GREETING') {
-      return {
-        type: 'text',
-        text: '您好，請問需要什麼服務呢？',
-        quickReply: getStandardQuickReply()
-      };
-    }
 
-    if (input === '回饋') return this.wizard.startFeedback(groupId, userId);
-    if (input.startsWith('回饋 ')) {
-      const content = input.replace(/^回饋\s+/, '').trim();
-      if (!content) return this.wizard.startFeedback(groupId, userId);
-      return `[FEEDBACK]${content}`;
-    }
+      if (input === '加入') {
+        return await this.member.joinGroup(groupId, userId, displayName);
+      }
 
-    if (input === '歷史') {
-      const trips = await this.crud.getTripHistory(groupId, 10);
-      if (trips.length === 0) return '目前還沒有歷史旅程。';
-      const rows = trips.map(t => `- ${t.trip_name} (${t.status === 'active' ? '進行中' : '已結束'})`);
-      return `最近旅程：\n${rows.join('\n')}`;
-    }
+      if (input === '退出') {
+        return await this.member.leaveGroup(groupId, userId, displayName);
+      }
 
-    if (input === '清單') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.expense.listExpenses(groupId);
-    }
+      if (input === '成員' || input === 'member') {
+        return await this.member.listMembers(groupId);
+      }
 
-    if (input === '結算') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.settlement.showSettlement(groupId);
-    }
-    if (input === '確認結算') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.settlement.confirmSettlement(groupId);
-    }
-
-    if (input === '刪除') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.wizard.startDeleteWizard(groupId, userId);
-    }
-    if (input === '修改') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.wizard.startModifyWizard(groupId, userId);
-    }
-    if (input === '開始記帳') {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const trip = await this.crud.getCurrentTrip(groupId);
-      if (!trip) return this.wizard.startTripNaming(groupId, userId);
-      return this.wizard.start(groupId, userId);
-    }
-
-    const deleteMatch = input.match(/^刪除\s*#(\d+)$/);
-    if (deleteMatch) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      return this.wizard.startDeleteWizard(groupId, userId, parseInt(deleteMatch[1], 10));
-    }
-
-    const updateAmountMatch = input.match(/^修改金額\s*#(\d+)\s*([\d,]+(?:\.\d+)?)$/);
-    if (updateAmountMatch) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const seq = parseInt(updateAmountMatch[1], 10);
-      const amount = parseFloat(updateAmountMatch[2].replace(/,/g, ''));
-      if (isNaN(amount) || amount <= 0) return '金額格式錯誤，請輸入大於 0 的數字。';
-      return this.expense.updateExpense(groupId, seq, amount, displayName);
-    }
-
-    const updateCurrencyMatch = input.match(/^修改幣別\s*#(\d+)\s*(.+)$/);
-    if (updateCurrencyMatch) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const seq = parseInt(updateCurrencyMatch[1], 10);
-      const currency = resolveCurrency(updateCurrencyMatch[2].trim());
-      if (!currency) {
-        await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_NEW_CURRENCY, JSON.stringify({ groupSeq: seq }));
+      if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '幣別輸入錯誤，請重新輸入，或從快捷選擇。',
-          quickReply: {
-            items: [
-              { type: 'action', action: { type: 'message', label: 'TWD', text: 'TWD' } },
-              { type: 'action', action: { type: 'message', label: 'USD', text: 'USD' } },
-              { type: 'action', action: { type: 'message', label: 'JPY', text: 'JPY' } },
-              { type: 'action', action: { type: 'message', label: 'KRW', text: 'KRW' } },
-              { type: 'action', action: { type: 'message', label: '取消', text: '取消' } },
-            ]
-          }
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 多筆：每行一筆，格式同簡易\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n👥 成員\n• 加入 / 退出 / 成員',
+          quickReply: getStandardQuickReply()
         };
       }
-      return this.expense.updateExpenseCurrency(groupId, seq, currency, displayName);
-    }
 
-    const splitDetailMatch = input.match(/^修改分攤\s*#(\d+)\s*(.*)$/);
-    if (splitDetailMatch) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const seq = parseInt(splitDetailMatch[1], 10);
-      const rest = splitDetailMatch[2].trim();
-      if (!rest) return this.expense.showExpenseSplitDetail(groupId, seq);
-      const addNames = [...rest.matchAll(/\+@(\S+)/g)].map(m => m[1]);
-      const removeNames = [...rest.matchAll(/-@(\S+)/g)].map(m => m[1]);
-      if (addNames.length > 0 && removeNames.length > 0) return '同一則訊息請只做新增或只做移除。';
-      if (addNames.length > 0) return this.expense.addSplitMembers(groupId, seq, addNames, displayName, mentionMap);
-      if (removeNames.length > 0) return this.expense.removeSplitMembers(groupId, seq, removeNames, displayName, mentionMap);
-      return '請使用：修改分攤 #題號 +@名字 或 修改分攤 #題號 -@名字';
-    }
-
-    if (input === '匯率' || input === '幣率') {
-      return this.expense.showGroupExchangeRates(groupId);
-    }
-
-    const onBehalf = input.match(/^代墊\s+@(\S+)\s+(?:([A-Za-z\u4e00-\u9fa5]+)\s+)?([\d,]+(?:\.\d+)?)\s*(.*)$/);
-    if (onBehalf) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const trip = await this.crud.getCurrentTrip(groupId);
-      if (!trip) return this.wizard.startTripNaming(groupId, userId);
-
-      const payerName = onBehalf[1];
-      const currencyRaw = (onBehalf[2] || 'TWD').trim();
-      const resolvedCurrency = resolveCurrency(currencyRaw);
-      if (!resolvedCurrency) return `幣別無法辨識：${currencyRaw}`;
-
-      const originalAmount = parseFloat(onBehalf[3].replace(/,/g, ''));
-      if (isNaN(originalAmount) || originalAmount <= 0) return '金額格式錯誤。';
-
-      const rest = (onBehalf[4] || '').trim();
-      const participants = [...rest.matchAll(/@(\S+)/g)].map(m => m[1]);
-      const description = rest.replace(/@\S+/g, '').trim() || '記帳';
-
-      let amount = originalAmount;
-      if (resolvedCurrency !== 'TWD') {
-        const rate = await this.crud.getExchangeRate(resolvedCurrency);
-        if (!rate) return `${resolvedCurrency} 匯率尚未就緒，請稍後再試。`;
-        amount = Math.round(originalAmount * rate * 100) / 100;
+      if (input === 'GREETING') {
+        return {
+          type: 'text',
+          text: '您好，請問需要什麼服務呢？',
+          quickReply: getStandardQuickReply()
+        };
       }
 
-      return this.expense.addExpenseOnBehalf(
-        groupId,
-        userId,
-        displayName,
-        payerName,
-        description,
-        amount,
-        participants.length > 0 ? participants : undefined,
-        resolvedCurrency,
-        resolvedCurrency !== 'TWD' ? originalAmount : undefined,
-        mentionMap
-      );
-    }
+      if (input === '結算' || input === 'settle') {
+        return await this.settlement.previewSettlement(groupId);
+      }
 
-    if (isExpenseFormat(input)) {
-      if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-      const trip = await this.crud.getCurrentTrip(groupId);
-      if (!trip) return this.wizard.startTripNaming(groupId, userId);
+      if (input === '確認結算') {
+        return await this.settlement.confirmSettlement(groupId, displayName);
+      }
 
-      let parsedItems;
-      try {
-        parsedItems = await this.nlp.parseMultipleExpenseMessages(input);
-      } catch (e: any) {
-        if (e.message === 'AI_QUOTA_EXCEEDED') {
-          return '[NOTIFY_ADMIN]AI 解析額度不足，請稍後再試。你也可改用精靈「開始記帳」。';
+      if (input === '清單' || input === 'list') {
+        return await this.expense.listExpenses(groupId);
+      }
+
+      if (input === '歷史' || input === 'history') {
+        return await this.settlement.listHistory(groupId);
+      }
+
+      if (input === '開始記帳') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const trip = await this.crud.getCurrentTrip(groupId);
+        if (!trip) return await this.wizard.startTripNaming(groupId, userId);
+        const members = await this.crud.getParticipatingMembers(groupId);
+        return createTemplateGuideMessage(members);
+      }
+
+      const deleteMatch = input.match(/^刪除\s*#(\d+)$/);
+      if (deleteMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startDeleteWizard(groupId, userId, parseInt(deleteMatch[1], 10));
+      }
+
+      const updateAmountMatch = input.match(/^修改金額\s*#(\d+)\s*([\d,]+(?:\.\d+)?)$/);
+      if (updateAmountMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const seq = parseInt(updateAmountMatch[1], 10);
+        const amount = parseFloat(updateAmountMatch[2].replace(/,/g, ''));
+        if (isNaN(amount) || amount <= 0) return '金額格式錯誤，請輸入大於 0 的數字。';
+        return await this.expense.updateExpense(groupId, seq, amount, displayName);
+      }
+
+      const updateCurrencyMatch = input.match(/^修改幣別\s*#(\d+)\s*(.+)$/);
+      if (updateCurrencyMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const seq = parseInt(updateCurrencyMatch[1], 10);
+        const currency = resolveCurrency(updateCurrencyMatch[2].trim());
+        if (!currency) return '幣別格式錯誤。';
+        return await this.expense.updateExpenseCurrency(groupId, seq, currency, displayName);
+      }
+
+      if (input === '修改') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyWizard(groupId, userId);
+      }
+
+      if (input === '刪除') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startDeleteWizard(groupId, userId);
+      }
+
+      // ── 完整模板格式：名稱：xx　金額：xx　幣別：xx　支付者：xx　分攤人：xx ──
+      const tmpl = parseTemplateExpense(input);
+      if (tmpl && tmpl.description && tmpl.amount) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+
+        // 解析付款人
+        let payerUserId = userId;
+        let payerName = displayName;
+        if (tmpl.payerName) {
+          const payerMember = await this.crud.getMemberByDisplayName(groupId, tmpl.payerName);
+          if (payerMember) { payerUserId = payerMember.user_id; payerName = payerMember.display_name; }
+          else return `找不到付款人「${tmpl.payerName}」，請確認成員名稱。`;
         }
-        throw e;
+
+        // 解析幣別與換算
+        let currency = tmpl.currency ? (resolveCurrency(tmpl.currency) ?? 'TWD') : 'TWD';
+        let amt = tmpl.amount;
+        let originalAmount: number | undefined;
+        if (currency !== 'TWD') {
+          const rate = await this.crud.getExchangeRate(currency);
+          if (rate) { originalAmount = amt; amt = Math.round(amt * rate * 100) / 100; }
+        }
+
+        return await this.expense.addExpense(
+          groupId, payerUserId, payerName,
+          tmpl.description, amt,
+          tmpl.sharers, currency, originalAmount,
+          (mentionMap as unknown as Record<string, string>) ?? {}
+        );
       }
 
-      if (parsedItems.length === 0) return '記帳格式不正確，請使用：記帳 [幣別] [金額] [項目]';
-      if (parsedItems.length === 1) {
-        const p = parsedItems[0];
-        return this.expense.addExpense(groupId, userId, displayName, p.description || '記帳', p.amount, p.participants, p.currency, p.originalAmount, mentionMap);
+      // ── 簡易格式：晚餐 500 ──
+      // Direct recording
+      const expenseMatch = input.match(/^(.+?)\s+([\d,]+(?:\.\d+)?)$/);
+      if (expenseMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const description = expenseMatch[1].trim();
+        const amount = parseFloat(expenseMatch[2].replace(/,/g, ''));
+        if (isNaN(amount) || amount <= 0) return '金額格式錯誤。';
+        return await this.expense.addExpense(groupId, userId, displayName, description, amount, mentionMap);
       }
-      return this.expense.addMultipleExpenses(groupId, userId, displayName, parsedItems, mentionMap);
+
+      const lines = input.split('\n').filter(l => l.trim().length > 0);
+      if (lines.length > 1) {
+        const parsedItems: { description: string, amount: number }[] = [];
+        for (const line of lines) {
+          const m = line.match(/^(.+?)\s+([\d,]+(?:\.\d+)?)$/);
+          if (m) {
+            parsedItems.push({
+              description: m[1].trim(),
+              amount: parseFloat(m[2].replace(/,/g, ''))
+            });
+          }
+        }
+        if (parsedItems.length > 0) {
+          if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+          return await this.expense.addMultipleExpenses(groupId, userId, displayName, parsedItems, mentionMap);
+        }
+      }
+    } catch (e) {
+      console.error('[MainAgent] processMessage error:', e);
+      return '抱歉，處理您的訊息時發生錯誤。';
     }
 
     return null;
@@ -316,32 +251,34 @@ export class MainAgent {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) return null;
 
-    await this.member.ensureMember(groupId, userId, displayName);
-    const member = await this.crud.getMember(groupId, userId);
-    const isParticipating = member?.is_participating === 1;
-    const params = new URLSearchParams(data);
-    const action = params.get('action');
+    try {
+      await this.member.ensureMember(groupId, userId, displayName);
+      const member = await this.crud.getMember(groupId, userId);
+      const isParticipating = member?.is_participating === 1;
+      const params = new URLSearchParams(data);
+      const action = params.get('action');
 
-    if (action === 'start_add') {
-      if (!isParticipating) return '雿??芸??亙?撣喉?隢?頛詨???乓?';
-      const trip = await this.crud.getCurrentTrip(groupId);
-      if (!trip) return this.wizard.startTripNaming(groupId, userId);
-      return this.wizard.start(groupId, userId);
+      if (action === 'start_add') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const trip = await this.crud.getCurrentTrip(groupId);
+        if (!trip) return await this.wizard.startTripNaming(groupId, userId);
+        return await this.wizard.start(groupId, userId);
+      }
+
+      if (action === 'start_edit') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyWizard(groupId, userId);
+      }
+
+      const session = await this.crud.getSession(userId);
+      if (session) {
+        return await this.wizard.handlePostback(session, data, displayName);
+      }
+    } catch (e) {
+      console.error('[MainAgent] processPostback error:', e);
+      return '處理按鈕點擊時發生錯誤。';
     }
 
-    if (action === 'start_edit') {
-      if (!isParticipating) return '雿??芸??亙?撣喉?隢?頛詨???乓?';
-      return this.wizard.startModifyWizard(groupId, userId);
-    }
-
-    const session = await this.crud.getSession(userId);
-    if (session) {
-      return this.wizard.handlePostback(session, data, displayName);
-    }
     return null;
-  }
-
-  async handleBotJoinGroup(): Promise<string> {
-    return '大家好，我是你的分帳小幫手🐕\n請先輸入「加入」來加入分帳，後續只要@我就可以使用嘍！';
   }
 }

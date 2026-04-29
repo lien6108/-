@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
-import { getStandardQuickReply, createExpenseListFlex } from '../utils/ui';
+import { getStandardQuickReply, createExpenseListFlex, createExpenseSuccessFlex } from '../utils/ui';
 
 function nowTag(): string {
   const now = new Date();
@@ -83,23 +83,8 @@ export class ExpenseAgent {
 
     const exp = await this.crud.createExpense(groupId, payerUserId, payerName, description, amount, specificUserIds, currency, originalAmount);
     const splits = await this.crud.getExpenseSplits(exp.id);
-    const share = splits.length > 0 ? splits[0].share_amount : 0;
 
-    const amountInfo = currency !== 'TWD' && originalAmount
-      ? `${currency} ${originalAmount} (約 TWD ${exp.amount})`
-      : `TWD ${exp.amount}`;
-
-    const msg = [
-      '已新增記帳',
-      `時間：${nowTag()}`,
-      `題號：#${exp.group_seq}`,
-      `項目：${exp.description}`,
-      `金額：${amountInfo}`,
-      `付款：${exp.payer_name}`,
-      `分攤：${splits.length} 人，每人 ${share}`,
-    ].join('\n');
-
-    return { type: 'text', text: msg, quickReply: this.getExpenseQuickReply(exp.group_seq) };
+    return createExpenseSuccessFlex(exp, splits);
   }
 
   async addMultipleExpenses(

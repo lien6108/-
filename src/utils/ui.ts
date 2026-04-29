@@ -1,5 +1,94 @@
 import { messagingApi } from '@line/bot-sdk';
 
+// ─── 記帳成功確認 Flex ────────────────────────────────────────────────────────
+
+export function createExpenseSuccessFlex(
+  exp: { group_seq: number; description: string; amount: number; payer_name: string; currency?: string; original_amount?: number },
+  splits: { debtor_name: string; share_amount: number }[]
+): messagingApi.FlexMessage {
+  const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+    ? `${exp.currency} ${exp.original_amount}（≈ TWD ${exp.amount}）`
+    : `TWD ${exp.amount}`;
+
+  const sharerText = splits.length > 0
+    ? `${splits.map(s => s.debtor_name).join('、')}（各 ${splits[0].share_amount}）`
+    : '（無分攤人）';
+
+  const rows: any[] = [
+    { label: '📋 項目', value: exp.description },
+    { label: '💰 金額', value: amountText },
+    { label: '🙋 付款人', value: exp.payer_name },
+    { label: '👥 分攤人', value: sharerText },
+  ].map(item => ({
+    type: 'box', layout: 'horizontal', margin: 'md',
+    contents: [
+      { type: 'text', text: item.label, size: 'sm', color: '#888888', flex: 3 },
+      { type: 'text', text: item.value, size: 'sm', color: '#333333', flex: 5, wrap: true, weight: 'bold' }
+    ]
+  }));
+
+  return {
+    type: 'flex',
+    altText: `✅ 已記帳 #${exp.group_seq} ${exp.description} ${exp.amount}`,
+    contents: {
+      type: 'bubble',
+      size: 'kilo',
+      header: {
+        type: 'box', layout: 'horizontal', backgroundColor: '#2ecc71',
+        contents: [
+          { type: 'text', text: '✅ 記帳成功', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
+          { type: 'text', text: `#${exp.group_seq}`, color: '#d5f5e3', size: 'sm', align: 'end', flex: 0 }
+        ]
+      },
+      body: { type: 'box', layout: 'vertical', contents: rows },
+      footer: {
+        type: 'box', layout: 'horizontal', spacing: 'sm',
+        contents: [
+          { type: 'button', action: { type: 'message', label: '刪除', text: `刪除 #${exp.group_seq}` }, style: 'link', height: 'sm', color: '#ff4d4f', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'link', height: 'sm', color: '#46494c', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '開始記帳', text: '開始記帳' }, style: 'primary', height: 'sm', color: '#46494c', flex: 2 }
+        ]
+      }
+    }
+  } as any;
+}
+
+// ─── 開始記帳說明卡片 ──────────────────────────────────────────────────────────
+
+export function createTemplateGuideMessage(members: { display_name: string }[]): messagingApi.Message {
+  const memberList = members.map(m => m.display_name).join('、') || '（尚無成員）';
+  const guideText =
+    '📌 最簡格式（直接輸入）：\n' +
+    '   晚餐 500\n\n' +
+    '📌 完整格式（複製修改）：\n' +
+    '名稱：晚餐　金額：500　幣別：TWD　支付者：Alice　分攤人：@Bob\n\n' +
+    '• 幣別預設 TWD\n' +
+    '• 支付者預設本人\n' +
+    '• 分攤人預設全體\n\n' +
+    `目前成員：${memberList}`;
+
+  // Quick reply: 常用類別一鍵記帳（點選即送出完整格式，可事後 修改金額 #N）
+  const categories = [
+    { label: '🍴 餐費 500', text: '名稱：餐費　金額：500' },
+    { label: '🚗 交通 100', text: '名稱：交通　金額：100' },
+    { label: '🛍️ 購物 300', text: '名稱：購物　金額：300' },
+    { label: '🏠 住宿 1000', text: '名稱：住宿　金額：1000' },
+    { label: '🍹 飲料 150', text: '名稱：飲料　金額：150' },
+    { label: '🎁 雜支 200', text: '名稱：雜支　金額：200' },
+  ];
+
+  return {
+    type: 'text',
+    text: guideText,
+    quickReply: {
+      items: categories.map(c => ({
+        type: 'action',
+        action: { type: 'message', label: c.label, text: c.text }
+      }))
+    }
+  };
+}
+
 export interface QuickReplyOptions {
   groupSeq?: number;
   showSettlePreview?: boolean;
@@ -97,7 +186,7 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
 
   return {
     type: 'flex',
-    altText: '未結算記帳清單',
+    altText: '未結算清單',
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -119,29 +208,170 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         layout: 'vertical',
         spacing: 'md',
         contents: [
-          {
-            type: 'box',
-            layout: 'horizontal',
-            spacing: 'md',
-            contents: [
-              {
-                type: 'button',
-                style: 'primary',
-                color: '#2f6fed',
-                height: 'sm',
-                action: { type: 'postback', label: '新增', data: 'action=start_add', displayText: '新增' }
-              },
-              {
-                type: 'button',
-                style: 'secondary',
-                height: 'sm',
-                action: { type: 'postback', label: '修改', data: 'action=start_edit', displayText: '修改' }
-              }
-            ]
-          },
-          { type: 'text', text: '可用快捷進行後續操作', size: 'xs', color: '#aaaaaa', align: 'center' }
+          { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#ff4d4f' }
         ]
       }
+    }
+  } as any;
+}
+
+export function createDraftFlex(draft: any, isPrivate = false, ownerId: string): messagingApi.FlexMessage {
+  const summary = [
+    { label: '幣別', value: draft.currency || 'TWD' },
+    { label: '金額', value: draft.amount ? `${draft.amount}` : '尚未設定' },
+    { label: '項目', value: draft.description || '尚未設定' },
+    { label: '付款人', value: draft.payerName || '尚未設定' },
+    { label: '分攤', value: draft.sharerNames?.join('、') || '全部分攤' }
+  ];
+
+  const ownerSuffix = `&owner=${ownerId}`;
+
+  const rows = summary.map(item => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: item.label, size: 'sm', color: '#aaaaaa', flex: 2 },
+      { type: 'text', text: item.value, size: 'sm', color: '#333333', flex: 4, weight: 'bold', wrap: true }
+    ],
+    margin: 'md'
+  }));
+
+  return {
+    type: 'flex',
+    altText: '記帳草稿',
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: '📝 記帳草稿', weight: 'bold', size: 'lg', color: '#ffffff' },
+          { type: 'text', text: `👤 編輯者：${draft.editorName || '本人'}`, size: 'xs', color: '#cccccc' }
+        ],
+        backgroundColor: '#46494c'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        contents: rows
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#46494c' },
+          { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
+          { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#ff4d4f' }
+        ]
+      }
+    }
+  } as any;
+}
+
+export function createSelectionFlex(title: string, subtitle: string, items: { label: string, data: string, style?: string }[]): messagingApi.FlexMessage {
+  const buttons = items.map(item => ({
+    type: 'button',
+    action: { type: 'postback', label: item.label, data: item.data },
+    style: item.style || 'secondary',
+    height: 'sm',
+    margin: 'sm'
+  }));
+
+  return {
+    type: 'flex',
+    altText: title,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          { type: 'text', text: title, weight: 'bold', size: 'lg', color: '#ffffff' },
+          { type: 'text', text: subtitle, size: 'xs', color: '#cccccc' }
+        ],
+        backgroundColor: '#46494c'
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: buttons
+      }
+    }
+  } as any;
+}
+
+export function createUnifiedDraftCarousel(ownerId: string, members: any[]): messagingApi.FlexMessage {
+  const os = `&owner=${ownerId}`;
+  
+  // Page 1: Calculator
+  const calcRows = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['0', 'DEL', 'CLR']];
+  const calcGrid = calcRows.map(row => ({
+    type: 'box', layout: 'horizontal', spacing: 'sm', contents: row.map(key => ({
+      type: 'button', action: { type: 'postback', label: key, data: `action=${key==='DEL'?'num_back':key==='CLR'?'num_clear':'num_press'}${key!=='DEL'&&key!=='CLR'?'&val='+key:''}${os}` },
+      style: 'secondary', height: 'sm'
+    })), margin: 'sm'
+  }));
+
+  // Page 2: Categories
+  const cats = ['🍴餐費', '🚗交通', '🛍️購物', '🏠住宿', '🍹飲料', '🎁雜支'];
+  const catButtons = cats.map(c => ({
+    type: 'button', action: { type: 'postback', label: c, data: `action=set_category_silent&val=${encodeURIComponent(c)}${os}` },
+    style: 'secondary', height: 'sm', margin: 'xs'
+  }));
+
+  // Page 3: Currency & Payer
+  const currs = ['TWD', 'USD', 'JPY', 'KRW'];
+  const currButtons = currs.map(c => ({
+    type: 'button', action: { type: 'postback', label: c, data: `action=set_currency_silent&val=${c}${os}` },
+    style: 'secondary', height: 'sm', margin: 'xs', flex: 1
+  }));
+  const payerButtons = [
+    { label: '本人', val: 'me' },
+    ...members.slice(0, 3).map(m => ({ label: m.display_name, val: m.display_name }))
+  ].map(p => ({
+    type: 'button', action: { type: 'postback', label: p.label, data: `action=set_payer_silent&val=${encodeURIComponent(p.val)}${os}` },
+    style: 'secondary', height: 'sm', margin: 'xs'
+  }));
+
+  const commonFooter = {
+    type: 'box', layout: 'vertical', spacing: 'sm', margin: 'lg', contents: [
+      { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm', color: '#00b900' },
+      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm', color: '#46494c' },
+      { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm' }
+    ]
+  };
+
+  return {
+    type: 'flex',
+    altText: '開始記帳',
+    contents: {
+      type: 'carousel',
+      contents: [
+        {
+          type: 'bubble', size: 'mega',
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '1️⃣ 輸入金額', weight: 'bold', color: '#ffffff' }] },
+          body: { type: 'box', layout: 'vertical', contents: [...calcGrid, commonFooter] }
+        },
+        {
+          type: 'bubble', size: 'mega',
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '2️⃣ 選擇項目', weight: 'bold', color: '#ffffff' }] },
+          body: { type: 'box', layout: 'vertical', contents: [...catButtons, commonFooter] }
+        },
+        {
+          type: 'bubble', size: 'mega',
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '3️⃣ 幣別與付款', weight: 'bold', color: '#ffffff' }] },
+          body: { type: 'box', layout: 'vertical', contents: [
+            { type: 'text', text: '幣別', size: 'xs', color: '#aaaaaa', margin: 'md' },
+            { type: 'box', layout: 'horizontal', contents: currButtons },
+            { type: 'text', text: '付款人', size: 'xs', color: '#aaaaaa', margin: 'md' },
+            ...payerButtons,
+            commonFooter
+          ] }
+        }
+      ]
     }
   } as any;
 }
