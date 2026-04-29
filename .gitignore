@@ -6,3 +6,6 @@ splitbill.db
 cloudflared.log
 cloudflared_err.log
 cloudflared.exe
+node_modules/
+dist/
+.wrangler/
