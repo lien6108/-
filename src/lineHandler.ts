@@ -234,14 +234,16 @@ export class LineEventHandler {
     }
   }
 
-  private async reply(replyToken: string, message: string | messagingApi.Message) {
-    let msgObj: messagingApi.Message;
-    if (typeof message === 'string') {
+  private async reply(replyToken: string, message: string | messagingApi.Message | messagingApi.Message[]) {
+    let messages: messagingApi.Message[];
+    if (Array.isArray(message)) {
+      messages = message;
+    } else if (typeof message === 'string') {
       const text = message.length > 5000 ? `${message.substring(0, 4990)}...` : message;
-      msgObj = { type: 'text', text };
+      messages = [{ type: 'text', text }];
     } else {
-      msgObj = message;
+      messages = [message];
     }
-    await this.client.replyMessage({ replyToken, messages: [msgObj] });
+    await this.client.replyMessage({ replyToken, messages });
   }
 }

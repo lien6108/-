@@ -66,7 +66,7 @@ export class MainAgent {
     this.wizard = new WizardAgent(crud, this.expense);
   }
 
-  async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Map<string, string>): Promise<string | messagingApi.Message | null> {
+  async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Map<string, string>): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
       return null;
@@ -109,7 +109,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 多筆：每行一筆，格式同簡易\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n👥 成員\n• 加入 / 退出 / 成員',
           quickReply: getStandardQuickReply()
         };
       }
@@ -211,33 +211,14 @@ export class MainAgent {
         );
       }
 
-      // ── 簡易格式：晚餐 500 ──
-      // Direct recording
-      const expenseMatch = input.match(/^(.+?)\s+([\d,]+(?:\.\d+)?)$/);
+      // ── 簡易格式：記帳 晚餐 500 ──
+      const expenseMatch = input.match(/^記帳\s+(.+?)\s+([\d,]+(?:\.\d+)?)$/);
       if (expenseMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
         const description = expenseMatch[1].trim();
         const amount = parseFloat(expenseMatch[2].replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤。';
         return await this.expense.addExpense(groupId, userId, displayName, description, amount, mentionMap);
-      }
-
-      const lines = input.split('\n').filter(l => l.trim().length > 0);
-      if (lines.length > 1) {
-        const parsedItems: { description: string, amount: number }[] = [];
-        for (const line of lines) {
-          const m = line.match(/^(.+?)\s+([\d,]+(?:\.\d+)?)$/);
-          if (m) {
-            parsedItems.push({
-              description: m[1].trim(),
-              amount: parseFloat(m[2].replace(/,/g, ''))
-            });
-          }
-        }
-        if (parsedItems.length > 0) {
-          if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
-          return await this.expense.addMultipleExpenses(groupId, userId, displayName, parsedItems, mentionMap);
-        }
       }
     } catch (e) {
       console.error('[MainAgent] processMessage error:', e);

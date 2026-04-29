@@ -55,38 +55,38 @@ export function createExpenseSuccessFlex(
 
 // ─── 開始記帳說明卡片 ──────────────────────────────────────────────────────────
 
-export function createTemplateGuideMessage(members: { display_name: string }[]): messagingApi.Message {
+export function createTemplateGuideMessage(members: { display_name: string }[]): messagingApi.Message[] {
   const memberList = members.map(m => m.display_name).join('、') || '（尚無成員）';
-  const guideText =
-    '📌 最簡格式（直接輸入）：\n' +
-    '   晚餐 500\n\n' +
-    '📌 完整格式（複製修改）：\n' +
-    '名稱：晚餐　金額：500　幣別：TWD　支付者：Alice　分攤人：@Bob\n\n' +
-    '• 幣別預設 TWD\n' +
-    '• 支付者預設本人\n' +
-    '• 分攤人預設全體\n\n' +
-    `目前成員：${memberList}`;
 
-  // Quick reply: 常用類別一鍵記帳（點選即送出完整格式，可事後 修改金額 #N）
-  const categories = [
-    { label: '🍴 餐費 500', text: '名稱：餐費　金額：500' },
-    { label: '🚗 交通 100', text: '名稱：交通　金額：100' },
-    { label: '🛍️ 購物 300', text: '名稱：購物　金額：300' },
-    { label: '🏠 住宿 1000', text: '名稱：住宿　金額：1000' },
-    { label: '🍹 飲料 150', text: '名稱：飲料　金額：150' },
-    { label: '🎁 雜支 200', text: '名稱：雜支　金額：200' },
-  ];
-
-  return {
+  const msg1: messagingApi.Message = {
     type: 'text',
-    text: guideText,
+    text:
+      '💡 記帳方式說明\n\n' +
+      '【簡易記帳】\n' +
+      '若此筆金額使用台幣，且由您為所有人付款，可直接輸入：\n' +
+      '  記帳 晚餐 500\n' +
+      '（注意：「記帳」後要空格，名稱與金額之間也要空格）\n\n' +
+      '【完整格式】\n' +
+      '若有指定幣別、付款人或分攤人，請使用完整格式（見下一則訊息複製）\n\n' +
+      `目前成員：${memberList}`,
     quickReply: {
-      items: categories.map(c => ({
-        type: 'action',
-        action: { type: 'message', label: c.label, text: c.text }
-      }))
+      items: [
+        { type: 'action', action: { type: 'message', label: '🍴 餐費 500', text: '記帳 餐費 500' } },
+        { type: 'action', action: { type: 'message', label: '🚗 交通 100', text: '記帳 交通 100' } },
+        { type: 'action', action: { type: 'message', label: '🛍️ 購物 300', text: '記帳 購物 300' } },
+        { type: 'action', action: { type: 'message', label: '🏠 住宿 1000', text: '記帳 住宿 1000' } },
+        { type: 'action', action: { type: 'message', label: '🍹 飲料 150', text: '記帳 飲料 150' } },
+        { type: 'action', action: { type: 'message', label: '🎁 雜支 200', text: '記帳 雜支 200' } },
+      ]
     }
   };
+
+  const msg2: messagingApi.Message = {
+    type: 'text',
+    text: '名稱：　金額：　幣別：　支付者：　分攤人：'
+  };
+
+  return [msg1, msg2];
 }
 
 export interface QuickReplyOptions {
