@@ -94,8 +94,13 @@ export class MainAgent {
       const isParticipating = member?.is_participating === 1;
 
       const session = await this.crud.getSession(userId);
-      if (session) {
+      // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
+      const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
+      if (session && !isModifyDeleteCmd) {
         return await this.wizard.handleNext(session, input, displayName);
+      }
+      if (session && isModifyDeleteCmd) {
+        await this.crud.deleteSession(userId);
       }
 
       // 處理來自 LIFF 的快速記帳訊息
@@ -162,21 +167,25 @@ export class MainAgent {
         return createTemplateGuideMessage(members);
       }
 
-      const deleteMatch = input.match(/^刪除\s*#(\d+)$/);
+      // 統一 # 符號處理：支援半形 # 與全形 ＃
+      const normalizedInput = input.replace(/＃/g, '#');
+
+      const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
         return await this.wizard.startDeleteWizard(groupId, userId, parseInt(deleteMatch[1], 10));
       }
 
       // 修改 #N → 詢問要改什麼
-      const modifySelectMatch = input.match(/^修改\s*#(\d+)$/);
+      const modifySelectMatch = normalizedInput.match(/^修改\s*#(\d+)\s*$/);
       if (modifySelectMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        await this.crud.deleteSession(userId); // 清除可能殘留的舊 session
         return await this.wizard.startModifyFieldSelect(groupId, userId, parseInt(modifySelectMatch[1], 10));
       }
 
       // 修改金額 #N 100（含金額直接改）或 修改金額 #N（啟動 wizard）
-      const updateAmountMatch = input.match(/^修改金額\s*#(\d+)\s*([\d,]+(?:\.\d+)?)$/);
+      const updateAmountMatch = normalizedInput.match(/^修改金額\s*#(\d+)\s+([\d,]+(?:\.\d+)?)\s*$/);
       if (updateAmountMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
         const seq = parseInt(updateAmountMatch[1], 10);
@@ -184,38 +193,43 @@ export class MainAgent {
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤，請輸入大於 0 的數字。';
         return await this.expense.updateExpense(groupId, seq, amount, displayName);
       }
-      const updateAmountNoValMatch = input.match(/^修改金額\s*#(\d+)$/);
+      const updateAmountNoValMatch = normalizedInput.match(/^修改金額\s*#(\d+)\s*$/);
       if (updateAmountNoValMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        await this.crud.deleteSession(userId);
         return await this.wizard.startModifyAmountWizard(groupId, userId, parseInt(updateAmountNoValMatch[1], 10));
       }
 
       // 修改幣別 #N JPY（含幣別直接改）或 修改幣別 #N（啟動 wizard）
-      const updateCurrencyMatch = input.match(/^修改幣別\s*#(\d+)\s*(.+)$/);
+      // 用 \S+ 而非 .+ 避免捕捉到尾部空白
+      const updateCurrencyMatch = normalizedInput.match(/^修改幣別\s*#(\d+)\s+(\S+)\s*$/);
       if (updateCurrencyMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
         const seq = parseInt(updateCurrencyMatch[1], 10);
-        const currency = resolveCurrency(updateCurrencyMatch[2].trim());
-        if (!currency) return '幣別格式錯誤。';
+        const currency = resolveCurrency(updateCurrencyMatch[2]);
+        if (!currency) return `「${updateCurrencyMatch[2]}」無法辨識，請使用如 TWD、JPY、美金 等格式。`;
         return await this.expense.updateExpenseCurrency(groupId, seq, currency, displayName);
       }
-      const updateCurrencyNoValMatch = input.match(/^修改幣別\s*#(\d+)$/);
+      const updateCurrencyNoValMatch = normalizedInput.match(/^修改幣別\s*#(\d+)\s*$/);
       if (updateCurrencyNoValMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        await this.crud.deleteSession(userId);
         return await this.wizard.startModifyCurrencyWizard(groupId, userId, parseInt(updateCurrencyNoValMatch[1], 10));
       }
 
       // 修改支付人 #N
-      const updatePayerMatch = input.match(/^修改支付人\s*#(\d+)$/);
+      const updatePayerMatch = normalizedInput.match(/^修改支付人\s*#(\d+)\s*$/);
       if (updatePayerMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        await this.crud.deleteSession(userId);
         return await this.wizard.startModifyPayerWizard(groupId, userId, parseInt(updatePayerMatch[1], 10));
       }
 
       // 修改分攤人 #N
-      const updateSharersMatch = input.match(/^修改分攤人\s*#(\d+)$/);
+      const updateSharersMatch = normalizedInput.match(/^修改分攤人\s*#(\d+)\s*$/);
       if (updateSharersMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        await this.crud.deleteSession(userId);
         return await this.wizard.startModifySharersWizard(groupId, userId, parseInt(updateSharersMatch[1], 10));
       }
 
