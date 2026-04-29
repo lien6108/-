@@ -16,6 +16,8 @@ export enum WizardStep {
   AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM = 'AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM',
   AWAITING_EXPENSE_TO_MODIFY = 'AWAITING_EXPENSE_TO_MODIFY',
   AWAITING_EXPENSE_TO_DELETE = 'AWAITING_EXPENSE_TO_DELETE',
+  AWAITING_MODIFY_AMOUNT = 'AWAITING_MODIFY_AMOUNT',
+  AWAITING_MODIFY_CURRENCY = 'AWAITING_MODIFY_CURRENCY',
 }
 
 const CANCEL = '取消';
@@ -61,9 +63,43 @@ export class WizardAgent {
   async startDeleteWizard(groupId: string, userId: string, providedGroupSeq?: number): Promise<messagingApi.Message> {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
     if (expenses.length === 0) return { type: 'text', text: '目前沒有未結算的記帳。' };
-    if (providedGroupSeq) return this.toDeleteConfirm(groupId, userId, providedGroupSeq);
+    if (providedGroupSeq) return this.toDeleteConfirm(groupId, userId, providedGroupSeq, expenses);
     await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_EXPENSE_TO_DELETE, JSON.stringify({}));
     return this.chooseExpensePrompt('請選擇要刪除的編號。', expenses);
+  }
+
+  async startModifyFieldSelect(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    return {
+      type: 'text',
+      text: `修改 #${seq}，要改什麼？`,
+      quickReply: {
+        items: [
+          this.qr(`修改金額 #${seq}`, `修改金額 #${seq}`),
+          this.qr(`修改幣別 #${seq}`, `修改幣別 #${seq}`),
+          this.qr(CANCEL, CANCEL)
+        ]
+      }
+    };
+  }
+
+  async startModifyAmountWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_AMOUNT, JSON.stringify({ groupSeq: seq }));
+    return { type: 'text', text: `#${seq} 的新金額（原幣金額）：`, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+  }
+
+  async startModifyCurrencyWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_CURRENCY, JSON.stringify({ groupSeq: seq }));
+    return {
+      type: 'text',
+      text: `#${seq} 的新幣別：`,
+      quickReply: {
+        items: [
+          this.qr('TWD', 'TWD'), this.qr('JPY', 'JPY'), this.qr('USD', 'USD'),
+          this.qr('KRW', 'KRW'), this.qr('EUR', 'EUR'), this.qr('HKD', 'HKD'),
+          this.qr(CANCEL, CANCEL)
+        ]
+      }
+    };
   }
 
   async handleNext(session: Session, text: string, displayName: string): Promise<string | messagingApi.Message | null> {
@@ -76,6 +112,26 @@ export class WizardAgent {
 
     const step = session.step as WizardStep;
     switch (step) {
+      case WizardStep.AWAITING_EXPENSE_TO_DELETE: {
+        if (input === '確認') {
+          const seq = data.groupSeq;
+          await this.crud.deleteSession(session.user_id);
+          return await this.expenseAgent.deleteExpense(session.group_id, seq, displayName);
+        }
+        break;
+      }
+      case WizardStep.AWAITING_MODIFY_AMOUNT: {
+        const amount = parseFloat(input.replace(/,/g, ''));
+        if (isNaN(amount) || amount <= 0) return { type: 'text', text: '請輸入有效金額（大於 0 的數字）：', quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+        await this.crud.deleteSession(session.user_id);
+        return await this.expenseAgent.updateExpense(session.group_id, data.groupSeq, amount, displayName);
+      }
+      case WizardStep.AWAITING_MODIFY_CURRENCY: {
+        const currency = resolveCurrency(input);
+        if (!currency) return { type: 'text', text: `「${input}」無法辨識，請輸入如 TWD、JPY、美金 等：`, quickReply: { items: [this.qr('TWD', 'TWD'), this.qr('JPY', 'JPY'), this.qr('USD', 'USD'), this.qr(CANCEL, CANCEL)] } };
+        await this.crud.deleteSession(session.user_id);
+        return await this.expenseAgent.updateExpenseCurrency(session.group_id, data.groupSeq, currency, displayName);
+      }
       case WizardStep.AWAITING_EXPENSE_DRAFT_MENU:
         if (input === '確認送出') {
           await this.crud.deleteSession(session.user_id);
@@ -172,7 +228,10 @@ export class WizardAgent {
     return { type: 'text', text: title, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
   }
 
-  private async toDeleteConfirm(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
-    return { type: 'text', text: `確認要刪除 #${seq} 嗎？`, quickReply: { items: [this.qr('確認', '確認'), this.qr(CANCEL, CANCEL)] } };
+  private async toDeleteConfirm(groupId: string, userId: string, seq: number, expenses: any[]): Promise<messagingApi.Message> {
+    const exp = expenses.find(e => e.group_seq === seq);
+    const detail = exp ? `（${exp.description} / ${exp.amount}）` : '';
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_EXPENSE_TO_DELETE, JSON.stringify({ groupSeq: seq }));
+    return { type: 'text', text: `確認要刪除 #${seq}${detail} 嗎？`, quickReply: { items: [this.qr('確認', '確認'), this.qr(CANCEL, CANCEL)] } };
   }
 }

@@ -168,6 +168,14 @@ export class MainAgent {
         return await this.wizard.startDeleteWizard(groupId, userId, parseInt(deleteMatch[1], 10));
       }
 
+      // 修改 #N → 詢問要改什麼
+      const modifySelectMatch = input.match(/^修改\s*#(\d+)$/);
+      if (modifySelectMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyFieldSelect(groupId, userId, parseInt(modifySelectMatch[1], 10));
+      }
+
+      // 修改金額 #N 100（含金額直接改）或 修改金額 #N（啟動 wizard）
       const updateAmountMatch = input.match(/^修改金額\s*#(\d+)\s*([\d,]+(?:\.\d+)?)$/);
       if (updateAmountMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
@@ -176,7 +184,13 @@ export class MainAgent {
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤，請輸入大於 0 的數字。';
         return await this.expense.updateExpense(groupId, seq, amount, displayName);
       }
+      const updateAmountNoValMatch = input.match(/^修改金額\s*#(\d+)$/);
+      if (updateAmountNoValMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyAmountWizard(groupId, userId, parseInt(updateAmountNoValMatch[1], 10));
+      }
 
+      // 修改幣別 #N JPY（含幣別直接改）或 修改幣別 #N（啟動 wizard）
       const updateCurrencyMatch = input.match(/^修改幣別\s*#(\d+)\s*(.+)$/);
       if (updateCurrencyMatch) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
@@ -184,6 +198,11 @@ export class MainAgent {
         const currency = resolveCurrency(updateCurrencyMatch[2].trim());
         if (!currency) return '幣別格式錯誤。';
         return await this.expense.updateExpenseCurrency(groupId, seq, currency, displayName);
+      }
+      const updateCurrencyNoValMatch = input.match(/^修改幣別\s*#(\d+)$/);
+      if (updateCurrencyNoValMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyCurrencyWizard(groupId, userId, parseInt(updateCurrencyNoValMatch[1], 10));
       }
 
       if (input === '修改') {

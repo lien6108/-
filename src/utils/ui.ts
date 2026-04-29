@@ -44,9 +44,9 @@ export function createExpenseSuccessFlex(
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '修改', text: '修改' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '修改', text: `修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
           { type: 'button', action: { type: 'message', label: '刪除', text: `刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '完整清單', text: '清單' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
+          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
         ]
       }
     }
