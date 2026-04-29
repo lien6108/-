@@ -182,9 +182,13 @@ export class ExpenseAgent {
     const splits = await this.crud.getExpenseSplits(exp.id);
     const share = splits.length ? splits[0].share_amount : 0;
 
+    const amountDisplay = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+      ? `${exp.currency} ${exp.original_amount}（台幣 ${exp.amount}）`
+      : `TWD ${exp.amount}`;
+
     return {
       type: 'text',
-      text: `${requestName} 已修改 #${groupSeq}\n金額：${exp.amount}\n分攤：${splits.length} 人，每人 ${share}`,
+      text: `${requestName} 已修改 #${groupSeq}\n金額：${amountDisplay}\n分攤：${splits.length} 人，每人 ${share}`,
       quickReply: this.getExpenseQuickReply(groupSeq)
     };
   }
