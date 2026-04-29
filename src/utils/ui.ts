@@ -87,9 +87,18 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
     }
   };
 
+  const templateText = '名稱：\n金額：\n幣別：\n支付者：\n分攤人：';
   const msg2: messagingApi.Message = {
     type: 'text',
-    text: '名稱：\n金額：\n幣別：\n支付者：\n分攤人：'
+    text: templateText,
+    quickReply: {
+      items: [
+        {
+          type: 'action',
+          action: { type: 'clipboard', label: '📋 複製模板', clipboardText: templateText }
+        }
+      ]
+    }
   };
 
   return [msg1, msg2];
