@@ -205,6 +205,20 @@ export class MainAgent {
         return await this.wizard.startModifyCurrencyWizard(groupId, userId, parseInt(updateCurrencyNoValMatch[1], 10));
       }
 
+      // 修改支付人 #N
+      const updatePayerMatch = input.match(/^修改支付人\s*#(\d+)$/);
+      if (updatePayerMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifyPayerWizard(groupId, userId, parseInt(updatePayerMatch[1], 10));
+      }
+
+      // 修改分攤人 #N
+      const updateSharersMatch = input.match(/^修改分攤人\s*#(\d+)$/);
+      if (updateSharersMatch) {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        return await this.wizard.startModifySharersWizard(groupId, userId, parseInt(updateSharersMatch[1], 10));
+      }
+
       if (input === '修改') {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
         return await this.wizard.startModifyWizard(groupId, userId);

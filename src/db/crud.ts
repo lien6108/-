@@ -57,6 +57,17 @@ export interface Trip {
   closed_at?: string | null;
 }
 
+export interface WizardData {
+  description?: string;
+  amount?: number;
+  currency?: string;
+  payerUserId?: string;
+  payerName?: string;
+  specificUserIds?: string[];
+  groupSeq?: number;
+  [key: string]: any;
+}
+
 export class CRUD {
   private db: D1Database;
 
@@ -357,6 +368,24 @@ export class CRUD {
 
     const share = Math.round((expense.amount / splits.length) * 100) / 100;
     await this.db.prepare(`UPDATE expense_splits SET share_amount = ? WHERE expense_id = ?`).bind(share, expenseId).run();
+  }
+
+  async updateExpensePayer(expenseId: number, payerUserId: string, payerName: string): Promise<Expense | null> {
+    await this.db.prepare(
+      `UPDATE expenses SET payer_user_id = ?, payer_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+    ).bind(payerUserId, payerName, expenseId).run();
+    return this.db.prepare(`SELECT * FROM expenses WHERE id = ?`).bind(expenseId).first<Expense>();
+  }
+
+  async replaceExpenseSplits(expenseId: number, debtors: { userId: string; name: string }[]): Promise<void> {
+    await this.db.prepare(`DELETE FROM expense_splits WHERE expense_id = ?`).bind(expenseId).run();
+    if (debtors.length === 0) return;
+    const stmts = debtors.map(d =>
+      this.db.prepare(`INSERT INTO expense_splits (expense_id, debtor_user_id, debtor_name, share_amount) VALUES (?, ?, ?, 0)`)
+        .bind(expenseId, d.userId, d.name)
+    );
+    await this.db.batch(stmts);
+    await this.recalcSplitAmounts(expenseId);
   }
 
   // --- Settlement ---

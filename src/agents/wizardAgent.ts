@@ -18,6 +18,8 @@ export enum WizardStep {
   AWAITING_EXPENSE_TO_DELETE = 'AWAITING_EXPENSE_TO_DELETE',
   AWAITING_MODIFY_AMOUNT = 'AWAITING_MODIFY_AMOUNT',
   AWAITING_MODIFY_CURRENCY = 'AWAITING_MODIFY_CURRENCY',
+  AWAITING_MODIFY_PAYER = 'AWAITING_MODIFY_PAYER',
+  AWAITING_MODIFY_SHARERS = 'AWAITING_MODIFY_SHARERS',
 }
 
 const CANCEL = '取消';
@@ -69,6 +71,7 @@ export class WizardAgent {
   }
 
   async startModifyFieldSelect(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    const members = await this.crud.getParticipatingMembers(groupId);
     return {
       type: 'text',
       text: `修改 #${seq}，要改什麼？`,
@@ -76,6 +79,8 @@ export class WizardAgent {
         items: [
           this.qr(`修改金額 #${seq}`, `修改金額 #${seq}`),
           this.qr(`修改幣別 #${seq}`, `修改幣別 #${seq}`),
+          this.qr(`修改支付人 #${seq}`, `修改支付人 #${seq}`),
+          this.qr(`修改分攤人 #${seq}`, `修改分攤人 #${seq}`),
           this.qr(CANCEL, CANCEL)
         ]
       }
@@ -84,14 +89,14 @@ export class WizardAgent {
 
   async startModifyAmountWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
     await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_AMOUNT, JSON.stringify({ groupSeq: seq }));
-    return { type: 'text', text: `#${seq} 的新金額（原幣金額）：`, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+    return { type: 'text', text: `請輸入 #${seq} 的新金額：`, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
   }
 
   async startModifyCurrencyWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
     await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_CURRENCY, JSON.stringify({ groupSeq: seq }));
     return {
       type: 'text',
-      text: `#${seq} 的新幣別：`,
+      text: `請輸入 #${seq} 的新幣別（中文英文均可）：`,
       quickReply: {
         items: [
           this.qr('TWD', 'TWD'), this.qr('JPY', 'JPY'), this.qr('USD', 'USD'),
@@ -99,6 +104,25 @@ export class WizardAgent {
           this.qr(CANCEL, CANCEL)
         ]
       }
+    };
+  }
+
+  async startModifyPayerWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    const members = await this.crud.getParticipatingMembers(groupId);
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_PAYER, JSON.stringify({ groupSeq: seq }));
+    const items: messagingApi.QuickReplyItem[] = members.slice(0, 12).map(m => this.qr(m.display_name, m.display_name));
+    items.push(this.qr(CANCEL, CANCEL));
+    return { type: 'text', text: `請輸入 #${seq} 的新支付人：`, quickReply: { items } };
+  }
+
+  async startModifySharersWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
+    const members = await this.crud.getParticipatingMembers(groupId);
+    const memberList = members.map(m => `• ${m.display_name}`).join('\n');
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_SHARERS, JSON.stringify({ groupSeq: seq }));
+    return {
+      type: 'text',
+      text: `請輸入 #${seq} 的新分攤人，用空格隔開，或輸入「所有人」：\n\n目前成員：\n${memberList}`,
+      quickReply: { items: [this.qr('所有人', '所有人'), this.qr(CANCEL, CANCEL)] }
     };
   }
 
@@ -131,6 +155,45 @@ export class WizardAgent {
         if (!currency) return { type: 'text', text: `「${input}」無法辨識，請輸入如 TWD、JPY、美金 等：`, quickReply: { items: [this.qr('TWD', 'TWD'), this.qr('JPY', 'JPY'), this.qr('USD', 'USD'), this.qr(CANCEL, CANCEL)] } };
         await this.crud.deleteSession(session.user_id);
         return await this.expenseAgent.updateExpenseCurrency(session.group_id, data.groupSeq, currency, displayName);
+      }
+      case WizardStep.AWAITING_MODIFY_PAYER: {
+        const cleanName = input.replace(/^@/, '').trim();
+        const member = await this.crud.getMemberByDisplayName(session.group_id, cleanName);
+        if (!member) {
+          const members = await this.crud.getParticipatingMembers(session.group_id);
+          const items: messagingApi.QuickReplyItem[] = members.slice(0, 12).map(m => this.qr(m.display_name, m.display_name));
+          items.push(this.qr(CANCEL, CANCEL));
+          return { type: 'text', text: `找不到「${cleanName}」，請重新輸入成員名稱：`, quickReply: { items } };
+        }
+        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
+        if (!expense) { await this.crud.deleteSession(session.user_id); return `找不到 #${data.groupSeq}。`; }
+        await this.crud.updateExpensePayer(expense.id, member.user_id, member.display_name);
+        await this.crud.deleteSession(session.user_id);
+        return { type: 'text', text: `已修改 #${data.groupSeq} 支付人為「${member.display_name}」。`, quickReply: getStandardQuickReply() };
+      }
+      case WizardStep.AWAITING_MODIFY_SHARERS: {
+        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
+        if (!expense) { await this.crud.deleteSession(session.user_id); return `找不到 #${data.groupSeq}。`; }
+        let debtors: { userId: string; name: string }[];
+        if (/^(所有人|全部|all|全員)$/i.test(input.trim())) {
+          const all = await this.crud.getParticipatingMembers(session.group_id);
+          debtors = all.map(m => ({ userId: m.user_id, name: m.display_name }));
+        } else {
+          const names = input.split(/[\s,，、]+/).filter(s => s.length > 0);
+          debtors = [];
+          const missing: string[] = [];
+          for (const n of names) {
+            const clean = n.replace(/^@/, '').trim();
+            const m = await this.crud.getMemberByDisplayName(session.group_id, clean);
+            if (m) debtors.push({ userId: m.user_id, name: m.display_name });
+            else missing.push(n);
+          }
+          if (missing.length > 0) return { type: 'text', text: `找不到成員：${missing.join('、')}，請重新輸入：`, quickReply: { items: [this.qr('所有人', '所有人'), this.qr(CANCEL, CANCEL)] } };
+        }
+        await this.crud.replaceExpenseSplits(expense.id, debtors);
+        await this.crud.deleteSession(session.user_id);
+        const sharerNames = debtors.map(d => d.name).join('、');
+        return { type: 'text', text: `已修改 #${data.groupSeq} 分攤人為：${sharerNames}。`, quickReply: getStandardQuickReply() };
       }
       case WizardStep.AWAITING_EXPENSE_DRAFT_MENU:
         if (input === '確認送出') {
