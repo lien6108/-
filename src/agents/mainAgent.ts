@@ -17,30 +17,38 @@ function parseTemplateExpense(input: string): {
   currency?: string;
   payerName?: string;
   sharers?: string[];
+  errors?: string[];
 } | null {
   // 必須包含至少一個模板欄位才進入此 parser
   if (!/[名稱金額幣別支付分攤][：:]/.test(input)) return null;
 
-  // 全形空白轉半形，方便切割
-  const normalized = input.replace(/　/g, ' ');
+  // 換行、全形空白全部轉半形空白，方便切割
+  const normalized = input.replace(/\r?\n/g, ' ').replace(/　/g, ' ');
   const fields: Record<string, string> = {};
 
   // 以已知欄位名稱作為切割點
   const segments = normalized.split(/(?=(?:名稱|金額|幣別|支付者|分攤人)[：:])/);
   for (const seg of segments) {
-    const m = seg.match(/^(名稱|金額|幣別|支付者|分攤人)[：:]\s*(.+)$/);
+    const m = seg.match(/^(名稱|金額|幣別|支付者|分攤人)[：:]\s*(.+)/);
     if (m) fields[m[1]] = m[2].trim();
   }
 
+  const errors: string[] = [];
+  if (!fields['名稱']) errors.push('【名稱】欄位遺漏或為空');
+
   const amount = fields['金額'] ? parseFloat(fields['金額'].replace(/,/g, '')) : NaN;
-  if (!fields['名稱'] || isNaN(amount) || amount <= 0) return null;
+  if (!fields['金額']) errors.push('【金額】欄位遺漏');
+  else if (isNaN(amount) || amount <= 0) errors.push(`【金額】「${fields['金額']}」不是有效數字`);
+
+  // 若名稱與金額都沒有，視為非模板訊息
+  if (!fields['名稱'] && !fields['金額']) return null;
 
   // 分攤人：所有人/全部 → 視同未指定（全體分攤）
   let sharers: string[] | undefined;
   if (fields['分攤人']) {
     const raw = fields['分攤人'].trim();
     if (/^(所有人|全部|all|全員)$/i.test(raw)) {
-      sharers = undefined; // 全體
+      sharers = undefined;
     } else {
       sharers = raw.split(/[\s,，、]+/).filter(s => s.length > 0);
     }
@@ -48,10 +56,11 @@ function parseTemplateExpense(input: string): {
 
   return {
     description: fields['名稱'],
-    amount,
+    amount: isNaN(amount) ? undefined : amount,
     currency: fields['幣別'],
     payerName: fields['支付者'],
     sharers,
+    errors: errors.length > 0 ? errors : undefined,
   };
 }
 
@@ -189,31 +198,53 @@ export class MainAgent {
 
       // ── 完整模板格式：名稱：xx　金額：xx　幣別：xx　支付者：xx　分攤人：xx ──
       const tmpl = parseTemplateExpense(input);
-      if (tmpl && tmpl.description && tmpl.amount) {
+      if (tmpl) {
         if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
 
-        // 解析付款人
+        // 有格式錯誤即回報
+        if (tmpl.errors) return `記帳格式有誤，請檢查：\n${tmpl.errors.join('\n')}`;
+
+        if (!tmpl.description || !tmpl.amount) return '記帳格式錯誤，請檢查名稱與金額。';
+
+        // 解析付款人（支持「我」、@前綴、直接名字）
         let payerUserId = userId;
         let payerName = displayName;
         if (tmpl.payerName) {
-          const payerMember = await this.crud.getMemberByDisplayName(groupId, tmpl.payerName);
-          if (payerMember) { payerUserId = payerMember.user_id; payerName = payerMember.display_name; }
-          else return `找不到付款人「${tmpl.payerName}」，請確認成員名稱。`;
+          const cleanPayer = tmpl.payerName.replace(/^@/, '').trim();
+          if (cleanPayer === '我') {
+            // 保持預設（發訊者）
+          } else {
+            const payerMember = await this.crud.getMemberByDisplayName(groupId, cleanPayer);
+            if (payerMember) { payerUserId = payerMember.user_id; payerName = payerMember.display_name; }
+            else return `找不到付款人「${cleanPayer}」，請確認成員名稱。`;
+          }
         }
 
-        // 解析幣別與換算
-        let currency = tmpl.currency ? (resolveCurrency(tmpl.currency) ?? 'TWD') : 'TWD';
+        // 分攤人中的「我」替換為發訊者
+        let sharers = tmpl.sharers;
+        if (sharers) {
+          sharers = sharers.map(s => (s === '我' ? displayName : s));
+        }
+
+        // 解析幣別
+        let currency = 'TWD';
+        if (tmpl.currency) {
+          const resolved = resolveCurrency(tmpl.currency);
+          if (!resolved) return `【幣別】「${tmpl.currency}」無法辨識，請使用如 TWD、JPY、USD 等格式。`;
+          currency = resolved;
+        }
         let amt = tmpl.amount;
         let originalAmount: number | undefined;
         if (currency !== 'TWD') {
           const rate = await this.crud.getExchangeRate(currency);
           if (rate) { originalAmount = amt; amt = Math.round(amt * rate * 100) / 100; }
+          else return `無法取得 ${currency} 對 TWD 的化率，請改使用 TWD 或稍後再試。`;
         }
 
         return await this.expense.addExpense(
           groupId, payerUserId, payerName,
           tmpl.description, amt,
-          tmpl.sharers, currency, originalAmount,
+          sharers, currency, originalAmount,
           (mentionMap as unknown as Record<string, string>) ?? {}
         );
       }
