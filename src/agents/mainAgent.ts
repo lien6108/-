@@ -35,9 +35,16 @@ function parseTemplateExpense(input: string): {
   const amount = fields['金額'] ? parseFloat(fields['金額'].replace(/,/g, '')) : NaN;
   if (!fields['名稱'] || isNaN(amount) || amount <= 0) return null;
 
-  const sharers = fields['分攤人']
-    ? fields['分攤人'].split(/[\s,，、]+/).filter(s => s.length > 0)
-    : undefined;
+  // 分攤人：所有人/全部 → 視同未指定（全體分攤）
+  let sharers: string[] | undefined;
+  if (fields['分攤人']) {
+    const raw = fields['分攤人'].trim();
+    if (/^(所有人|全部|all|全員)$/i.test(raw)) {
+      sharers = undefined; // 全體
+    } else {
+      sharers = raw.split(/[\s,，、]+/).filter(s => s.length > 0);
+    }
+  }
 
   return {
     description: fields['名稱'],

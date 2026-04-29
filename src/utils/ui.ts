@@ -44,9 +44,9 @@ export function createExpenseSuccessFlex(
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '刪除', text: `刪除 #${exp.group_seq}` }, style: 'link', height: 'sm', color: '#ff4d4f', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'link', height: 'sm', color: '#46494c', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '開始記帳', text: '開始記帳' }, style: 'primary', height: 'sm', color: '#46494c', flex: 2 }
+          { type: 'button', action: { type: 'message', label: '🗑 刪除', text: `刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '📋 清單', text: '清單' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '➕ 記帳', text: '開始記帳' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
         ]
       }
     }
@@ -67,7 +67,13 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
       '  記帳 晚餐 500\n' +
       '（注意：「記帳」後要空格，名稱與金額之間也要空格）\n\n' +
       '【完整格式】\n' +
-      '若有指定幣別、付款人或分攤人，請使用完整格式（見下一則訊息複製）\n\n' +
+      '若有指定幣別、付款人或分攤人，請複製下一則訊息填寫。\n' +
+      '範例：\n' +
+      '名稱：拉麵\n' +
+      '金額：800\n' +
+      '幣別：JPY\n' +
+      '支付者：Alice\n' +
+      '分攤人：@Bob 或 所有人\n\n' +
       `目前成員：${memberList}`,
     quickReply: {
       items: [
@@ -83,7 +89,7 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
 
   const msg2: messagingApi.Message = {
     type: 'text',
-    text: '名稱：　金額：　幣別：　支付者：　分攤人：'
+    text: '名稱：\n金額：\n幣別：\n支付者：\n分攤人：'
   };
 
   return [msg1, msg2];

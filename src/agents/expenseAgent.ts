@@ -40,12 +40,15 @@ export class ExpenseAgent {
     const missing: string[] = [];
 
     for (const name of names) {
+      // 先查 mentionMap（LINE @mention 已被 lineHandler 替換為 safeMention）
       const byMention = mentionMap[name] || mentionMap[`@${name}`];
       if (byMention) {
         userIds.push(byMention);
         continue;
       }
-      const m = all.find(x => x.display_name.toLowerCase() === name.toLowerCase());
+      // 去掉 @ 前綴再做顯示名稱比對
+      const cleanName = name.startsWith('@') ? name.slice(1) : name;
+      const m = all.find(x => x.display_name.toLowerCase() === cleanName.toLowerCase());
       if (m) userIds.push(m.user_id);
       else missing.push(name);
     }
