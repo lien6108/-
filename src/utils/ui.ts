@@ -284,8 +284,8 @@ export function createMyAccountFlex(
         type: 'box', layout: 'horizontal', margin: 'sm',
         contents: [
           { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, wrap: true },
-          { type: 'text', text: `付款：${item.payer_name}`, size: 'xs', color: '#888888', flex: 3, wrap: true },
-          { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' }
+          { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' },
+          { type: 'text', text: `付款：${item.payer_name}`, size: 'xs', color: '#888888', flex: 3, wrap: true, align: 'end' }
         ]
       }));
 
@@ -316,8 +316,7 @@ export function createMyAccountFlex(
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
+          { type: 'button', action: { type: 'message', label: '完整清單', text: '清單' }, style: 'secondary', height: 'sm', flex: 1 }
         ]
       }
     }
