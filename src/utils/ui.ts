@@ -144,65 +144,6 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
   return { items: items.slice(0, 13) };
 }
 
-export function createExpensePickFlex(
-  expenses: any[],
-  mode: 'delete' | 'modify'
-): messagingApi.FlexMessage {
-  const isDelete = mode === 'delete';
-  const headerText = isDelete ? '🗑️ 選擇要刪除的帳單' : '✏️ 選擇要修改的帳單';
-  const headerColor = isDelete ? '#a07878' : '#7a8898';
-  const btnLabel = isDelete ? '刪除' : '修改';
-  const btnColor = isDelete ? '#b07878' : '#7a9aaa';
-
-  const rows = expenses.map(exp => {
-    const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
-      ? `${exp.currency} ${exp.original_amount}`
-      : `TWD ${exp.amount}`;
-    return {
-      type: 'box', layout: 'horizontal', margin: 'md',
-      contents: [
-        {
-          type: 'box', layout: 'vertical', flex: 5,
-          contents: [
-            { type: 'text', text: `#${exp.group_seq}  ${exp.description}`, size: 'sm', weight: 'bold', wrap: true },
-            { type: 'text', text: `${amountText}  ${exp.payer_name}`, size: 'xs', color: '#888888', margin: 'xs' }
-          ]
-        },
-        {
-          type: 'button',
-          action: { type: 'message', label: btnLabel, text: `${btnLabel} #${exp.group_seq}` },
-          style: 'primary', height: 'sm', flex: 2,
-          color: btnColor
-        }
-      ]
-    };
-  });
-
-  const contents: any[] = [
-    ...rows,
-    { type: 'separator', margin: 'lg' },
-    {
-      type: 'button',
-      action: { type: 'message', label: '取消', text: '取消' },
-      style: 'secondary', height: 'sm', margin: 'md'
-    }
-  ];
-
-  return {
-    type: 'flex',
-    altText: headerText,
-    contents: {
-      type: 'bubble',
-      size: 'mega',
-      header: {
-        type: 'box', layout: 'vertical', backgroundColor: headerColor,
-        contents: [{ type: 'text', text: headerText, weight: 'bold', size: 'md', color: '#ffffff' }]
-      },
-      body: { type: 'box', layout: 'vertical', contents }
-    }
-  } as any;
-}
-
 export function createExpenseListFlex(expenses: any[], totalTwd: number): messagingApi.FlexMessage {
   const rows = expenses.map(exp => {
     const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
