@@ -66,7 +66,7 @@ app.get('/view/current', (c) => {
 <html><head><title>目前分帳清單</title>${viewStyle}
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head><body>
-<div class="header">📋 目前分帳清單</div>
+<div class="header">🐾 目前分帳清單</div>
 <div id="loading" class="loading">載入中…</div>
 <div id="content"></div>
 <script>

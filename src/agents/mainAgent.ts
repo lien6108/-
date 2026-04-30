@@ -155,7 +155,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n🦴 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n🐾 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n🐶 成員\n• 加入 / 退出 / 成員',
           quickReply: getStandardQuickReply()
         };
       }
@@ -164,7 +164,7 @@ export class MainAgent {
         if (!isParticipating) {
           return {
             type: 'text',
-            text: '你還沒加入分帳名單，加入後就能和大家一起記帳啦！😊',
+            text: '你還沒加入分帳名單，加入後就能和大家一起記帳啦！🐶',
             quickReply: {
               items: [
                 { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
@@ -177,7 +177,7 @@ export class MainAgent {
         }
         return {
           type: 'text',
-          text: '有什麼需要幫忙的嗎？😊',
+          text: '有什麼需要幫忙的嗎？🐶',
           quickReply: getStandardQuickReply()
         };
       }

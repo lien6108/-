@@ -179,7 +179,7 @@ export class WizardAgent {
         if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
         await this.crud.updateExpensePayer(expense.id, member.user_id, member.display_name);
         await this.crud.deleteSession(session.user_id);
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getStandardQuickReply() };
+        return { type: 'text', text: `🐾 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getStandardQuickReply() };
       }
       case WizardStep.AWAITING_MODIFY_SHARERS: {
         const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
@@ -203,7 +203,7 @@ export class WizardAgent {
         await this.crud.replaceExpenseSplits(expense.id, debtors);
         await this.crud.deleteSession(session.user_id);
         const sharerNames = debtors.map(d => d.name).join('、');
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 分攤人為：${sharerNames}！`, quickReply: getStandardQuickReply() };
+        return { type: 'text', text: `🐾 已修改 #${data.groupSeq} 分攤人為：${sharerNames}！`, quickReply: getStandardQuickReply() };
       }
       case WizardStep.AWAITING_TRIP_NAME: {
         const tripName = input.trim();
@@ -218,7 +218,7 @@ export class WizardAgent {
         await this.crud.deleteSession(session.user_id);
         return {
           type: 'text',
-          text: `✅ 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始記帳啊！`,
+          text: `🐾 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始記帳啊！`,
           quickReply: { items: [this.qr('開始記帳', '開始記帳'), this.qr('成員', '成員'), this.qr(CANCEL, CANCEL)] }
         };
       }

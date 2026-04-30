@@ -76,7 +76,7 @@ export class LineEventHandler {
       if (dmSession?.group_id === 'dm' && dmSession?.step === 'AWAITING_FEEDBACK') {
         await this.crud.deleteSession(userId);
         await this.adminAgent.notifyAdmin(`💬 使用者回饋\n來自：${await this.getDisplayName('unknown', userId)} (${userId})\n內容：${t}`);
-        if (event.replyToken) await this.reply(event.replyToken, '謝謝您的回饋，我們收到囉！🙏');
+        if (event.replyToken) await this.reply(event.replyToken, '謝謝您的回饋，我們收到囉！🐾');
         return;
       }
 
@@ -182,7 +182,7 @@ export class LineEventHandler {
     if (!event.replyToken) return;
     const tutorialMsg: messagingApi.Message = {
       type: 'text',
-      text: '感謝加入「分帳小幫手」！✨\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率並結算的工具。\n\n🚀 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. 輸入「開始記帳」即可開始！\n\n💡 提示：輸入「說明」可查看完整指令清單。',
+      text: '感謝加入「分帳小幫手」！🐾\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率並結算的工具。\n\n🐕 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. 輸入「開始記帳」即可開始！\n\n🦴 提示：輸入「說明」可查看完整指令清單。',
       quickReply: {
         items: [
           { type: 'action', action: { type: 'message', label: '查看說明', text: '說明' } },
@@ -238,7 +238,7 @@ export class LineEventHandler {
         header: {
           type: 'box', layout: 'vertical', backgroundColor: '#46494c',
           contents: [
-            { type: 'text', text: '📋 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
+            { type: 'text', text: '🐾 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
             { type: 'text', text: `✈️ ${tripName}`, color: '#cccccc', size: 'xs' }
           ]
         },

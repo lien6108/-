@@ -25,12 +25,12 @@ export class AdminAgent {
 
     if (['維修開啟', 'maintenance on', '維修 on'].includes(t)) {
       await this.crud.setMaintenanceMode(true);
-      return '✅ 已開啟維修模式。';
+      return '🐾 已開啟維修模式。';
     }
 
     if (['維修關閉', 'maintenance off', '維修 off'].includes(t)) {
       await this.crud.setMaintenanceMode(false);
-      return '✅ 已關閉維修模式。';
+      return '🐾 已關閉維修模式。';
     }
 
     if (['維修狀態', 'maintenance status'].includes(t)) {
@@ -41,14 +41,14 @@ export class AdminAgent {
     if (['清除資料', 'clear data', 'reset all'].includes(t)) {
       try {
         await this.crud.clearAllData();
-        return '✅ 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
+        return '🐾 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
       } catch (e: any) {
         return `❌ 清除失敗：${e?.message || e}`;
       }
     }
 
     if (['說明', 'help', '指令'].includes(t)) {
-      return '📋 管理員指令清單：\n\n' +
+      return '🐾 管理員指令清單：\n\n' +
         '• 維修開啟 — 開啟維修模式（封鎖一般使用者）\n' +
         '• 維修關閉 — 關閉維修模式\n' +
         '• 維修狀態 — 查看目前維修模式\n' +

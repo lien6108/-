@@ -15,10 +15,10 @@ export function createExpenseSuccessFlex(
     : '（無分攤人）';
 
   const rows: any[] = [
-    { label: '📋 項目', value: exp.description },
+    { label: '🐾 項目', value: exp.description },
     { label: '💰 金額', value: amountText },
-    { label: '🙋 付款人', value: exp.payer_name },
-    { label: '👥 分攤人', value: sharerText },
+    { label: '🐶 付款人', value: exp.payer_name },
+    { label: '🐶 分攤人', value: sharerText },
   ].map(item => ({
     type: 'box', layout: 'horizontal', margin: 'md',
     contents: [
@@ -29,14 +29,14 @@ export function createExpenseSuccessFlex(
 
   return {
     type: 'flex',
-    altText: `✅ 已記帳 #${exp.group_seq} ${exp.description} ${exp.amount}`,
+    altText: `🐾 已記帳 #${exp.group_seq} ${exp.description} ${exp.amount}`,
     contents: {
       type: 'bubble',
       size: 'kilo',
       header: {
         type: 'box', layout: 'horizontal', backgroundColor: '#2ecc71',
         contents: [
-          { type: 'text', text: '✅ 記帳成功', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
+          { type: 'text', text: '🐾 記帳成功', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
           { type: 'text', text: `#${exp.group_seq}`, color: '#d5f5e3', size: 'sm', align: 'end', flex: 0 }
         ]
       },
@@ -61,7 +61,7 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
   const msg1: messagingApi.Message = {
     type: 'text',
     text:
-      '💡 記帳方式說明\n\n' +
+      '🦴 記帳方式說明\n\n' +
       '【簡易記帳】\n' +
       '若此筆金額使用台幣，且由您為所有人付款，可直接輸入：\n' +
       '  記帳 晚餐 500\n' +
@@ -95,7 +95,7 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
       items: [
         {
           type: 'action',
-          action: { type: 'clipboard', label: '📋 複製模板', clipboardText: templateText }
+          action: { type: 'clipboard', label: '🐾 複製模板', clipboardText: templateText }
         }
       ]
     }
@@ -247,7 +247,7 @@ export function createMyAccountFlex(
 
   // 需要轉帳
   const paymentRows: any[] = payments.length === 0
-    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: '#2ecc71', margin: 'sm' }]
+    ? [{ type: 'text', text: '🐾 不需要轉帳給任何人', size: 'sm', color: '#2ecc71', margin: 'sm' }]
     : payments.map(p => ({
         type: 'box', layout: 'horizontal', margin: 'sm',
         contents: [
@@ -303,7 +303,7 @@ export function createMyAccountFlex(
     section('💰 我代墊的帳'),
     ...paidRows,
     separator,
-    section('📋 我需要分攤的帳'),
+    section('🐾 我需要分攤的帳'),
     ...splitRows
   ];
 
@@ -375,7 +375,7 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
         layout: 'vertical',
         spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#46494c' },
+          { type: 'button', action: { type: 'postback', label: '🐾 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#46494c' },
           { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#ff4d4f' }
         ]

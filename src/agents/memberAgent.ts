@@ -21,7 +21,7 @@ export class MemberAgent {
     const names = members.map(m => `- ${m.display_name}`).join('\n');
     return {
       type: 'text',
-      text: `✅ ${displayName} 已加入分帳！\n目前成員 (${members.length})\n${names || '- 無'}`,
+      text: `🐾 ${displayName} 已加入分帳！\n目前成員 (${members.length})\n${names || '- 無'}`,
       quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }
@@ -52,7 +52,7 @@ export class MemberAgent {
 
     return {
       type: 'text',
-      text: `${displayName} 已退出分帳，掰掰！👋\n目前成員 (${members.length})\n${names || '- 無'}`,
+      text: `${displayName} 已退出分帳，掰掰！🐾\n目前成員 (${members.length})\n${names || '- 無'}`,
       quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }
@@ -84,7 +84,7 @@ export class MemberAgent {
 
     return {
       type: 'flex',
-      altText: `👥 分帳成員 (${members.length})`,
+      altText: `🐶 分帳成員 (${members.length})`,
       contents: {
         type: 'bubble',
         size: 'kilo',
