@@ -85,6 +85,8 @@ export class MainAgent {
   async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Map<string, string>): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
+      // 只有在被 @mention 時才回應維修中訊息，其他訊息靜默
+      if (input === 'GREETING') return '🔧 系統維修中，請稍後再試。';
       return null;
     }
 
