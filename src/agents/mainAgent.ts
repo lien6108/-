@@ -118,15 +118,19 @@ export class MainAgent {
       }
 
       if (input === '加入') {
-        return await this.member.joinGroup(groupId, userId, displayName);
+        return await this.member.handleJoinGroup(groupId, userId, displayName);
       }
 
       if (input === '退出') {
-        return await this.member.leaveGroup(groupId, userId, displayName);
+        return await this.member.requestLeave(groupId, userId, displayName);
+      }
+
+      if (input === '確認退出') {
+        return await this.member.confirmLeave(groupId, userId, displayName);
       }
 
       if (input === '成員' || input === 'member') {
-        return await this.member.listMembers(groupId);
+        return await this.member.getMemberList(groupId);
       }
 
       if (input === '說明' || input === 'help' || input === 'HELP') {
