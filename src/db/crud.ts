@@ -95,6 +95,19 @@ export class CRUD {
     return group.is_active === 1;
   }
 
+  // --- Admin: clear all data ---
+  async clearAllData(): Promise<void> {
+    await this.db.batch([
+      this.db.prepare(`DELETE FROM expense_splits`),
+      this.db.prepare(`DELETE FROM expenses`),
+      this.db.prepare(`DELETE FROM settlement_history`),
+      this.db.prepare(`DELETE FROM sessions`),
+      this.db.prepare(`DELETE FROM trips`),
+      this.db.prepare(`UPDATE groups SET current_trip_id = NULL`),
+      this.db.prepare(`UPDATE group_members SET is_participating = 0`),
+    ]);
+  }
+
   // --- System settings ---
   async setMaintenanceMode(enabled: boolean): Promise<void> {
     await this.db.prepare(

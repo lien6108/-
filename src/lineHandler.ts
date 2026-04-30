@@ -198,7 +198,11 @@ export class LineEventHandler {
       const on = await this.crud.isMaintenanceMode();
       return `目前維修模式：${on ? '開啟' : '關閉'}`;
     }
-    return '可用管理指令：維修開啟 / 維修關閉 / 維修狀態';
+    if (['清除資料', 'clear data', 'reset all'].includes(t)) {
+      await this.crud.clearAllData();
+      return '✅ 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
+    }
+    return '可用管理指令：維修開啟 / 維修關閉 / 維修狀態 / 清除資料';
   }
 
   private async getDisplayName(groupId: string, userId: string): Promise<string> {
