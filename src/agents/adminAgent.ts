@@ -39,8 +39,12 @@ export class AdminAgent {
     }
 
     if (['清除資料', 'clear data', 'reset all'].includes(t)) {
-      await this.crud.clearAllData();
-      return '✅ 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
+      try {
+        await this.crud.clearAllData();
+        return '✅ 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
+      } catch (e: any) {
+        return `❌ 清除失敗：${e?.message || e}`;
+      }
     }
 
     if (['說明', 'help', '指令'].includes(t)) {

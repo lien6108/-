@@ -102,8 +102,8 @@ export class CRUD {
       this.db.prepare(`DELETE FROM expenses`),
       this.db.prepare(`DELETE FROM settlement_history`),
       this.db.prepare(`DELETE FROM sessions`),
-      this.db.prepare(`DELETE FROM trips`),
       this.db.prepare(`UPDATE groups SET current_trip_id = NULL`),
+      this.db.prepare(`DELETE FROM trips`),
       this.db.prepare(`UPDATE group_members SET is_participating = 0`),
     ]);
   }
