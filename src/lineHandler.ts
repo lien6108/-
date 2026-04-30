@@ -126,10 +126,8 @@ export class LineEventHandler {
     // Administrative controls - ONLY in Private DM from admin
     if (groupId === 'unknown' && this.adminAgent.isAdmin(userId)) {
       const adminReply = await this.adminAgent.handleAdminDM(text);
-      if (adminReply && event.replyToken) {
-        await this.reply(event.replyToken, adminReply);
-        return;
-      }
+      if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。');
+      return;
     }
 
     const replyText = await this.mainAgent.processMessage(groupId, userId, displayName, text, mentionMap);
