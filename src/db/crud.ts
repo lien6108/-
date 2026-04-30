@@ -205,7 +205,12 @@ export class CRUD {
   }
 
   // --- Expense ---
-  private async getNextGroupSeq(groupId: string): Promise<number> {
+  private async getNextGroupSeq(groupId: string, tripId?: string | null): Promise<number> {
+    if (tripId) {
+      const row = await this.db.prepare(`SELECT COALESCE(MAX(group_seq), 0) + 1 AS next_seq FROM expenses WHERE trip_id = ?`)
+        .bind(tripId).first<{ next_seq: number }>();
+      return row?.next_seq || 1;
+    }
     const row = await this.db.prepare(`SELECT COALESCE(MAX(group_seq), 0) + 1 AS next_seq FROM expenses WHERE group_id = ?`)
       .bind(groupId).first<{ next_seq: number }>();
     return row?.next_seq || 1;
@@ -222,8 +227,8 @@ export class CRUD {
     originalAmount?: number
   ): Promise<Expense> {
     await this.getOrCreateGroup(groupId);
-    const groupSeq = await this.getNextGroupSeq(groupId);
     const trip = await this.getCurrentTrip(groupId);
+    const groupSeq = await this.getNextGroupSeq(groupId, trip?.id);
 
     const expense = await this.db.prepare(
       `INSERT INTO expenses (group_id, trip_id, group_seq, payer_user_id, payer_name, description, amount, currency, original_amount)
