@@ -59,7 +59,7 @@ export class WizardAgent {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
     if (expenses.length === 0) return { type: 'text', text: '目前沒有未結算的記帳。' };
     await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_EXPENSE_TO_MODIFY, JSON.stringify({}));
-    return this.chooseExpensePrompt('請選擇要修改的編號。', expenses);
+    return this.chooseExpensePrompt('請選擇要修改的編號', expenses, 'modify');
   }
 
   async startDeleteWizard(groupId: string, userId: string, providedGroupSeq?: number): Promise<messagingApi.Message> {
@@ -67,7 +67,7 @@ export class WizardAgent {
     if (expenses.length === 0) return { type: 'text', text: '目前沒有未結算的記帳。' };
     if (providedGroupSeq) return this.toDeleteConfirm(groupId, userId, providedGroupSeq, expenses);
     await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_EXPENSE_TO_DELETE, JSON.stringify({}));
-    return this.chooseExpensePrompt('請選擇要刪除的編號。', expenses);
+    return this.chooseExpensePrompt('請選擇要刪除的編號', expenses, 'delete');
   }
 
   async startModifyFieldSelect(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
@@ -287,8 +287,56 @@ export class WizardAgent {
     return { type: 'action', action: { type: 'postback', label, data } };
   }
 
-  private chooseExpensePrompt(title: string, expenses: any[]): messagingApi.Message {
-    return { type: 'text', text: title, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+  private chooseExpensePrompt(title: string, expenses: any[], action: 'delete' | 'modify' = 'delete'): messagingApi.Message {
+    const buttons = expenses.slice(0, 12).map(exp => {
+      const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+        ? `${exp.currency} ${exp.original_amount}`
+        : `TWD ${exp.amount}`;
+      const label = `#${exp.group_seq} ${exp.description}`;
+      const text = action === 'delete' ? `刪除 #${exp.group_seq}` : `修改 #${exp.group_seq}`;
+      return {
+        type: 'box',
+        layout: 'horizontal',
+        spacing: 'sm',
+        margin: 'sm',
+        contents: [
+          { type: 'text', text: `#${exp.group_seq}`, size: 'sm', color: '#888888', flex: 1, gravity: 'center' },
+          { type: 'text', text: exp.description, size: 'sm', weight: 'bold', flex: 4, wrap: true, gravity: 'center' },
+          { type: 'text', text: amountText, size: 'xs', color: '#555555', flex: 3, align: 'end', gravity: 'center' },
+          {
+            type: 'button',
+            action: { type: 'message', label: action === 'delete' ? '刪除' : '選擇', text },
+            style: action === 'delete' ? 'secondary' : 'primary',
+            height: 'sm',
+            flex: 2,
+            color: action === 'delete' ? undefined : '#2ecc71'
+          }
+        ]
+      };
+    });
+
+    return {
+      type: 'flex',
+      altText: title,
+      contents: {
+        type: 'bubble',
+        size: 'mega',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          contents: [{ type: 'text', text: title, weight: 'bold', color: '#ffffff', size: 'md' }]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'none',
+          contents: buttons.length > 0 ? buttons : [{ type: 'text', text: '沒有記帳項目', size: 'sm', color: '#888888' }]
+        },
+        footer: {
+          type: 'box', layout: 'vertical',
+          contents: [
+            { type: 'button', action: { type: 'message', label: '取消', text: '取消' }, style: 'secondary', height: 'sm' }
+          ]
+        }
+      }
+    } as any;
   }
 
   private async toDeleteConfirm(groupId: string, userId: string, seq: number, expenses: any[]): Promise<messagingApi.Message> {
