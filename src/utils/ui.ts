@@ -135,7 +135,7 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
   items.push(qr('刪除帳單', '刪除帳單'));
   items.push(qr('完整清單', '清單'));
   items.push(qr('查看成員', '成員'));
-  items.push(qr('完整說明', '開始記帳說明'));
+  items.push(qr('完整說明', '說明'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
   if (options.showSettleConfirm) items.push(qr('確認結算', '確認結算'));
   items.push(qr('修改旅程名稱', '修改旅程名稱'));
