@@ -220,10 +220,12 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
       },
       footer: {
         type: 'box',
-        layout: 'vertical',
-        spacing: 'md',
+        layout: 'horizontal',
+        spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#ff4d4f' }
+          { type: 'button', action: { type: 'message', label: '刪除', text: '刪除' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '修改', text: '修改' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
         ]
       }
     }

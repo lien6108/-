@@ -155,8 +155,6 @@ export class ExpenseAgent {
     }
 
     const flex = createExpenseListFlex(expenses, total);
-    flex.quickReply = getStandardQuickReply({ showSettlePreview: true });
-
     return flex;
   }
 
