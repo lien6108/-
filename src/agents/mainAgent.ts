@@ -220,11 +220,6 @@ export class MainAgent {
         return await this.settlement.listHistory(groupId);
       }
 
-      const historyTripMatch = normalizedInput.match(/^歷史\s*#(\d+)$/);
-      if (historyTripMatch) {
-        return await this.settlement.showTripExpenses(groupId, parseInt(historyTripMatch[1], 10));
-      }
-
       if (input === '開始記帳') {
         if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const trip = await this.crud.getCurrentTrip(groupId);
@@ -235,6 +230,11 @@ export class MainAgent {
 
       // 統一 # 符號處理：支援半形 # 與全形 ＃
       const normalizedInput = input.replace(/＃/g, '#');
+
+      const historyTripMatch = normalizedInput.match(/^歷史\s*#(\d+)$/);
+      if (historyTripMatch) {
+        return await this.settlement.showTripExpenses(groupId, parseInt(historyTripMatch[1], 10));
+      }
 
       const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
