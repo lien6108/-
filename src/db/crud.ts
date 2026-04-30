@@ -178,8 +178,12 @@ export class CRUD {
 
   async getAllGroupsByUserId(userId: string): Promise<string[]> {
     const res = await this.db.prepare(
-      `SELECT DISTINCT group_id FROM members WHERE user_id = ?`
-    ).bind(userId).all<{ group_id: string }>();
+      `SELECT DISTINCT group_id FROM expenses WHERE payer_user_id = ?
+       UNION
+       SELECT DISTINCT e.group_id FROM expense_splits es
+         JOIN expenses e ON es.expense_id = e.id
+         WHERE es.debtor_user_id = ?`
+    ).bind(userId, userId).all<{ group_id: string }>();
     return (res.results || []).map(r => r.group_id);
   }
 
