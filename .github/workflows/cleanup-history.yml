@@ -1,0 +1,27 @@
+name: One-time cleanup closed trips
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Delete closed trips data
+        run: |
+          npx wrangler d1 execute splitbill --remote --command "DELETE FROM expense_splits WHERE expense_id IN (SELECT id FROM expenses WHERE trip_id IN (SELECT id FROM trips WHERE status = 'closed'))"
+          npx wrangler d1 execute splitbill --remote --command "DELETE FROM expenses WHERE trip_id IN (SELECT id FROM trips WHERE status = 'closed')"
+          npx wrangler d1 execute splitbill --remote --command "DELETE FROM trips WHERE status = 'closed'"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
