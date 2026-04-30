@@ -88,8 +88,18 @@ export class WizardAgent {
   }
 
   async startModifyAmountWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
-    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_AMOUNT, JSON.stringify({ groupSeq: seq }));
-    return { type: 'text', text: `請輸入 #${seq} 的新金額：`, quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+    const expense = await this.crud.getExpenseByGroupSeq(groupId, seq);
+    if (!expense) return { type: 'text', text: `找不到 #${seq}。` };
+    const currency = expense.currency || 'TWD';
+    const currentDisplay = currency !== 'TWD' && expense.original_amount
+      ? `${currency} ${expense.original_amount}`
+      : `TWD ${expense.amount}`;
+    await this.crud.upsertSession(userId, groupId, WizardStep.AWAITING_MODIFY_AMOUNT, JSON.stringify({ groupSeq: seq, currency }));
+    return {
+      type: 'text',
+      text: `請輸入 #${seq} 的新金額（目前：${currentDisplay}，輸入的數字將視為 ${currency}）：`,
+      quickReply: { items: [this.qr(CANCEL, CANCEL)] }
+    };
   }
 
   async startModifyCurrencyWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
