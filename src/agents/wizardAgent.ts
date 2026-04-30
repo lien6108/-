@@ -331,8 +331,31 @@ export class WizardAgent {
       const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
         ? `${exp.currency} ${exp.original_amount}`
         : `TWD ${exp.amount}`;
-      const label = `#${exp.group_seq} ${exp.description}`;
       const text = action === 'delete' ? `刪除 #${exp.group_seq}` : `修改 #${exp.group_seq}`;
+
+      if (action === 'modify') {
+        return {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          margin: 'sm',
+          contents: [
+            {
+              type: 'box', layout: 'vertical', flex: 5,
+              contents: [
+                { type: 'text', text: `#${exp.group_seq}  ${exp.description}`, size: 'sm', weight: 'bold', wrap: true },
+                { type: 'text', text: `${amountText}　付款：${exp.payer_name}`, size: 'xs', color: '#888888', margin: 'xs', wrap: true }
+              ]
+            },
+            {
+              type: 'button',
+              action: { type: 'message', label: '選擇', text },
+              style: 'primary', height: 'sm', flex: 2, color: '#7a8898'
+            }
+          ]
+        };
+      }
+
       return {
         type: 'box',
         layout: 'horizontal',
@@ -344,11 +367,8 @@ export class WizardAgent {
           { type: 'text', text: amountText, size: 'xs', color: '#555555', flex: 3, align: 'end', gravity: 'center' },
           {
             type: 'button',
-            action: { type: 'message', label: action === 'delete' ? '刪除' : '選擇', text },
-            style: action === 'delete' ? 'secondary' : 'primary',
-            height: 'sm',
-            flex: 2,
-            color: action === 'delete' ? undefined : '#8fa8b8'
+            action: { type: 'message', label: '刪除', text },
+            style: 'secondary', height: 'sm', flex: 2
           }
         ]
       };
@@ -361,7 +381,7 @@ export class WizardAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          type: 'box', layout: 'vertical', backgroundColor: action === 'modify' ? '#7a8898' : '#a07878',
           contents: [{ type: 'text', text: title, weight: 'bold', color: '#ffffff', size: 'md' }]
         },
         body: {
