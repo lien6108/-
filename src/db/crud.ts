@@ -169,6 +169,13 @@ export class CRUD {
     return res.results || [];
   }
 
+  async getGroupsByUserId(userId: string): Promise<string[]> {
+    const res = await this.db.prepare(
+      `SELECT DISTINCT group_id FROM members WHERE user_id = ? AND is_participating = 1`
+    ).bind(userId).all<{ group_id: string }>();
+    return (res.results || []).map(r => r.group_id);
+  }
+
   // --- Member ---
   async getMember(groupId: string, userId: string): Promise<Member | null> {
     return this.db.prepare(`SELECT * FROM members WHERE group_id = ? AND user_id = ?`).bind(groupId, userId).first<Member>();

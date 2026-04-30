@@ -2,8 +2,91 @@ import { Hono } from 'hono';
 import { validateSignature } from '@line/bot-sdk';
 import { Env } from './env';
 import { LineEventHandler } from './lineHandler';
+import { CRUD } from './db/crud';
 
 const app = new Hono<{ Bindings: Env }>();
+
+const viewStyle = `
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:-apple-system,"Microsoft JhengHei",sans-serif;background:#f4f7f6;margin:0;padding:0;color:#333}
+    .header{background:#46494c;color:#fff;padding:18px 16px;font-size:18px;font-weight:bold;display:flex;align-items:center;gap:8px}
+    .card{background:#fff;border-radius:12px;margin:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .card-title{font-size:13px;color:#888;font-weight:bold;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
+    .trip-badge{display:inline-block;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:2px 10px;font-size:12px;margin-bottom:8px}
+    .row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f5f5f5}
+    .row:last-child{border-bottom:none}
+    .seq{color:#bbb;font-size:12px;min-width:28px}
+    .desc{flex:1;font-weight:600;font-size:14px;padding:0 8px}
+    .amount{color:#333;font-size:13px;text-align:right;white-space:nowrap}
+    .payer{color:#888;font-size:11px;text-align:right}
+    .total-row{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:2px solid #eee;font-weight:bold}
+    .empty{color:#bbb;font-size:14px;padding:12px 0;text-align:center}
+    .trip-item{padding:10px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between;align-items:center}
+    .trip-item:last-child{border-bottom:none}
+    .trip-name{font-size:15px;font-weight:600}
+    .trip-meta{font-size:12px;color:#aaa;margin-top:2px}
+    .status-active{color:#2ecc71;font-size:12px}
+    .status-closed{color:#bbb;font-size:12px}
+    h2{font-size:14px;color:#555;margin:16px 16px 0;font-weight:600}
+  </style>`;
+
+app.get('/view/current', async (c) => {
+  const uid = c.req.query('uid');
+  if (!uid) return c.html(`<!DOCTYPE html><html><head>${viewStyle}</head><body><div class="header">📋 目前分帳清單</div><div class="card"><div class="empty">無效連結，請重新取得。</div></div></body></html>`);
+  const crud = new CRUD(c.env);
+  const groupIds = await crud.getGroupsByUserId(uid);
+  let bodyHtml = '';
+  if (groupIds.length === 0) {
+    bodyHtml = '<div class="card"><div class="empty">你目前未加入任何分帳群組。</div></div>';
+  }
+  for (const gid of groupIds) {
+    const trip = await crud.getCurrentTrip(gid);
+    const expenses = await crud.getUnsettledExpenses(gid);
+    const tripName = trip?.trip_name || '（未命名旅程）';
+    let rows = '';
+    let total = 0;
+    for (const exp of expenses) {
+      const amtText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+        ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
+      total += exp.amount;
+      rows += `<div class="row"><span class="seq">#${exp.group_seq}</span><span class="desc">${exp.description}</span><div><div class="amount">${amtText}</div><div class="payer">${exp.payer_name}</div></div></div>`;
+    }
+    if (rows === '') rows = '<div class="empty">目前無記帳資料</div>';
+    const totalRow = expenses.length > 0 ? `<div class="total-row"><span>總計 (TWD)</span><span>${Math.round(total * 100) / 100}</span></div>` : '';
+    bodyHtml += `<div class="card"><div class="trip-badge">✈️ ${tripName}</div><div>${rows}</div>${totalRow}</div>`;
+  }
+  const html = `<!DOCTYPE html><html><head><title>目前分帳清單</title>${viewStyle}</head><body><div class="header">📋 目前分帳清單</div>${bodyHtml}</body></html>`;
+  return c.html(html);
+});
+
+app.get('/view/history', async (c) => {
+  const uid = c.req.query('uid');
+  if (!uid) return c.html(`<!DOCTYPE html><html><head>${viewStyle}</head><body><div class="header">🗂 歷史分帳</div><div class="card"><div class="empty">無效連結，請重新取得。</div></div></body></html>`);
+  const crud = new CRUD(c.env);
+  const groupIds = await crud.getGroupsByUserId(uid);
+  let bodyHtml = '';
+  if (groupIds.length === 0) {
+    bodyHtml = '<div class="card"><div class="empty">你目前未加入任何分帳群組。</div></div>';
+  }
+  for (const gid of groupIds) {
+    const trips = await crud.getTripHistory(gid);
+    if (trips.length === 0) continue;
+    let items = '';
+    for (const t of trips) {
+      const isActive = t.status === 'active';
+      const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
+      const statusTag = isActive
+        ? `<span class="status-active">● 進行中</span>`
+        : `<span class="status-closed">● 已結算</span>`;
+      items += `<div class="trip-item"><div><div class="trip-name">✈️ ${t.trip_name}</div><div class="trip-meta">${date}</div></div>${statusTag}</div>`;
+    }
+    bodyHtml += `<div class="card">${items}</div>`;
+  }
+  if (!bodyHtml) bodyHtml = '<div class="card"><div class="empty">目前無歷史分帳紀錄。</div></div>';
+  const html = `<!DOCTYPE html><html><head><title>歷史分帳</title>${viewStyle}</head><body><div class="header">🗂 歷史分帳</div>${bodyHtml}</body></html>`;
+  return c.html(html);
+});
 
 app.get('/', (c) => {
   return c.json({ status: 'ok', service: '分帳神器 LINE Bot (Cloudflare Workers)' });
