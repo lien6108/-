@@ -146,11 +146,11 @@ export class MainAgent {
       }
 
       if (input === '結算' || input === 'settle') {
-        return await this.settlement.previewSettlement(groupId);
+        return await this.settlement.showSettlement(groupId);
       }
 
       if (input === '確認結算') {
-        return await this.settlement.confirmSettlement(groupId, displayName);
+        return await this.settlement.confirmSettlement(groupId);
       }
 
       if (input === '清單' || input === 'list') {
