@@ -76,13 +76,13 @@ export class LineEventHandler {
       if (dmSession?.group_id === 'dm' && dmSession?.step === 'AWAITING_FEEDBACK') {
         await this.crud.deleteSession(userId);
         await this.adminAgent.notifyAdmin(`💬 使用者回饋\n來自：${await this.getDisplayName('unknown', userId)} (${userId})\n內容：${t}`);
-        if (event.replyToken) await this.reply(event.replyToken, '謝謝您，已提交您的回饋！🙏');
+        if (event.replyToken) await this.reply(event.replyToken, '謝謝旺！已收到您的回饲，汪汪！🐾');
         return;
       }
 
       if (t === '我要回饋') {
         await this.crud.upsertSession(userId, 'dm', 'AWAITING_FEEDBACK', '{}');
-        if (event.replyToken) await this.reply(event.replyToken, '請輸入您要回饋的內容：');
+        if (event.replyToken) await this.reply(event.replyToken, '旺旺！請輸入您想要回饲的內容：🐾');
         return;
       }
 
@@ -100,11 +100,11 @@ export class LineEventHandler {
 
       if (this.adminAgent.isAdmin(userId)) {
         const adminReply = await this.adminAgent.handleAdminDM(t);
-        if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。');
+        if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。旺！');
         return;
       }
 
-      if (event.replyToken) await this.reply(event.replyToken, '請在群組中使用分帳功能。');
+      if (event.replyToken) await this.reply(event.replyToken, '旺旺！分帳功能需要在群組中使用喔～🐶');
       return;
     }
 

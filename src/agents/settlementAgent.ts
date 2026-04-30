@@ -11,7 +11,7 @@ export class SettlementAgent {
   async showSettlement(groupId: string): Promise<string | messagingApi.Message> {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
     if (expenses.length === 0) {
-      return '目前沒有可結算的記帳。';
+      return '汪！目前還沒有記帳可以結算喔！旺！';
     }
 
     const { balances, transactions } = await this.crud.calculateSettlement(groupId);
@@ -61,7 +61,7 @@ export class SettlementAgent {
       section('💸 建議轉帳'),
       ...txRows,
       { type: 'separator', margin: 'lg', color: '#eeeeee' },
-      { type: 'text', text: '確認結算後會封存本單，並重置參與成員。', size: 'xs', color: '#aaaaaa', wrap: true, margin: 'md' }
+      { type: 'text', text: '確認結算後會封存本單，並重置參與成員。旺旺！🐾', size: 'xs', color: '#aaaaaa', wrap: true, margin: 'md' }
     ];
 
     return {
@@ -90,14 +90,14 @@ export class SettlementAgent {
 
   async confirmSettlement(groupId: string): Promise<string | messagingApi.Message> {
     const count = await this.crud.settleAllExpenses(groupId);
-    if (count === 0) return '目前沒有可結算的記帳。';
+    if (count === 0) return '汪！目前還沒有記帳可以結算喔！旺！';
 
     await this.crud.closeCurrentTrip(groupId);
     await this.crud.resetParticipatingMembers(groupId);
 
     return {
       type: 'text',
-      text: `已完成結算並封存本單，共 ${count} 筆記帳。`
+      text: `🐾 旺旺！結算完成，本單已封存！共 ${count} 筆記帳。`
     };
   }
 }
