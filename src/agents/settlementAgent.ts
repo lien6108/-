@@ -71,7 +71,7 @@ export class SettlementAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          type: 'box', layout: 'vertical', backgroundColor: '#7a8f88',
           contents: [
             { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
           ]

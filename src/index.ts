@@ -161,7 +161,7 @@ app.get('/liff', (c) => {
         .btn { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 12px; text-align: center; font-size: 20px; font-weight: 600; cursor: pointer; transition: all 0.1s; -webkit-tap-highlight-color: transparent; }
         .btn:active { background: #f0f0f0; transform: scale(0.95); }
         .btn.primary { background: var(--primary); color: white; grid-column: span 2; border: none; }
-        .btn.danger { color: #ff4d4f; }
+        .btn.danger { color: #c07878; }
         .categories { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 10px; margin-bottom: 5px; scrollbar-width: none; }
         .categories::-webkit-scrollbar { display: none; }
         .cat-btn { padding: 8px 16px; border-radius: 30px; background: white; border: 1px solid #eee; white-space: nowrap; font-size: 14px; font-weight: 500; color: #666; }
