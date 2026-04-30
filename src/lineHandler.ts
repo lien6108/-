@@ -71,6 +71,21 @@ export class LineEventHandler {
     if (groupId === 'unknown') {
       const t = text.trim();
 
+      // Check pending DM session first
+      const dmSession = await this.crud.getSession(userId);
+      if (dmSession?.group_id === 'dm' && dmSession?.step === 'AWAITING_FEEDBACK') {
+        await this.crud.deleteSession(userId);
+        await this.adminAgent.notifyAdmin(`💬 使用者回饋\n來自：${await this.getDisplayName('unknown', userId)} (${userId})\n內容：${t}`);
+        if (event.replyToken) await this.reply(event.replyToken, '謝謝您，已提交您的回饋！🙏');
+        return;
+      }
+
+      if (t === '我要回饋') {
+        await this.crud.upsertSession(userId, 'dm', 'AWAITING_FEEDBACK', '{}');
+        if (event.replyToken) await this.reply(event.replyToken, '請輸入您要回饋的內容：');
+        return;
+      }
+
       if (t === '查看目前分帳') {
         const msg = await this.buildCurrentFlex(userId);
         if (event.replyToken) await this.reply(event.replyToken, msg);
