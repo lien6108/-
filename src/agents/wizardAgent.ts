@@ -1,7 +1,7 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD, Session, WizardData } from '../db/crud';
 import { ExpenseAgent } from './expenseAgent';
-import { createDraftFlex, createUnifiedDraftCarousel, getStandardQuickReply } from '../utils/ui';
+import { createDraftFlex, createUnifiedDraftCarousel } from '../utils/ui';
 import { resolveCurrency } from '../utils/currency';
 
 export enum WizardStep {
@@ -179,7 +179,7 @@ export class WizardAgent {
         if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
         await this.crud.updateExpensePayer(expense.id, member.user_id, member.display_name);
         await this.crud.deleteSession(session.user_id);
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getStandardQuickReply() };
+        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: this.modifyQuickReply(data.groupSeq) };
       }
       case WizardStep.AWAITING_MODIFY_SHARERS: {
         const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
@@ -203,7 +203,7 @@ export class WizardAgent {
         await this.crud.replaceExpenseSplits(expense.id, debtors);
         await this.crud.deleteSession(session.user_id);
         const sharerNames = debtors.map(d => d.name).join('、');
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 分攤人為：${sharerNames}！`, quickReply: getStandardQuickReply() };
+        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 分攞人為：${sharerNames}！`, quickReply: this.modifyQuickReply(data.groupSeq) };
       }
       case WizardStep.AWAITING_TRIP_NAME: {
         const tripName = input.trim();
@@ -308,6 +308,18 @@ export class WizardAgent {
 
   private qr(label: string, text: string): messagingApi.QuickReplyItem {
     return { type: 'action', action: { type: 'message', label, text } };
+  }
+
+  private modifyQuickReply(groupSeq: number): messagingApi.QuickReply {
+    return {
+      items: [
+        this.qr(`修改金額 #${groupSeq}`, `修改金額 #${groupSeq}`),
+        this.qr(`修改幣別 #${groupSeq}`, `修改幣別 #${groupSeq}`),
+        this.qr(`修改支付人 #${groupSeq}`, `修改支付人 #${groupSeq}`),
+        this.qr(`修改分攤人 #${groupSeq}`, `修改分攤人 #${groupSeq}`),
+        this.qr(CANCEL, CANCEL),
+      ]
+    };
   }
 
   private pb(label: string, data: string): messagingApi.QuickReplyItem {

@@ -57,7 +57,17 @@ export class ExpenseAgent {
   }
 
   private getExpenseQuickReply(groupSeq: number): messagingApi.QuickReply {
-    return getStandardQuickReply({ groupSeq });
+    const qr = (label: string, text: string): messagingApi.QuickReplyItem =>
+      ({ type: 'action', action: { type: 'message', label, text } });
+    return {
+      items: [
+        qr(`修改金額 #${groupSeq}`, `修改金額 #${groupSeq}`),
+        qr(`修改幣別 #${groupSeq}`, `修改幣別 #${groupSeq}`),
+        qr(`修改支付人 #${groupSeq}`, `修改支付人 #${groupSeq}`),
+        qr(`修改分攤人 #${groupSeq}`, `修改分攤人 #${groupSeq}`),
+        qr('取消', '取消'),
+      ]
+    };
   }
 
   async addExpense(
