@@ -86,7 +86,7 @@ export class MainAgent {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
       // 只有在被 @mention 時才回應維修中訊息，其他訊息靜默
-      if (input === 'GREETING') return '🔧 汪～系統正在維修中，請稍後再試！旺旺！';
+      if (input === 'GREETING') return '🔧 系統維修中，請稍後再試～';
       return null;
     }
 
@@ -164,7 +164,7 @@ export class MainAgent {
         if (!isParticipating) {
           return {
             type: 'text',
-            text: '🐶 汪汪！你還沒加入分帳名單，加入後就能和小夥伴们一起記帳啦！',
+            text: '你還沒加入分帳名單，加入後就能和大家一起記帳啦！😊',
             quickReply: {
               items: [
                 { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
@@ -177,7 +177,7 @@ export class MainAgent {
         }
         return {
           type: 'text',
-          text: '旺旺！有什麼需要幫忙的嗎？🐾',
+          text: '有什麼需要幫忙的嗎？😊',
           quickReply: getStandardQuickReply()
         };
       }
@@ -201,7 +201,7 @@ export class MainAgent {
       if (input === '修改帳單') {
         return {
           type: 'text',
-          text: '旺！請輸入要修改的帳單編號，例如：修改 #1',
+          text: '請輸入要修改的帳單編號，例如：修改 #1',
           quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
         };
       }
@@ -209,13 +209,13 @@ export class MainAgent {
       if (input === '刪除帳單') {
         return {
           type: 'text',
-          text: '汪！請輸入要刪除的帳單編號，例如：刪除 #1',
+          text: '請輸入要刪除的帳單編號，例如：刪除 #1',
           quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
         };
       }
 
       if (input === '開始記帳說明') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const trip = await this.crud.getCurrentTrip(groupId);
         if (!trip) return await this.wizard.startTripNaming(groupId, userId);
         const members = await this.crud.getParticipatingMembers(groupId);
@@ -227,7 +227,7 @@ export class MainAgent {
       }
 
       if (input === '開始記帳') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const trip = await this.crud.getCurrentTrip(groupId);
         if (!trip) return await this.wizard.startTripNaming(groupId, userId);
         const members = await this.crud.getParticipatingMembers(groupId);
@@ -239,14 +239,14 @@ export class MainAgent {
 
       const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         return await this.wizard.startDeleteWizard(groupId, userId, parseInt(deleteMatch[1], 10));
       }
 
       // 修改 #N → 詢問要改什麼
       const modifySelectMatch = normalizedInput.match(/^修改\s*#(\d+)\s*$/);
       if (modifySelectMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         await this.crud.deleteSession(userId); // 清除可能殘留的舊 session
         return await this.wizard.startModifyFieldSelect(groupId, userId, parseInt(modifySelectMatch[1], 10));
       }
@@ -254,7 +254,7 @@ export class MainAgent {
       // 修改金額 #N 100（含金額直接改）或 修改金額 #N（啟動 wizard）
       const updateAmountMatch = normalizedInput.match(/^修改金額\s*#(\d+)\s+([\d,]+(?:\.\d+)?)\s*$/);
       if (updateAmountMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const seq = parseInt(updateAmountMatch[1], 10);
         const amount = parseFloat(updateAmountMatch[2].replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤，請輸入大於 0 的數字。';
@@ -262,7 +262,7 @@ export class MainAgent {
       }
       const updateAmountNoValMatch = normalizedInput.match(/^修改金額\s*#(\d+)\s*$/);
       if (updateAmountNoValMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         await this.crud.deleteSession(userId);
         return await this.wizard.startModifyAmountWizard(groupId, userId, parseInt(updateAmountNoValMatch[1], 10));
       }
@@ -271,7 +271,7 @@ export class MainAgent {
       // 用 \S+ 而非 .+ 避免捕捉到尾部空白
       const updateCurrencyMatch = normalizedInput.match(/^修改幣別\s*#(\d+)\s+(\S+)\s*$/);
       if (updateCurrencyMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const seq = parseInt(updateCurrencyMatch[1], 10);
         const currency = resolveCurrency(updateCurrencyMatch[2]);
         if (!currency) return `「${updateCurrencyMatch[2]}」無法辨識，請使用如 TWD、JPY、美金 等格式。`;
@@ -279,7 +279,7 @@ export class MainAgent {
       }
       const updateCurrencyNoValMatch = normalizedInput.match(/^修改幣別\s*#(\d+)\s*$/);
       if (updateCurrencyNoValMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         await this.crud.deleteSession(userId);
         return await this.wizard.startModifyCurrencyWizard(groupId, userId, parseInt(updateCurrencyNoValMatch[1], 10));
       }
@@ -287,7 +287,7 @@ export class MainAgent {
       // 修改支付人 #N
       const updatePayerMatch = normalizedInput.match(/^修改支付人\s*#(\d+)\s*$/);
       if (updatePayerMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         await this.crud.deleteSession(userId);
         return await this.wizard.startModifyPayerWizard(groupId, userId, parseInt(updatePayerMatch[1], 10));
       }
@@ -295,25 +295,25 @@ export class MainAgent {
       // 修改分攤人 #N
       const updateSharersMatch = normalizedInput.match(/^修改分攤人\s*#(\d+)\s*$/);
       if (updateSharersMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         await this.crud.deleteSession(userId);
         return await this.wizard.startModifySharersWizard(groupId, userId, parseInt(updateSharersMatch[1], 10));
       }
 
       if (input === '修改') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         return await this.wizard.startModifyWizard(groupId, userId);
       }
 
       if (input === '刪除') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         return await this.wizard.startDeleteWizard(groupId, userId);
       }
 
       // ── 完整模板格式：名稱：xx　金額：xx　幣別：xx　支付者：xx　分攤人：xx ──
       const tmpl = parseTemplateExpense(input);
       if (tmpl) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
 
         // 有格式錯誤即回報
         if (tmpl.errors) return `記帳格式有誤，請檢查：\n${tmpl.errors.join('\n')}`;
@@ -366,7 +366,7 @@ export class MainAgent {
       // ── 簡易格式：記帳 晚餐 500 ──
       const expenseMatch = input.match(/^記帳\s+(.+?)\s+([\d,]+(?:\.\d+)?)$/);
       if (expenseMatch) {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const description = expenseMatch[1].trim();
         const amount = parseFloat(expenseMatch[2].replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤。';
@@ -392,14 +392,14 @@ export class MainAgent {
       const action = params.get('action');
 
       if (action === 'start_add') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const trip = await this.crud.getCurrentTrip(groupId);
         if (!trip) return await this.wizard.startTripNaming(groupId, userId);
         return await this.wizard.start(groupId, userId);
       }
 
       if (action === 'start_edit') {
-        if (!isParticipating) return '旺旺！你還沒加入分帳喔，請先輸入「加入」！';
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         return await this.wizard.startModifyWizard(groupId, userId);
       }
 

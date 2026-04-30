@@ -21,7 +21,7 @@ export class MemberAgent {
     const names = members.map(m => `- ${m.display_name}`).join('\n');
     return {
       type: 'text',
-      text: `🐾 ${displayName} 已加入分帳！旺旺！\n目前成員 (${members.length})\n${names || '- 無'}`,
+      text: `✅ ${displayName} 已加入分帳！\n目前成員 (${members.length})\n${names || '- 無'}`,
       quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }
@@ -29,7 +29,7 @@ export class MemberAgent {
   async requestLeave(groupId: string, userId: string, displayName: string): Promise<string | messagingApi.Message> {
     return {
       type: 'text',
-      text: `${displayName}，確定要退出分帳嗎？汪～`,
+      text: `${displayName}，確定要退出分帳嗎？`,
       quickReply: {
         items: [
           { type: 'action', action: { type: 'message', label: '確認退出', text: '確認退出' } },
@@ -41,10 +41,10 @@ export class MemberAgent {
 
   async confirmLeave(groupId: string, userId: string, displayName: string): Promise<string | messagingApi.Message> {
     const member = await this.crud.getMember(groupId, userId);
-    if (!member || member.is_participating !== 1) return `汪？${displayName} 目前不在分帳名單中喔！`;
+    if (!member || member.is_participating !== 1) return `${displayName} 目前不在分帳名單中喔！`;
 
     const hasExpenses = await this.crud.userHasUnsettledExpenses(groupId, userId);
-    if (hasExpenses) return `旺旺！${displayName} 還有未結算謹務，請先完成結算後再退出喔！`;
+    if (hasExpenses) return `${displayName} 還有未結算帳務，請先完成結算後再退出喔！`;
 
     await this.crud.setParticipation(groupId, userId, false);
     const members = await this.crud.getParticipatingMembers(groupId);
@@ -52,7 +52,7 @@ export class MemberAgent {
 
     return {
       type: 'text',
-      text: `${displayName} 已退出分帳，掙掙！🐾\n目前成員 (${members.length})\n${names || '- 無'}`,
+      text: `${displayName} 已退出分帳，掰掰！👋\n目前成員 (${members.length})\n${names || '- 無'}`,
       quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }
@@ -62,7 +62,7 @@ export class MemberAgent {
     if (members.length === 0) {
       return {
         type: 'text',
-        text: '🐶 目前還沒有夥伴加入導～輸入「加入」如一起分帳吧！旺旺！',
+        text: '目前還沒有夥伴加入耶～輸入「加入」一起分帳吧！',
         quickReply: {
           items: [
             { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
@@ -84,7 +84,7 @@ export class MemberAgent {
 
     return {
       type: 'flex',
-      altText: `🐾 分帳小夥伴 (${members.length})`,
+      altText: `👥 分帳成員 (${members.length})`,
       contents: {
         type: 'bubble',
         size: 'kilo',
