@@ -67,13 +67,28 @@ export class LineEventHandler {
     if (source?.type === 'group') groupId = source.groupId;
     if (source?.type === 'room') groupId = source.roomId;
 
-    // Private DM: handle admin commands; others get a default reply
+    // Private DM: handle admin commands and view requests
     if (groupId === 'unknown') {
+      const t = text.trim();
+
+      if (t === '查看目前分帳') {
+        const msg = await this.buildCurrentFlex(userId);
+        if (event.replyToken) await this.reply(event.replyToken, msg);
+        return;
+      }
+
+      if (t === '查看歷史分帳') {
+        const msg = await this.buildHistoryFlex(userId);
+        if (event.replyToken) await this.reply(event.replyToken, msg);
+        return;
+      }
+
       if (this.adminAgent.isAdmin(userId)) {
-        const adminReply = await this.adminAgent.handleAdminDM(text.trim());
+        const adminReply = await this.adminAgent.handleAdminDM(t);
         if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。');
         return;
       }
+
       if (event.replyToken) await this.reply(event.replyToken, '請在群組中使用分帳功能。');
       return;
     }
@@ -161,6 +176,116 @@ export class LineEventHandler {
       }
     };
     await this.reply(event.replyToken, tutorialMsg);
+  }
+
+  private async buildCurrentFlex(userId: string): Promise<messagingApi.Message> {
+    const groupIds = await this.crud.getGroupsByUserId(userId);
+    if (groupIds.length === 0) {
+      return { type: 'text', text: '你目前未加入任何分帳群組。' };
+    }
+
+    const bubbles: any[] = [];
+    for (const gid of groupIds) {
+      const trip = await this.crud.getCurrentTrip(gid);
+      const expenses = await this.crud.getUnsettledExpenses(gid);
+      const tripName = trip?.trip_name || '（未命名旅程）';
+      let total = 0;
+
+      const rows = expenses.length === 0
+        ? [{ type: 'text', text: '目前無記帳資料', size: 'sm', color: '#aaaaaa', margin: 'md' }]
+        : expenses.map(exp => {
+            const amt = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+              ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
+            total += exp.amount;
+            return {
+              type: 'box', layout: 'horizontal', margin: 'sm',
+              contents: [
+                { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#aaaaaa', flex: 1 },
+                { type: 'text', text: exp.description, size: 'sm', flex: 4, weight: 'bold', wrap: true },
+                { type: 'box', layout: 'vertical', flex: 3, contents: [
+                  { type: 'text', text: amt, size: 'xs', align: 'end' },
+                  { type: 'text', text: exp.payer_name, size: 'xs', color: '#888888', align: 'end' }
+                ]}
+              ]
+            };
+          });
+
+      const totalRow = expenses.length > 0 ? {
+        type: 'box', layout: 'horizontal', margin: 'md',
+        contents: [
+          { type: 'text', text: '總計 (TWD)', weight: 'bold', size: 'sm', flex: 1 },
+          { type: 'text', text: `${Math.round(total * 100) / 100}`, weight: 'bold', size: 'sm', align: 'end', flex: 1 }
+        ]
+      } : null;
+
+      bubbles.push({
+        type: 'bubble', size: 'mega',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          contents: [
+            { type: 'text', text: '📋 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
+            { type: 'text', text: `✈️ ${tripName}`, color: '#cccccc', size: 'xs' }
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical',
+          contents: [
+            ...rows,
+            ...(totalRow ? [{ type: 'separator', margin: 'md' }, totalRow] : [])
+          ]
+        }
+      });
+    }
+
+    if (bubbles.length === 1) {
+      return { type: 'flex', altText: '目前分帳清單', contents: bubbles[0] } as any;
+    }
+    return { type: 'flex', altText: '目前分帳清單', contents: { type: 'carousel', contents: bubbles } } as any;
+  }
+
+  private async buildHistoryFlex(userId: string): Promise<messagingApi.Message> {
+    const groupIds = await this.crud.getGroupsByUserId(userId);
+    if (groupIds.length === 0) {
+      return { type: 'text', text: '你目前未加入任何分帳群組。' };
+    }
+
+    const allTrips: any[] = [];
+    for (const gid of groupIds) {
+      const trips = await this.crud.getTripHistory(gid);
+      allTrips.push(...trips);
+    }
+
+    if (allTrips.length === 0) {
+      return { type: 'text', text: '目前無歷史分帳紀錄。' };
+    }
+
+    const rows = allTrips.map(t => {
+      const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
+      const statusText = t.status === 'active' ? '● 進行中' : '● 已結算';
+      const statusColor = t.status === 'active' ? '#2ecc71' : '#aaaaaa';
+      return {
+        type: 'box', layout: 'horizontal', margin: 'md',
+        contents: [
+          { type: 'box', layout: 'vertical', flex: 4, contents: [
+            { type: 'text', text: `✈️ ${t.trip_name}`, size: 'sm', weight: 'bold', wrap: true },
+            { type: 'text', text: date, size: 'xs', color: '#aaaaaa' }
+          ]},
+          { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', flex: 2 }
+        ]
+      };
+    });
+
+    return {
+      type: 'flex', altText: '歷史分帳',
+      contents: {
+        type: 'bubble', size: 'mega',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          contents: [{ type: 'text', text: '🗂 歷史分帳', weight: 'bold', color: '#ffffff', size: 'md' }]
+        },
+        body: { type: 'box', layout: 'vertical', contents: rows }
+      }
+    } as any;
   }
 
   private async getDisplayName(groupId: string, userId: string): Promise<string> {
