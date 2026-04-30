@@ -283,6 +283,13 @@ export class CRUD {
       `SELECT * FROM expenses WHERE group_id = ? AND is_settled = 0 ORDER BY created_at ASC`
     ).bind(groupId).all<Expense>();
     return res.results || [];
+
+  async getExpensesByTripId(tripId: number): Promise<Expense[]> {
+    const res = await this.db.prepare(
+      `SELECT * FROM expenses WHERE trip_id = ? ORDER BY group_seq ASC`
+    ).bind(tripId).all<Expense>();
+    return res.results || [];
+  }
   }
 
   async getExpenseByGroupSeq(groupId: string, groupSeq: number): Promise<Expense | null> {

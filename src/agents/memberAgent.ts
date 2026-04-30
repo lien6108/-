@@ -93,7 +93,7 @@ export class MemberAgent {
           layout: 'horizontal',
           backgroundColor: '#8a7f8c',
           contents: [
-            { type: 'text', text: '� 分帳小夥伴', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
+            { type: 'text', text: '👻 分帳小夥伴', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
             { type: 'text', text: `${members.length} 人`, color: '#cccccc', size: 'sm', align: 'end', flex: 0 }
           ]
         },
