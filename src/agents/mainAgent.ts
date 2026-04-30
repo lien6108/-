@@ -198,6 +198,30 @@ export class MainAgent {
         return await this.expense.showMyAccount(groupId, userId, displayName);
       }
 
+      if (input === '修改帳單') {
+        return {
+          type: 'text',
+          text: '請輸入要修改的帳單編號，例如：修改 #1',
+          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+        };
+      }
+
+      if (input === '刪除帳單') {
+        return {
+          type: 'text',
+          text: '請輸入要刪除的帳單編號，例如：刪除 #1',
+          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+        };
+      }
+
+      if (input === '開始記帳說明') {
+        if (!isParticipating) return '你尚未加入分帳，請先輸入「加入」。';
+        const trip = await this.crud.getCurrentTrip(groupId);
+        if (!trip) return await this.wizard.startTripNaming(groupId, userId);
+        const members = await this.crud.getParticipatingMembers(groupId);
+        return createTemplateGuideMessage(members);
+      }
+
       if (input === '歷史' || input === 'history') {
         return await this.settlement.listHistory(groupId);
       }
