@@ -72,11 +72,46 @@ export class MemberAgent {
       };
     }
 
-    const names = members.map(m => `- ${m.display_name}`).join('\n');
+    const memberRows = members.map((m, i) => ({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        { type: 'text', text: `${i + 1}`, size: 'sm', color: '#aaaaaa', flex: 1, align: 'center' },
+        { type: 'text', text: m.display_name, size: 'sm', color: '#333333', flex: 5, weight: 'bold' }
+      ],
+      margin: 'md'
+    }));
+
     return {
-      type: 'text',
-      text: `目前分帳成員 (${members.length})\n${names}`,
-      quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
-    };
+      type: 'flex',
+      altText: `目前分帳成員 (${members.length})`,
+      contents: {
+        type: 'bubble',
+        size: 'kilo',
+        header: {
+          type: 'box',
+          layout: 'horizontal',
+          backgroundColor: '#46494c',
+          contents: [
+            { type: 'text', text: '👥 分帳成員', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
+            { type: 'text', text: `${members.length} 人`, color: '#cccccc', size: 'sm', align: 'end', flex: 0 }
+          ]
+        },
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          contents: memberRows
+        },
+        footer: {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            { type: 'button', action: { type: 'message', label: '加入', text: '加入' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 },
+            { type: 'button', action: { type: 'message', label: '退出', text: '退出' }, style: 'secondary', height: 'sm', flex: 1 }
+          ]
+        }
+      }
+    } as any;
   }
 }
