@@ -362,9 +362,13 @@ export class WizardAgent {
         spacing: 'sm',
         margin: 'sm',
         contents: [
-          { type: 'text', text: `#${exp.group_seq}`, size: 'sm', color: '#888888', flex: 1, gravity: 'center' },
-          { type: 'text', text: exp.description, size: 'sm', weight: 'bold', flex: 4, wrap: true, gravity: 'center' },
-          { type: 'text', text: amountText, size: 'xs', color: '#555555', flex: 3, align: 'end', gravity: 'center' },
+          {
+            type: 'box', layout: 'vertical', flex: 5,
+            contents: [
+              { type: 'text', text: `#${exp.group_seq}  ${exp.description}`, size: 'sm', weight: 'bold', wrap: true },
+              { type: 'text', text: `${amountText}　付款：${exp.payer_name}`, size: 'xs', color: '#888888', margin: 'xs', wrap: true }
+            ]
+          },
           {
             type: 'button',
             action: { type: 'message', label: '刪除', text },
