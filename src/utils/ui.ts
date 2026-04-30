@@ -137,6 +137,7 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
   if (options.showList !== false) items.push(qr('清單', '清單'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
   if (options.showSettleConfirm) items.push(qr('確認結算', '確認結算'));
+  items.push(qr('修改旅程名稱', '修改旅程名稱'));
   items.push(qr(CANCEL, CANCEL));
 
   return { items: items.slice(0, 13) };
