@@ -281,11 +281,16 @@ export function createMyAccountFlex(
   const splitRows: any[] = splitItems.length === 0
     ? [{ type: 'text', text: '（無）', size: 'sm', color: '#aaaaaa', margin: 'sm' }]
     : splitItems.map(item => ({
-        type: 'box', layout: 'horizontal', margin: 'sm',
+        type: 'box', layout: 'vertical', margin: 'sm',
         contents: [
-          { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, wrap: true },
-          { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' },
-          { type: 'text', text: `付款：${item.payer_name}`, size: 'xs', color: '#888888', flex: 3, wrap: true, align: 'end' }
+          {
+            type: 'box', layout: 'horizontal',
+            contents: [
+              { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true },
+              { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' }
+            ]
+          },
+          { type: 'text', text: `付款人：${item.payer_name}`, size: 'xs', color: '#888888', wrap: true }
         ]
       }));
 
