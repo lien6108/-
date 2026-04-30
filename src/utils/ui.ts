@@ -223,8 +223,100 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         layout: 'horizontal',
         spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '刪除', text: '刪除' }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '修改', text: '修改' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'message', label: '只看我的帳', text: '只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
+          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
+        ]
+      }
+    }
+  } as any;
+}
+
+export function createMyAccountFlex(
+  userName: string,
+  payments: { to_name: string; amount: number }[],
+  paidItems: { seq: number; description: string; amount: number; currency?: string; original_amount?: number; others: { debtor_name: string; share_amount: number }[] }[],
+  splitItems: { seq: number; description: string; payer_name: string; myShare: number }[]
+): messagingApi.FlexMessage {
+  const section = (title: string): any => ({
+    type: 'text', text: title, weight: 'bold', size: 'sm', color: '#555555', margin: 'lg'
+  });
+
+  const separator: any = { type: 'separator', margin: 'md', color: '#eeeeee' };
+
+  // 需要轉帳
+  const paymentRows: any[] = payments.length === 0
+    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: '#2ecc71', margin: 'sm' }]
+    : payments.map(p => ({
+        type: 'box', layout: 'horizontal', margin: 'sm',
+        contents: [
+          { type: 'text', text: `付給 ${p.to_name}`, size: 'sm', color: '#333333', flex: 3 },
+          { type: 'text', text: `TWD ${Math.round(p.amount * 100) / 100}`, size: 'sm', color: '#e74c3c', align: 'end', flex: 2, weight: 'bold' }
+        ]
+      }));
+
+  // 代墊明細
+  const paidRows: any[] = paidItems.length === 0
+    ? [{ type: 'text', text: '（無）', size: 'sm', color: '#aaaaaa', margin: 'sm' }]
+    : paidItems.map(item => {
+        const amtText = item.currency && item.currency !== 'TWD' && item.original_amount
+          ? `${item.currency} ${item.original_amount}`
+          : `TWD ${item.amount}`;
+        const othersText = item.others.map(o => o.debtor_name).join('、');
+        return {
+          type: 'box', layout: 'vertical', margin: 'sm',
+          contents: [
+            {
+              type: 'box', layout: 'horizontal',
+              contents: [
+                { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true },
+                { type: 'text', text: amtText, size: 'sm', flex: 2, align: 'end', color: '#555555' }
+              ]
+            },
+            { type: 'text', text: `分攤：${othersText}（各 ${item.others[0]?.share_amount ?? '-'}）`, size: 'xs', color: '#888888', wrap: true }
+          ]
+        };
+      });
+
+  // 分攤明細
+  const splitRows: any[] = splitItems.length === 0
+    ? [{ type: 'text', text: '（無）', size: 'sm', color: '#aaaaaa', margin: 'sm' }]
+    : splitItems.map(item => ({
+        type: 'box', layout: 'horizontal', margin: 'sm',
+        contents: [
+          { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, wrap: true },
+          { type: 'text', text: `付款：${item.payer_name}`, size: 'xs', color: '#888888', flex: 3, wrap: true },
+          { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' }
+        ]
+      }));
+
+  const bodyContents: any[] = [
+    section('💸 需要轉帳'),
+    ...paymentRows,
+    separator,
+    section('💰 我代墊的帳'),
+    ...paidRows,
+    separator,
+    section('📋 我需要分攤的帳'),
+    ...splitRows
+  ];
+
+  return {
+    type: 'flex',
+    altText: `${userName} 的帳目`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+        contents: [
+          { type: 'text', text: `👤 ${userName} 的帳目`, weight: 'bold', size: 'lg', color: '#ffffff' }
+        ]
+      },
+      body: { type: 'box', layout: 'vertical', contents: bodyContents },
+      footer: {
+        type: 'box', layout: 'horizontal', spacing: 'sm',
+        contents: [
+          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'secondary', height: 'sm', flex: 1 },
           { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
         ]
       }

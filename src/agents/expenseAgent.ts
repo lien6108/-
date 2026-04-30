@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
-import { getStandardQuickReply, createExpenseListFlex, createExpenseSuccessFlex } from '../utils/ui';
+import { getStandardQuickReply, createExpenseListFlex, createExpenseSuccessFlex, createMyAccountFlex } from '../utils/ui';
 
 function nowTag(): string {
   const now = new Date();
@@ -156,6 +156,52 @@ export class ExpenseAgent {
 
     const flex = createExpenseListFlex(expenses, total);
     return flex;
+  }
+
+  async showMyAccount(groupId: string, userId: string, userName: string): Promise<string | messagingApi.Message> {
+    const expenses = await this.crud.getUnsettledExpenses(groupId);
+    if (expenses.length === 0) return '目前沒有未結算記帳。';
+
+    const { transactions } = await this.crud.calculateSettlement(groupId);
+
+    // 我需要轉帳給誰
+    const myPayments = transactions.filter(t => t.from === userId);
+
+    // 我代墊的帳（我是付款人，但有其他人需要分攤）
+    const paidItems: { seq: number; description: string; amount: number; currency?: string; original_amount?: number; others: { debtor_name: string; share_amount: number }[] }[] = [];
+    // 我需要分攤的帳（我是 debtor，付款人是別人）
+    const splitItems: { seq: number; description: string; payer_name: string; myShare: number }[] = [];
+
+    for (const exp of expenses) {
+      const splits = await this.crud.getExpenseSplits(exp.id);
+      if (exp.payer_user_id === userId) {
+        // 我付的，看有沒有其他人要還我
+        const others = splits.filter(s => s.debtor_user_id !== userId);
+        if (others.length > 0) {
+          paidItems.push({
+            seq: exp.group_seq,
+            description: exp.description,
+            amount: exp.amount,
+            currency: exp.currency,
+            original_amount: exp.original_amount,
+            others
+          });
+        }
+      } else {
+        // 別人付的，看我有沒有分攤
+        const myPart = splits.find(s => s.debtor_user_id === userId);
+        if (myPart) {
+          splitItems.push({
+            seq: exp.group_seq,
+            description: exp.description,
+            payer_name: exp.payer_name,
+            myShare: myPart.share_amount
+          });
+        }
+      }
+    }
+
+    return createMyAccountFlex(userName, myPayments, paidItems, splitItems);
   }
 
   async updateExpense(groupId: string, groupSeq: number, newAmount: number, requestName: string): Promise<string | messagingApi.Message> {

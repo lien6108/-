@@ -157,6 +157,10 @@ export class MainAgent {
         return await this.expense.listExpenses(groupId);
       }
 
+      if (input === '只看我的帳') {
+        return await this.expense.showMyAccount(groupId, userId, displayName);
+      }
+
       if (input === '歷史' || input === 'history') {
         return await this.settlement.listHistory(groupId);
       }
