@@ -100,7 +100,6 @@ export class CRUD {
     await this.db.batch([
       this.db.prepare(`DELETE FROM expense_splits`),
       this.db.prepare(`DELETE FROM expenses`),
-      this.db.prepare(`DELETE FROM settlement_history`),
       this.db.prepare(`DELETE FROM sessions`),
       this.db.prepare(`UPDATE groups SET current_trip_id = NULL`),
       this.db.prepare(`DELETE FROM trips`),
