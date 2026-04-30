@@ -22,6 +22,8 @@ export class LineEventHandler {
     this.crud = new CRUD(env);
     this.mainAgent = new MainAgent(env, this.crud);
     this.adminAgent = new AdminAgent(env, this.crud);
+    // 自動執行 DB migration（IF NOT EXISTS，安全冪等）
+    this.crud.runMigrations().catch(e => console.error('[Migration] failed:', e));
   }
 
   async handleEvents(events: webhook.Event[]) {

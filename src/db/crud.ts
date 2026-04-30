@@ -521,7 +521,29 @@ export class CRUD {
     await this.db.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(userId).run();
   }
 
-  // ─── Itinerary ───────────────────────────────────────────────────────────────
+  async runMigrations(): Promise<void> {
+    await this.db.prepare(`CREATE TABLE IF NOT EXISTS itinerary_spots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id INTEGER NOT NULL,
+      day INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      name TEXT NOT NULL,
+      maps_url TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )`).run();
+    await this.db.prepare(`CREATE TABLE IF NOT EXISTS shopping_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id INTEGER NOT NULL,
+      assignee TEXT NOT NULL,
+      item TEXT NOT NULL,
+      spot_id INTEGER,
+      is_bought INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )`).run();
+  } ───────────────────────────────────────────────────────────────
 
   async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
     const res = await this.db.prepare(
