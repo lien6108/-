@@ -277,7 +277,7 @@ export class LineEventHandler {
   }
 
   private async buildHistoryFlex(userId: string): Promise<messagingApi.Message> {
-    const groupIds = await this.crud.getGroupsByUserId(userId);
+    const groupIds = await this.crud.getAllGroupsByUserId(userId);
     if (groupIds.length === 0) {
       return { type: 'text', text: '你目前未加入任何分帳群組。' };
     }
@@ -343,7 +343,7 @@ export class LineEventHandler {
   }
 
   private async buildTripDetailFlex(userId: string, tripId: number): Promise<messagingApi.Message> {
-    const groupIds = await this.crud.getGroupsByUserId(userId);
+    const groupIds = await this.crud.getAllGroupsByUserId(userId);
     let trip: any = null;
     for (const gid of groupIds) {
       const trips = await this.crud.getTripHistory(gid);
