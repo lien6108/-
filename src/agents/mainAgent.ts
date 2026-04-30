@@ -118,7 +118,15 @@ export class MainAgent {
       }
 
       if (input === '加入') {
-        return await this.member.handleJoinGroup(groupId, userId, displayName);
+        const joinMsg = await this.member.handleJoinGroup(groupId, userId, displayName);
+        // 若為第一位加入的成員且尚未有旅程，自動觸發旅程命名
+        const participants = await this.crud.getParticipatingMembers(groupId);
+        const currentTrip = await this.crud.getCurrentTrip(groupId);
+        if (participants.length === 1 && !currentTrip) {
+          const tripMsg = await this.wizard.startTripNaming(groupId, userId);
+          return [joinMsg as messagingApi.Message, tripMsg];
+        }
+        return joinMsg;
       }
 
       if (input === '退出') {
@@ -127,6 +135,17 @@ export class MainAgent {
 
       if (input === '確認退出') {
         return await this.member.confirmLeave(groupId, userId, displayName);
+      }
+
+      if (input === '修改旅程名稱') {
+        const trip = await this.crud.getCurrentTrip(groupId);
+        await this.crud.upsertSession(userId, groupId, 'AWAITING_TRIP_NAME', JSON.stringify({}));
+        return {
+          type: 'text',
+          text: trip ? `目前旅程名稱：「${trip.trip_name}」
+請輸入新的旅程名稱：` : '請輸入旅程名稱：',
+          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+        };
       }
 
       if (input === '成員' || input === 'member') {

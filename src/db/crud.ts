@@ -134,6 +134,13 @@ export class CRUD {
     return created!;
   }
 
+  async updateTripName(groupId: string, tripName: string): Promise<Trip | null> {
+    const current = await this.getCurrentTrip(groupId);
+    if (!current) return null;
+    await this.db.prepare(`UPDATE trips SET trip_name = ? WHERE id = ?`).bind(tripName, current.id).run();
+    return this.db.prepare(`SELECT * FROM trips WHERE id = ?`).bind(current.id).first<Trip>();
+  }
+
   async closeCurrentTrip(groupId: string): Promise<void> {
     const current = await this.getCurrentTrip(groupId);
     if (!current) return;

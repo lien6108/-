@@ -205,6 +205,23 @@ export class WizardAgent {
         const sharerNames = debtors.map(d => d.name).join('、');
         return { type: 'text', text: `已修改 #${data.groupSeq} 分攤人為：${sharerNames}。`, quickReply: getStandardQuickReply() };
       }
+      case WizardStep.AWAITING_TRIP_NAME: {
+        const tripName = input.trim();
+        if (!tripName) return { type: 'text', text: '請輸入旅程名稱：', quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
+        const existing = await this.crud.getCurrentTrip(session.group_id);
+        let trip;
+        if (existing) {
+          trip = await this.crud.updateTripName(session.group_id, tripName);
+        } else {
+          trip = await this.crud.startNewTrip(session.group_id, tripName);
+        }
+        await this.crud.deleteSession(session.user_id);
+        return {
+          type: 'text',
+          text: `✅ 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始記帳了！`,
+          quickReply: { items: [this.qr('開始記帳', '開始記帳'), this.qr('成員', '成員'), this.qr(CANCEL, CANCEL)] }
+        };
+      }
       case WizardStep.AWAITING_EXPENSE_DRAFT_MENU:
         if (input === '確認送出') {
           await this.crud.deleteSession(session.user_id);
