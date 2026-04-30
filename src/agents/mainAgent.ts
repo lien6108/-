@@ -6,7 +6,7 @@ import { SettlementAgent } from './settlementAgent';
 import { WizardAgent } from './wizardAgent';
 import { resolveCurrency } from '../utils/currency';
 import { Env } from '../env';
-import { getStandardQuickReply, createTemplateGuideMessage } from '../utils/ui';
+import { getStandardQuickReply, createTemplateGuideMessage, createExpensePickFlex } from '../utils/ui';
 
 // ─── 模板格式解析 ─────────────────────────────────────────────────────────────
 // 支援：名稱：晚餐　金額：500　幣別：JPY　支付者：Bob　分攤人：@Alice @Carol
@@ -199,19 +199,17 @@ export class MainAgent {
       }
 
       if (input === '修改帳單') {
-        return {
-          type: 'text',
-          text: '請輸入要修改的帳單編號，例如：修改 #1',
-          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
-        };
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
+        const expenses = await this.crud.getUnsettledExpenses(groupId);
+        if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳單耶～';
+        return createExpensePickFlex(expenses, 'modify');
       }
 
       if (input === '刪除帳單') {
-        return {
-          type: 'text',
-          text: '請輸入要刪除的帳單編號，例如：刪除 #1',
-          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '查看清單', text: '清單' } }, { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
-        };
+        if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
+        const expenses = await this.crud.getUnsettledExpenses(groupId);
+        if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳單耶～';
+        return createExpensePickFlex(expenses, 'delete');
       }
 
       if (input === '開始記帳說明') {
