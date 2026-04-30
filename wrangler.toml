@@ -16,3 +16,5 @@ database_id = "39d3588c-0947-4e70-bcee-df0c33e72cd3"
 
 [vars]
 LIFF_BASE_URL = ""
+LIFF_ID_CURRENT = ""
+LIFF_ID_HISTORY = ""

@@ -67,55 +67,13 @@ export class LineEventHandler {
     if (source?.type === 'group') groupId = source.groupId;
     if (source?.type === 'room') groupId = source.roomId;
 
-    // Private DM: handle view requests for all users, admin commands for admin
+    // Private DM: handle admin commands; others get a default reply
     if (groupId === 'unknown') {
-      const t = text.trim();
-      const workerBase = 'https://splitbill-worker.u107029033.workers.dev';
-
-      if (t === '查看目前分帳') {
-        const url = `${workerBase}/view/current?uid=${userId}`;
-        if (event.replyToken) await this.reply(event.replyToken, {
-          type: 'flex',
-          altText: '查看目前分帳',
-          contents: {
-            type: 'bubble', size: 'kilo',
-            body: { type: 'box', layout: 'vertical', contents: [
-              { type: 'text', text: '📋 目前分帳清單', weight: 'bold', size: 'md' },
-              { type: 'text', text: '點下方按鈕查看你目前參與的分帳（僅供檢視）', size: 'sm', color: '#888888', wrap: true, margin: 'sm' }
-            ]},
-            footer: { type: 'box', layout: 'vertical', contents: [
-              { type: 'button', action: { type: 'uri', label: '開啟目前分帳清單', uri: url }, style: 'primary', color: '#46494c' }
-            ]}
-          }
-        } as any);
-        return;
-      }
-
-      if (t === '查看歷史分帳') {
-        const url = `${workerBase}/view/history?uid=${userId}`;
-        if (event.replyToken) await this.reply(event.replyToken, {
-          type: 'flex',
-          altText: '查看歷史分帳',
-          contents: {
-            type: 'bubble', size: 'kilo',
-            body: { type: 'box', layout: 'vertical', contents: [
-              { type: 'text', text: '🗂 歷史分帳', weight: 'bold', size: 'md' },
-              { type: 'text', text: '點下方按鈕查看你的歷史分帳旅程（僅供檢視）', size: 'sm', color: '#888888', wrap: true, margin: 'sm' }
-            ]},
-            footer: { type: 'box', layout: 'vertical', contents: [
-              { type: 'button', action: { type: 'uri', label: '開啟歷史分帳清單', uri: url }, style: 'primary', color: '#46494c' }
-            ]}
-          }
-        } as any);
-        return;
-      }
-
       if (this.adminAgent.isAdmin(userId)) {
-        const adminReply = await this.adminAgent.handleAdminDM(t);
+        const adminReply = await this.adminAgent.handleAdminDM(text.trim());
         if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。');
         return;
       }
-
       if (event.replyToken) await this.reply(event.replyToken, '請在群組中使用分帳功能。');
       return;
     }

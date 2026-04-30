@@ -4,4 +4,6 @@ export interface Env {
   DB: D1Database;
   AI: any;
   ADMIN_LINE_USER_ID?: string;
+  LIFF_ID_CURRENT?: string;
+  LIFF_ID_HISTORY?: string;
 }

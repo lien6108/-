@@ -12,7 +12,6 @@ const viewStyle = `
     body{font-family:-apple-system,"Microsoft JhengHei",sans-serif;background:#f4f7f6;margin:0;padding:0;color:#333}
     .header{background:#46494c;color:#fff;padding:18px 16px;font-size:18px;font-weight:bold;display:flex;align-items:center;gap:8px}
     .card{background:#fff;border-radius:12px;margin:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-    .card-title{font-size:13px;color:#888;font-weight:bold;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
     .trip-badge{display:inline-block;background:#e8f5e9;color:#2e7d32;border-radius:8px;padding:2px 10px;font-size:12px;margin-bottom:8px}
     .row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f5f5f5}
     .row:last-child{border-bottom:none}
@@ -28,63 +27,114 @@ const viewStyle = `
     .trip-meta{font-size:12px;color:#aaa;margin-top:2px}
     .status-active{color:#2ecc71;font-size:12px}
     .status-closed{color:#bbb;font-size:12px}
-    h2{font-size:14px;color:#555;margin:16px 16px 0;font-weight:600}
+    .loading{text-align:center;padding:40px;color:#aaa;font-size:14px}
+    #content{display:none}
   </style>`;
 
-app.get('/view/current', async (c) => {
+// JSON API: current unsettled expenses for a user
+app.get('/api/current', async (c) => {
   const uid = c.req.query('uid');
-  if (!uid) return c.html(`<!DOCTYPE html><html><head>${viewStyle}</head><body><div class="header">📋 目前分帳清單</div><div class="card"><div class="empty">無效連結，請重新取得。</div></div></body></html>`);
+  if (!uid) return c.json({ error: 'missing uid' }, 400);
   const crud = new CRUD(c.env);
   const groupIds = await crud.getGroupsByUserId(uid);
-  let bodyHtml = '';
-  if (groupIds.length === 0) {
-    bodyHtml = '<div class="card"><div class="empty">你目前未加入任何分帳群組。</div></div>';
-  }
+  const result = [];
   for (const gid of groupIds) {
     const trip = await crud.getCurrentTrip(gid);
     const expenses = await crud.getUnsettledExpenses(gid);
-    const tripName = trip?.trip_name || '（未命名旅程）';
-    let rows = '';
-    let total = 0;
-    for (const exp of expenses) {
-      const amtText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
-        ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
-      total += exp.amount;
-      rows += `<div class="row"><span class="seq">#${exp.group_seq}</span><span class="desc">${exp.description}</span><div><div class="amount">${amtText}</div><div class="payer">${exp.payer_name}</div></div></div>`;
-    }
-    if (rows === '') rows = '<div class="empty">目前無記帳資料</div>';
-    const totalRow = expenses.length > 0 ? `<div class="total-row"><span>總計 (TWD)</span><span>${Math.round(total * 100) / 100}</span></div>` : '';
-    bodyHtml += `<div class="card"><div class="trip-badge">✈️ ${tripName}</div><div>${rows}</div>${totalRow}</div>`;
+    result.push({ tripName: trip?.trip_name || '（未命名旅程）', expenses });
   }
-  const html = `<!DOCTYPE html><html><head><title>目前分帳清單</title>${viewStyle}</head><body><div class="header">📋 目前分帳清單</div>${bodyHtml}</body></html>`;
+  return c.json(result);
+});
+
+// JSON API: trip history for a user
+app.get('/api/history', async (c) => {
+  const uid = c.req.query('uid');
+  if (!uid) return c.json({ error: 'missing uid' }, 400);
+  const crud = new CRUD(c.env);
+  const groupIds = await crud.getGroupsByUserId(uid);
+  const result = [];
+  for (const gid of groupIds) {
+    const trips = await crud.getTripHistory(gid);
+    result.push(...trips);
+  }
+  return c.json(result);
+});
+
+app.get('/view/current', (c) => {
+  const liffId = c.env.LIFF_ID_CURRENT || '';
+  const html = `<!DOCTYPE html>
+<html><head><title>目前分帳清單</title>${viewStyle}
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head><body>
+<div class="header">📋 目前分帳清單</div>
+<div id="loading" class="loading">載入中…</div>
+<div id="content"></div>
+<script>
+(async () => {
+  try {
+    await liff.init({ liffId: '${liffId}' });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const profile = await liff.getProfile();
+    const uid = profile.userId;
+    const res = await fetch('/api/current?uid=' + uid);
+    const data = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('content');
+    el.style.display = 'block';
+    if (!data.length) { el.innerHTML = '<div class="card"><div class="empty">你目前未加入任何分帳群組。</div></div>'; return; }
+    el.innerHTML = data.map(g => {
+      const rows = g.expenses.length === 0 ? '<div class="empty">目前無記帳資料</div>' :
+        g.expenses.map(exp => {
+          const amt = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+            ? exp.currency + ' ' + exp.original_amount : 'TWD ' + exp.amount;
+          return '<div class="row"><span class="seq">#' + exp.group_seq + '</span><span class="desc">' + exp.description + '</span><div><div class="amount">' + amt + '</div><div class="payer">' + exp.payer_name + '</div></div></div>';
+        }).join('');
+      const total = g.expenses.reduce((s, e) => s + e.amount, 0);
+      const totalRow = g.expenses.length > 0 ? '<div class="total-row"><span>總計 (TWD)</span><span>' + Math.round(total * 100) / 100 + '</span></div>' : '';
+      return '<div class="card"><div class="trip-badge">✈️ ' + g.tripName + '</div>' + rows + totalRow + '</div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('loading').textContent = '載入失敗：' + e.message;
+  }
+})();
+</script>
+</body></html>`;
   return c.html(html);
 });
 
-app.get('/view/history', async (c) => {
-  const uid = c.req.query('uid');
-  if (!uid) return c.html(`<!DOCTYPE html><html><head>${viewStyle}</head><body><div class="header">🗂 歷史分帳</div><div class="card"><div class="empty">無效連結，請重新取得。</div></div></body></html>`);
-  const crud = new CRUD(c.env);
-  const groupIds = await crud.getGroupsByUserId(uid);
-  let bodyHtml = '';
-  if (groupIds.length === 0) {
-    bodyHtml = '<div class="card"><div class="empty">你目前未加入任何分帳群組。</div></div>';
-  }
-  for (const gid of groupIds) {
-    const trips = await crud.getTripHistory(gid);
-    if (trips.length === 0) continue;
-    let items = '';
-    for (const t of trips) {
-      const isActive = t.status === 'active';
+app.get('/view/history', (c) => {
+  const liffId = c.env.LIFF_ID_HISTORY || '';
+  const html = `<!DOCTYPE html>
+<html><head><title>歷史分帳</title>${viewStyle}
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head><body>
+<div class="header">🗂 歷史分帳</div>
+<div id="loading" class="loading">載入中…</div>
+<div id="content"></div>
+<script>
+(async () => {
+  try {
+    await liff.init({ liffId: '${liffId}' });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const profile = await liff.getProfile();
+    const uid = profile.userId;
+    const res = await fetch('/api/history?uid=' + uid);
+    const trips = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('content');
+    el.style.display = 'block';
+    if (!trips.length) { el.innerHTML = '<div class="card"><div class="empty">目前無歷史分帳紀錄。</div></div>'; return; }
+    el.innerHTML = '<div class="card">' + trips.map(t => {
       const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
-      const statusTag = isActive
-        ? `<span class="status-active">● 進行中</span>`
-        : `<span class="status-closed">● 已結算</span>`;
-      items += `<div class="trip-item"><div><div class="trip-name">✈️ ${t.trip_name}</div><div class="trip-meta">${date}</div></div>${statusTag}</div>`;
-    }
-    bodyHtml += `<div class="card">${items}</div>`;
+      const tag = t.status === 'active' ? '<span class="status-active">● 進行中</span>' : '<span class="status-closed">● 已結算</span>';
+      return '<div class="trip-item"><div><div class="trip-name">✈️ ' + t.trip_name + '</div><div class="trip-meta">' + date + '</div></div>' + tag + '</div>';
+    }).join('') + '</div>';
+  } catch(e) {
+    document.getElementById('loading').textContent = '載入失敗：' + e.message;
   }
-  if (!bodyHtml) bodyHtml = '<div class="card"><div class="empty">目前無歷史分帳紀錄。</div></div>';
-  const html = `<!DOCTYPE html><html><head><title>歷史分帳</title>${viewStyle}</head><body><div class="header">🗂 歷史分帳</div>${bodyHtml}</body></html>`;
+})();
+</script>
+</body></html>`;
   return c.html(html);
 });
 
