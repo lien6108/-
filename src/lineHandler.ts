@@ -1,6 +1,7 @@
 import { messagingApi, webhook } from '@line/bot-sdk';
 import { Env } from './env';
 import { MainAgent } from './agents/mainAgent';
+import { AdminAgent } from './agents/adminAgent';
 import { CRUD } from './db/crud';
 
 const { MessagingApiClient } = messagingApi;
@@ -8,6 +9,7 @@ const { MessagingApiClient } = messagingApi;
 export class LineEventHandler {
   private client: messagingApi.MessagingApiClient;
   private mainAgent: MainAgent;
+  private adminAgent: AdminAgent;
   private crud: CRUD;
   private env: Env;
   private botUserId: string | null = null;
@@ -19,6 +21,7 @@ export class LineEventHandler {
     });
     this.crud = new CRUD(env);
     this.mainAgent = new MainAgent(env, this.crud);
+    this.adminAgent = new AdminAgent(env, this.crud);
   }
 
   async handleEvents(events: webhook.Event[]) {
@@ -120,9 +123,9 @@ export class LineEventHandler {
 
     if (botMentionedOnly) text = 'GREETING';
 
-    // Administrative controls (Maintenance Mode etc.) - ONLY in Private DM
-    if (groupId === 'unknown' && userId === this.env.ADMIN_LINE_USER_ID) {
-      const adminReply = await this.handleAdminDM(text);
+    // Administrative controls - ONLY in Private DM from admin
+    if (groupId === 'unknown' && this.adminAgent.isAdmin(userId)) {
+      const adminReply = await this.adminAgent.handleAdminDM(text);
       if (adminReply && event.replyToken) {
         await this.reply(event.replyToken, adminReply);
         return;
@@ -132,34 +135,14 @@ export class LineEventHandler {
     const replyText = await this.mainAgent.processMessage(groupId, userId, displayName, text, mentionMap);
     if (!replyText || !event.replyToken) return;
 
-    if (typeof replyText === 'string' && replyText.startsWith('[NOTIFY_ADMIN]')) {
-      const actualReply = replyText.replace('[NOTIFY_ADMIN]', '');
-      await this.reply(event.replyToken, actualReply);
-      if (this.env.ADMIN_LINE_USER_ID) {
-        await this.client.pushMessage({
-          to: this.env.ADMIN_LINE_USER_ID,
-          messages: [{ type: 'text', text: `AI 通知\n群組：${groupId}\n使用者：${displayName}\n內容：${actualReply}` }]
-        });
-      }
-      return;
-    }
-
-    if (typeof replyText === 'string' && replyText.startsWith('[FEEDBACK]')) {
-      const content = replyText.replace('[FEEDBACK]', '').trim();
-      await this.reply(event.replyToken, `已收到你的回饋：\n${content}`);
-
-      if (this.env.ADMIN_LINE_USER_ID) {
-        const trip = await this.crud.getCurrentTrip(groupId);
-        const tripName = trip?.trip_name || '未命名旅程';
-        await this.client.pushMessage({
-          to: this.env.ADMIN_LINE_USER_ID,
-          messages: [{
-            type: 'text',
-            text: `回饋通知\n旅程：${tripName}\n群組：${groupId}\n使用者：${displayName} (${userId})\n內容：${content}`
-          }]
-        });
-      }
-      return;
+    if (typeof replyText === 'string' && (replyText.startsWith('[NOTIFY_ADMIN]') || replyText.startsWith('[FEEDBACK]'))) {
+      const handled = await this.adminAgent.handleSpecialReply(
+        event.replyToken,
+        replyText,
+        { groupId, displayName, userId },
+        (token, msg) => this.reply(token, msg)
+      );
+      if (handled) return;
     }
 
     await this.reply(event.replyToken, replyText);
@@ -182,27 +165,6 @@ export class LineEventHandler {
       }
     };
     await this.reply(event.replyToken, tutorialMsg);
-  }
-
-  private async handleAdminDM(text: string): Promise<string | null> {
-    const t = text.trim().toLowerCase();
-    if (['維修開啟', 'maintenance on', '維修 on'].includes(t)) {
-      await this.crud.setMaintenanceMode(true);
-      return '已開啟維修模式。';
-    }
-    if (['維修關閉', 'maintenance off', '維修 off'].includes(t)) {
-      await this.crud.setMaintenanceMode(false);
-      return '已關閉維修模式。';
-    }
-    if (['維修狀態', 'maintenance status'].includes(t)) {
-      const on = await this.crud.isMaintenanceMode();
-      return `目前維修模式：${on ? '開啟' : '關閉'}`;
-    }
-    if (['清除資料', 'clear data', 'reset all'].includes(t)) {
-      await this.crud.clearAllData();
-      return '✅ 已清除所有記帳資料（expenses、trips、sessions、成員參與狀態）。';
-    }
-    return '可用管理指令：維修開啟 / 維修關閉 / 維修狀態 / 清除資料';
   }
 
   private async getDisplayName(groupId: string, userId: string): Promise<string> {
