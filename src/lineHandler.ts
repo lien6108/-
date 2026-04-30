@@ -292,6 +292,12 @@ export class LineEventHandler {
       return { type: 'text', text: '目前無歷史分帳紀錄。' };
     }
 
+    allTrips.sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (a.status !== 'active' && b.status === 'active') return 1;
+      return 0;
+    });
+
     const rows = allTrips.map(t => {
       const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
       const isActive = t.status === 'active';
