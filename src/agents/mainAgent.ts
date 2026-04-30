@@ -138,9 +138,23 @@ export class MainAgent {
       }
 
       if (input === 'GREETING') {
+        if (!isParticipating) {
+          return {
+            type: 'text',
+            text: '👋 嗨！你還不在分帳名單中，可以加入後開始使用。',
+            quickReply: {
+              items: [
+                { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
+                { type: 'action', action: { type: 'message', label: '查看成員', text: '成員' } },
+                { type: 'action', action: { type: 'message', label: '完整說明', text: '說明' } },
+                { type: 'action', action: { type: 'message', label: '取消', text: '取消' } },
+              ]
+            }
+          };
+        }
         return {
           type: 'text',
-          text: '您好，請問需要什麼服務呢？',
+          text: '有什麼需要嗎？',
           quickReply: getStandardQuickReply()
         };
       }
