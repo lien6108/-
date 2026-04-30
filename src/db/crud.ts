@@ -520,4 +520,67 @@ export class CRUD {
   async deleteSession(userId: string): Promise<void> {
     await this.db.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(userId).run();
   }
+
+  // ─── Itinerary ───────────────────────────────────────────────────────────────
+
+  async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
+    const res = await this.db.prepare(
+      `SELECT COALESCE(MAX(sort_order), 0) + 1 as next FROM itinerary_spots WHERE trip_id = ? AND day = ?`
+    ).bind(tripId, day).first<{ next: number }>();
+    const order = res?.next ?? 1;
+    await this.db.prepare(
+      `INSERT INTO itinerary_spots (trip_id, day, sort_order, name, maps_url) VALUES (?, ?, ?, ?, ?)`
+    ).bind(tripId, day, order, name, mapsUrl || null).run();
+  }
+
+  async getSpotsByDay(tripId: number, day: number): Promise<ItinerarySpot[]> {
+    const res = await this.db.prepare(
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? ORDER BY sort_order ASC`
+    ).bind(tripId, day).all<ItinerarySpot>();
+    return res.results || [];
+  }
+
+  async getAllSpots(tripId: number): Promise<ItinerarySpot[]> {
+    const res = await this.db.prepare(
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? ORDER BY day ASC, sort_order ASC`
+    ).bind(tripId).all<ItinerarySpot>();
+    return res.results || [];
+  }
+
+  async markSpotDone(spotId: number): Promise<void> {
+    await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE id = ?`).bind(spotId).run();
+  }
+
+  async getNextPendingSpot(tripId: number): Promise<ItinerarySpot | null> {
+    return this.db.prepare(
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND status = 'pending' ORDER BY day ASC, sort_order ASC LIMIT 1`
+    ).bind(tripId).first<ItinerarySpot>();
+  }
+
+  async deleteSpot(spotId: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM itinerary_spots WHERE id = ?`).bind(spotId).run();
+  }
+
+  // ─── Shopping ────────────────────────────────────────────────────────────────
+
+  async addShoppingItem(tripId: number, assignee: string, item: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO shopping_items (trip_id, assignee, item) VALUES (?, ?, ?)`
+    ).bind(tripId, assignee, item).run();
+  }
+
+  async getShoppingItems(tripId: number): Promise<ShoppingItem[]> {
+    const res = await this.db.prepare(
+      `SELECT * FROM shopping_items WHERE trip_id = ? ORDER BY is_bought ASC, created_at ASC`
+    ).bind(tripId).all<ShoppingItem>();
+    return res.results || [];
+  }
+
+  async markItemBought(itemId: number): Promise<void> {
+    await this.db.prepare(`UPDATE shopping_items SET is_bought = 1 WHERE id = ?`).bind(itemId).run();
+  }
+
+  async deleteShoppingItem(itemId: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM shopping_items WHERE id = ?`).bind(itemId).run();
+  }
 }
