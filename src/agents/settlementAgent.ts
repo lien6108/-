@@ -35,7 +35,7 @@ export class SettlementAgent {
 
     // 建議轉帳列
     const txRows: any[] = transactions.length === 0
-      ? [{ type: 'text', text: '🐾 已經平衡，不需要轉帳', size: 'sm', color: '#2ecc71', margin: 'sm' }]
+      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#2ecc71', margin: 'sm' }]
       : transactions.map(t => ({
           type: 'box', layout: 'vertical', margin: 'sm',
           contents: [
@@ -73,7 +73,7 @@ export class SettlementAgent {
         header: {
           type: 'box', layout: 'vertical', backgroundColor: '#46494c',
           contents: [
-            { type: 'text', text: '🐾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
+            { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
           ]
         },
         body: { type: 'box', layout: 'vertical', contents: bodyContents },
@@ -97,7 +97,7 @@ export class SettlementAgent {
 
     return {
       type: 'text',
-      text: `🐾 結算完成，本單已封存！共 ${count} 筆記帳。`
+      text: `✅ 結算完成，本單已封存！共 ${count} 筆記帳。`
     };
   }
 }

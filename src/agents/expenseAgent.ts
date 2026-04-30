@@ -128,7 +128,7 @@ export class ExpenseAgent {
 
     return {
       type: 'text',
-      text: `🐾 已新增 ${valid.length} 筆記帳\n${rows.join('\n')}\n合計：TWD ${Math.round(total * 100) / 100}`,
+      text: `✅ 已新增 ${valid.length} 筆記帳\n${rows.join('\n')}\n合計：TWD ${Math.round(total * 100) / 100}`,
       quickReply: getStandardQuickReply({ groupSeq: lastSeq })
     };
   }
@@ -140,7 +140,7 @@ export class ExpenseAgent {
     await this.crud.deleteExpense(expense.id);
     return {
       type: 'text',
-      text: `🐾 ${requestName} 已刪除 #${groupSeq}（${expense.description} / ${expense.amount}）`,
+      text: `🗑️ ${requestName} 已刪除 #${groupSeq}（${expense.description} / ${expense.amount}）`,
       quickReply: getStandardQuickReply()
     };
   }
@@ -232,7 +232,7 @@ export class ExpenseAgent {
 
     return {
       type: 'text',
-      text: `🐾 ${requestName} 已修改 #${groupSeq}！\n金額：${amountDisplay}\n分攤：${splits.length} 人，每人 ${share}`,
+      text: `✅ ${requestName} 已修改 #${groupSeq}！\n金額：${amountDisplay}\n分攤：${splits.length} 人，每人 ${share}`,
       quickReply: this.getExpenseQuickReply(groupSeq)
     };
   }
@@ -259,7 +259,7 @@ export class ExpenseAgent {
 
     return {
       type: 'text',
-      text: `🐾 ${requestName} 已修改 #${groupSeq} 幣別！\n金額：${amountInfo}\n分攤：${splits.length} 人，每人 ${share}`,
+      text: `✅ ${requestName} 已修改 #${groupSeq} 幣別！\n金額：${amountInfo}\n分攤：${splits.length} 人，每人 ${share}`,
       quickReply: this.getExpenseQuickReply(groupSeq)
     };
   }

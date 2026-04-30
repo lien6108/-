@@ -84,7 +84,7 @@ export class MemberAgent {
 
     return {
       type: 'flex',
-      altText: `🐶 分帳成員 (${members.length})`,
+      altText: `👥 分帳成員 (${members.length})`,
       contents: {
         type: 'bubble',
         size: 'kilo',

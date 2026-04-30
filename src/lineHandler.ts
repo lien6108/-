@@ -238,7 +238,7 @@ export class LineEventHandler {
         header: {
           type: 'box', layout: 'vertical', backgroundColor: '#46494c',
           contents: [
-            { type: 'text', text: '🐾 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
+            { type: 'text', text: '📋 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
             { type: 'text', text: `✈️ ${tripName}`, color: '#cccccc', size: 'xs' }
           ]
         },
