@@ -28,14 +28,14 @@ export class SettlementAgent {
             type: 'text',
             text: `${b.net > 0 ? '+' : ''}${Math.round(b.net * 100) / 100}`,
             size: 'sm', flex: 2, align: 'end', weight: 'bold',
-            color: b.net > 0 ? '#2ecc71' : '#e74c3c'
+            color: b.net > 0 ? '#3b82f6' : '#e74c3c'
           }
         ]
       }));
 
     // 建議轉帳列
     const txRows: any[] = transactions.length === 0
-      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#2ecc71', margin: 'sm' }]
+      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#3b82f6', margin: 'sm' }]
       : transactions.map(t => ({
           type: 'box', layout: 'vertical', margin: 'sm',
           contents: [
@@ -71,7 +71,7 @@ export class SettlementAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
           contents: [
             { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
           ]

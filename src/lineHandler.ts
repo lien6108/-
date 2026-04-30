@@ -236,7 +236,7 @@ export class LineEventHandler {
       bubbles.push({
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
           contents: [
             { type: 'text', text: '📋 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
             { type: 'text', text: `✈️ ${tripName}`, color: '#cccccc', size: 'xs' }
@@ -277,7 +277,7 @@ export class LineEventHandler {
     const rows = allTrips.map(t => {
       const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
       const statusText = t.status === 'active' ? '● 進行中' : '● 已結算';
-      const statusColor = t.status === 'active' ? '#2ecc71' : '#aaaaaa';
+      const statusColor = t.status === 'active' ? '#3b82f6' : '#aaaaaa';
       return {
         type: 'box', layout: 'horizontal', margin: 'md',
         contents: [
@@ -295,7 +295,7 @@ export class LineEventHandler {
       contents: {
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+          type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
           contents: [{ type: 'text', text: '🗂 歷史分帳', weight: 'bold', color: '#ffffff', size: 'md' }]
         },
         body: { type: 'box', layout: 'vertical', contents: rows }

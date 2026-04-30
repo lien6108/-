@@ -91,7 +91,7 @@ export class MemberAgent {
         header: {
           type: 'box',
           layout: 'horizontal',
-          backgroundColor: '#46494c',
+          backgroundColor: '#1e40af',
           contents: [
             { type: 'text', text: '� 分帳小夥伴', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
             { type: 'text', text: `${members.length} 人`, color: '#cccccc', size: 'sm', align: 'end', flex: 0 }
@@ -107,7 +107,7 @@ export class MemberAgent {
           layout: 'horizontal',
           spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'message', label: '加入', text: '加入' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 },
+            { type: 'button', action: { type: 'message', label: '加入', text: '加入' }, style: 'primary', height: 'sm', color: '#3b82f6', flex: 1 },
             { type: 'button', action: { type: 'message', label: '退出', text: '退出' }, style: 'secondary', height: 'sm', flex: 1 }
           ]
         }

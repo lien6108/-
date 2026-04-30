@@ -34,10 +34,10 @@ export function createExpenseSuccessFlex(
       type: 'bubble',
       size: 'kilo',
       header: {
-        type: 'box', layout: 'horizontal', backgroundColor: '#2ecc71',
+        type: 'box', layout: 'horizontal', backgroundColor: '#3b82f6',
         contents: [
           { type: 'text', text: '✅ 記帳成功', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
-          { type: 'text', text: `#${exp.group_seq}`, color: '#d5f5e3', size: 'sm', align: 'end', flex: 0 }
+          { type: 'text', text: `#${exp.group_seq}`, color: '#bfdbfe', size: 'sm', align: 'end', flex: 0 }
         ]
       },
       body: { type: 'box', layout: 'vertical', contents: rows },
@@ -46,7 +46,7 @@ export function createExpenseSuccessFlex(
         contents: [
           { type: 'button', action: { type: 'message', label: '修改', text: `修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
           { type: 'button', action: { type: 'message', label: '刪除', text: `刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
+          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'primary', height: 'sm', color: '#3b82f6', flex: 1 }
         ]
       }
     }
@@ -213,7 +213,7 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         contents: [
           { type: 'text', text: '📝 未結算記帳清單', weight: 'bold', size: 'lg', color: '#ffffff' }
         ],
-        backgroundColor: '#46494c'
+        backgroundColor: '#1e40af'
       },
       body: {
         type: 'box',
@@ -226,7 +226,7 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         spacing: 'sm',
         contents: [
           { type: 'button', action: { type: 'message', label: '只看我的帳', text: '只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
-          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#2ecc71', flex: 1 }
+          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#3b82f6', flex: 1 }
         ]
       }
     }
@@ -247,7 +247,7 @@ export function createMyAccountFlex(
 
   // 需要轉帳
   const paymentRows: any[] = payments.length === 0
-    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: '#2ecc71', margin: 'sm' }]
+    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: '#3b82f6', margin: 'sm' }]
     : payments.map(p => ({
         type: 'box', layout: 'horizontal', margin: 'sm',
         contents: [
@@ -314,7 +314,7 @@ export function createMyAccountFlex(
       type: 'bubble',
       size: 'mega',
       header: {
-        type: 'box', layout: 'vertical', backgroundColor: '#46494c',
+        type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
         contents: [
           { type: 'text', text: `👤 ${userName} 的帳目`, weight: 'bold', size: 'lg', color: '#ffffff' }
         ]
@@ -363,7 +363,7 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
           { type: 'text', text: '📝 記帳草稿', weight: 'bold', size: 'lg', color: '#ffffff' },
           { type: 'text', text: `👤 編輯者：${draft.editorName || '本人'}`, size: 'xs', color: '#cccccc' }
         ],
-        backgroundColor: '#46494c'
+        backgroundColor: '#1e40af'
       },
       body: {
         type: 'box',
@@ -375,7 +375,7 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
         layout: 'vertical',
         spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#46494c' },
+          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#1e40af' },
           { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#ff4d4f' }
         ]
@@ -406,7 +406,7 @@ export function createSelectionFlex(title: string, subtitle: string, items: { la
           { type: 'text', text: title, weight: 'bold', size: 'lg', color: '#ffffff' },
           { type: 'text', text: subtitle, size: 'xs', color: '#cccccc' }
         ],
-        backgroundColor: '#46494c'
+        backgroundColor: '#1e40af'
       },
       body: {
         type: 'box',
@@ -454,7 +454,7 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
   const commonFooter = {
     type: 'box', layout: 'vertical', spacing: 'sm', margin: 'lg', contents: [
       { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm', color: '#00b900' },
-      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm', color: '#46494c' },
+      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm', color: '#1e40af' },
       { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm' }
     ]
   };
@@ -467,17 +467,17 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
       contents: [
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '1️⃣ 輸入金額', weight: 'bold', color: '#ffffff' }] },
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#1e40af', contents: [{ type: 'text', text: '1️⃣ 輸入金額', weight: 'bold', color: '#ffffff' }] },
           body: { type: 'box', layout: 'vertical', contents: [...calcGrid, commonFooter] }
         },
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '2️⃣ 選擇項目', weight: 'bold', color: '#ffffff' }] },
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#1e40af', contents: [{ type: 'text', text: '2️⃣ 選擇項目', weight: 'bold', color: '#ffffff' }] },
           body: { type: 'box', layout: 'vertical', contents: [...catButtons, commonFooter] }
         },
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#46494c', contents: [{ type: 'text', text: '3️⃣ 幣別與付款', weight: 'bold', color: '#ffffff' }] },
+          header: { type: 'box', layout: 'vertical', backgroundColor: '#1e40af', contents: [{ type: 'text', text: '3️⃣ 幣別與付款', weight: 'bold', color: '#ffffff' }] },
           body: { type: 'box', layout: 'vertical', contents: [
             { type: 'text', text: '幣別', size: 'xs', color: '#aaaaaa', margin: 'md' },
             { type: 'box', layout: 'horizontal', contents: currButtons },
