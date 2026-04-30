@@ -9,10 +9,10 @@ const app = new Hono<{ Bindings: Env }>();
 const viewStyle = `
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{font-family:-apple-system,"Microsoft JhengHei",sans-serif;background:#eff6ff;margin:0;padding:0;color:#333}
-    .header{background:#1e40af;color:#fff;padding:18px 16px;font-size:18px;font-weight:bold;display:flex;align-items:center;gap:8px}
+    body{font-family:-apple-system,"Microsoft JhengHei",sans-serif;background:#f2f0ed;margin:0;padding:0;color:#333}
+    .header{background:#6b7f8c;color:#fff;padding:18px 16px;font-size:18px;font-weight:bold;display:flex;align-items:center;gap:8px}
     .card{background:#fff;border-radius:12px;margin:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-    .trip-badge{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:8px;padding:2px 10px;font-size:12px;margin-bottom:8px}
+    .trip-badge{display:inline-block;background:#e4e9ed;color:#5a6e7a;border-radius:8px;padding:2px 10px;font-size:12px;margin-bottom:8px}
     .row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f5f5f5}
     .row:last-child{border-bottom:none}
     .seq{color:#bbb;font-size:12px;min-width:28px}
@@ -25,7 +25,7 @@ const viewStyle = `
     .trip-item:last-child{border-bottom:none}
     .trip-name{font-size:15px;font-weight:600}
     .trip-meta{font-size:12px;color:#aaa;margin-top:2px}
-    .status-active{color:#3b82f6;font-size:12px}
+    .status-active{color:#8fa8b8;font-size:12px}
     .status-closed{color:#bbb;font-size:12px}
     .loading{text-align:center;padding:40px;color:#aaa;font-size:14px}
     #content{display:none}
@@ -152,7 +152,7 @@ app.get('/liff', (c) => {
     <title>快速記帳 - 分帳神器</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        :root { --primary: #1e40af; --bg: #eff6ff; --text: #333; }
+        :root { --primary: #6b7f8c; --bg: #f2f0ed; --text: #333; }
         body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); }
         .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .label { font-size: 13px; color: #888; margin-bottom: 8px; font-weight: bold; }

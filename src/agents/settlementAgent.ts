@@ -28,14 +28,14 @@ export class SettlementAgent {
             type: 'text',
             text: `${b.net > 0 ? '+' : ''}${Math.round(b.net * 100) / 100}`,
             size: 'sm', flex: 2, align: 'end', weight: 'bold',
-            color: b.net > 0 ? '#3b82f6' : '#e74c3c'
+            color: b.net > 0 ? '#8fa8b8' : '#b87070'
           }
         ]
       }));
 
     // 建議轉帳列
     const txRows: any[] = transactions.length === 0
-      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#3b82f6', margin: 'sm' }]
+      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#8fa8b8', margin: 'sm' }]
       : transactions.map(t => ({
           type: 'box', layout: 'vertical', margin: 'sm',
           contents: [
@@ -43,7 +43,7 @@ export class SettlementAgent {
               type: 'box', layout: 'horizontal',
               contents: [
                 { type: 'text', text: `${t.from_name} → ${t.to_name}`, size: 'sm', flex: 3, wrap: true, weight: 'bold' },
-                { type: 'text', text: `TWD ${Math.round(t.amount * 100) / 100}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' }
+                { type: 'text', text: `TWD ${Math.round(t.amount * 100) / 100}`, size: 'sm', flex: 2, align: 'end', color: '#b87070', weight: 'bold' }
               ]
             }
           ]
@@ -71,7 +71,7 @@ export class SettlementAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
+          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
           contents: [
             { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
           ]
@@ -81,7 +81,7 @@ export class SettlementAgent {
           type: 'box', layout: 'horizontal', spacing: 'sm',
           contents: [
             { type: 'button', action: { type: 'message', label: '取消', text: '取消' }, style: 'secondary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', color: '#e74c3c', flex: 2 }
+            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', color: '#b87070', flex: 2 }
           ]
         }
       }

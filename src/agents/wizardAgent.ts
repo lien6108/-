@@ -336,7 +336,7 @@ export class WizardAgent {
             style: action === 'delete' ? 'secondary' : 'primary',
             height: 'sm',
             flex: 2,
-            color: action === 'delete' ? undefined : '#3b82f6'
+            color: action === 'delete' ? undefined : '#8fa8b8'
           }
         ]
       };
@@ -349,7 +349,7 @@ export class WizardAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#1e40af',
+          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
           contents: [{ type: 'text', text: title, weight: 'bold', color: '#ffffff', size: 'md' }]
         },
         body: {
