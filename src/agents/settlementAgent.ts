@@ -42,8 +42,7 @@ export class SettlementAgent {
             {
               type: 'box', layout: 'horizontal',
               contents: [
-                { type: 'text', text: t.from_name, size: 'sm', flex: 3, weight: 'bold' },
-                { type: 'text', text: `→ ${t.to_name}`, size: 'sm', flex: 3, color: '#555555' },
+                { type: 'text', text: `${t.from_name} → ${t.to_name}`, size: 'sm', flex: 3, wrap: true, weight: 'bold' },
                 { type: 'text', text: `TWD ${Math.round(t.amount * 100) / 100}`, size: 'sm', flex: 2, align: 'end', color: '#e74c3c', weight: 'bold' }
               ]
             }
