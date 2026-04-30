@@ -276,8 +276,23 @@ export class LineEventHandler {
 
     const rows = allTrips.map(t => {
       const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
-      const statusText = t.status === 'active' ? '● 進行中' : '● 已結算';
-      const statusColor = t.status === 'active' ? '#8fa8b8' : '#aaaaaa';
+      const isActive = t.status === 'active';
+      const statusText = isActive ? '● 進行中' : '● 已結算';
+      const statusColor = isActive ? '#5a9a6a' : '#aaaaaa';
+
+      const rightCol: any = isActive
+        ? { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', flex: 2, gravity: 'center' }
+        : {
+            type: 'box', layout: 'vertical', flex: 2, contents: [
+              { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end' },
+              {
+                type: 'button',
+                action: { type: 'message', label: '查看清單', text: `歷史 #${t.id}` },
+                style: 'secondary', height: 'sm', margin: 'xs'
+              }
+            ]
+          };
+
       return {
         type: 'box', layout: 'horizontal', margin: 'md',
         contents: [
@@ -285,7 +300,7 @@ export class LineEventHandler {
             { type: 'text', text: `✈️ ${t.trip_name}`, size: 'sm', weight: 'bold', wrap: true },
             { type: 'text', text: date, size: 'xs', color: '#aaaaaa' }
           ]},
-          { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', flex: 2 }
+          rightCol
         ]
       };
     });
