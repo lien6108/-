@@ -98,6 +98,13 @@ export class LineEventHandler {
         return;
       }
 
+      const dmHistoryMatch = t.match(/^歷史\s*#(\d+)$/);
+      if (dmHistoryMatch) {
+        const msg = await this.buildTripDetailFlex(userId, parseInt(dmHistoryMatch[1], 10));
+        if (event.replyToken) await this.reply(event.replyToken, msg);
+        return;
+      }
+
       if (this.adminAgent.isAdmin(userId)) {
         const adminReply = await this.adminAgent.handleAdminDM(t);
         if (event.replyToken) await this.reply(event.replyToken, adminReply ?? '管理員模式中，輸入「指令」查看可用指令。');
@@ -287,7 +294,7 @@ export class LineEventHandler {
               { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end' },
               {
                 type: 'button',
-                action: { type: 'message', label: '查看清單', text: `歷史 #${t.id}` },
+                action: { type: 'message', label: '查看', text: `歷史 #${t.id}` },
                 style: 'secondary', height: 'sm', margin: 'xs'
               }
             ]
@@ -314,6 +321,57 @@ export class LineEventHandler {
           contents: [{ type: 'text', text: '🗂 歷史分帳', weight: 'bold', color: '#ffffff', size: 'md' }]
         },
         body: { type: 'box', layout: 'vertical', contents: rows }
+      }
+    } as any;
+  }
+
+  private async buildTripDetailFlex(userId: string, tripId: number): Promise<messagingApi.Message> {
+    const groupIds = await this.crud.getGroupsByUserId(userId);
+    let trip: any = null;
+    for (const gid of groupIds) {
+      const trips = await this.crud.getTripHistory(gid);
+      trip = trips.find((t: any) => t.id === tripId);
+      if (trip) break;
+    }
+    if (!trip) return { type: 'text', text: '找不到指定的分帳記錄。' };
+
+    const expenses = await this.crud.getExpensesByTripId(tripId);
+    if (expenses.length === 0) return { type: 'text', text: `「${trip.trip_name}」沒有任何記帳。` };
+
+    let total = 0;
+    const rows: any[] = expenses.map((exp: any) => {
+      total += exp.amount;
+      const amt = exp.currency && exp.currency !== 'TWD' && exp.original_amount
+        ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
+      return {
+        type: 'box', layout: 'horizontal', margin: 'sm',
+        contents: [
+          { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#aaaaaa', flex: 1 },
+          { type: 'text', text: exp.description, size: 'sm', flex: 4, weight: 'bold', wrap: true },
+          { type: 'box', layout: 'vertical', flex: 3, contents: [
+            { type: 'text', text: amt, size: 'xs', align: 'end' },
+            { type: 'text', text: exp.payer_name, size: 'xs', color: '#888888', align: 'end' }
+          ]}
+        ]
+      };
+    });
+
+    return {
+      type: 'flex', altText: `${trip.trip_name} 完整清單`,
+      contents: {
+        type: 'bubble', size: 'mega',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          contents: [
+            { type: 'text', text: `✈️ ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md' },
+            { type: 'text', text: `共 ${expenses.length} 筆，合計 TWD ${Math.round(total * 100) / 100}`, size: 'xs', color: '#cccccc', margin: 'xs' }
+          ]
+        },
+        body: { type: 'box', layout: 'vertical', contents: rows },
+        footer: {
+          type: 'box', layout: 'horizontal',
+          contents: [{ type: 'button', action: { type: 'message', label: '返回歷史', text: '查看歷史分帳' }, style: 'secondary', height: 'sm' }]
+        }
       }
     } as any;
   }
