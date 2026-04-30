@@ -182,7 +182,18 @@ export class LineEventHandler {
   }
 
   private async handleJoin(event: webhook.JoinEvent) {
-    if (event.replyToken) await this.reply(event.replyToken, await this.mainAgent.handleBotJoinGroup());
+    if (!event.replyToken) return;
+    const joinMsg: messagingApi.Message = {
+      type: 'text',
+      text: '大家好！我是分帳小幫手 🐾\n\n我可以幫你們在這個群組輕鬆記帳、自動換算匯率並結算分帳金額！\n\n✨ 快速開始：\n1. 輸入「加入」成為分帳成員\n2. 輸入「開始記帳」建立旅程\n3. 輸入「說明」查看完整指令\n\n或是 @我 讓我打個招呼吧～',
+      quickReply: {
+        items: [
+          { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
+          { type: 'action', action: { type: 'message', label: '查看說明', text: '說明' } },
+        ]
+      }
+    };
+    await this.reply(event.replyToken, joinMsg);
   }
 
   private async handleFollow(event: webhook.FollowEvent) {
