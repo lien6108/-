@@ -68,6 +68,27 @@ export interface WizardData {
   [key: string]: any;
 }
 
+export interface ItinerarySpot {
+  id: number;
+  trip_id: number;
+  day: number;
+  sort_order: number;
+  name: string;
+  maps_url?: string | null;
+  status: 'pending' | 'done';
+  created_at: string;
+}
+
+export interface ShoppingItem {
+  id: number;
+  trip_id: number;
+  assignee: string;
+  item: string;
+  spot_id?: number | null;
+  is_bought: number;
+  created_at: string;
+}
+
 export class CRUD {
   private db: D1Database;
 
