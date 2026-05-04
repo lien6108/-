@@ -304,23 +304,49 @@ export class ItineraryAgent {
     }
 
     const buildFlightRow = (f: FlightInfo): any => {
-      const flightNoText = f.flight_no ? `${f.flight_no}  ` : '';
-      const routeText = f.depart_airport && f.arrive_airport
-        ? `${f.depart_airport} ${f.depart_time} → ${f.arrive_airport} ${f.arrive_time}`
-        : `${f.depart_time} → ${f.arrive_time}`;
-      const infoLines: any[] = [
-        { type: 'text', text: `${flightNoText}${f.depart_date}`, size: 'sm', weight: 'bold', color: '#333333' },
-        { type: 'text', text: routeText, size: 'xs', color: '#555555', margin: 'xs' },
-      ];
-      if (f.added_by_name) {
-        infoLines.push({ type: 'text', text: f.added_by_name, size: 'xs', color: '#aaaaaa', margin: 'xs' });
-      }
-      return {
-        type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'sm',
-        contents: [
-          { type: 'box', layout: 'vertical', flex: 1, contents: infoLines },
+      // 頂列：航班號（左）＋刪除按鈕（右）
+      const topRow: any = {
+        type: 'box', layout: 'horizontal', contents: [
+          {
+            type: 'text',
+            text: [f.flight_no, f.depart_date].filter(Boolean).join('  '),
+            size: 'sm', weight: 'bold', color: '#333333', flex: 1
+          },
           { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除班機 #${f.id}` }, style: 'secondary', height: 'sm', flex: 0 }
         ]
+      };
+
+      // 路線列：出發（左）→ 到達（右）
+      const departCol: any = {
+        type: 'box', layout: 'vertical', flex: 1, contents: [
+          { type: 'text', text: f.depart_airport || '─', size: 'sm', weight: 'bold', color: '#444444' },
+          { type: 'text', text: f.depart_time, size: 'lg', weight: 'bold', color: '#222222', margin: 'xs' },
+        ]
+      };
+      const arrowCol: any = {
+        type: 'text', text: '→', size: 'md', color: '#aaaaaa', align: 'center',
+        gravity: 'center', flex: 0, margin: 'md'
+      };
+      const arriveCol: any = {
+        type: 'box', layout: 'vertical', flex: 1, contents: [
+          { type: 'text', text: f.arrive_airport || '─', size: 'sm', weight: 'bold', color: '#444444', align: 'end' },
+          { type: 'text', text: f.arrive_time, size: 'lg', weight: 'bold', color: '#222222', margin: 'xs', align: 'end' },
+        ]
+      };
+      const routeRow: any = {
+        type: 'box', layout: 'horizontal', margin: 'sm',
+        contents: [departCol, arrowCol, arriveCol]
+      };
+
+      // 底列：新增者
+      const bottomContents: any[] = [];
+      if (f.added_by_name) {
+        bottomContents.push({ type: 'text', text: `由 ${f.added_by_name} 新增`, size: 'xs', color: '#aaaaaa', margin: 'xs' });
+      }
+
+      return {
+        type: 'box', layout: 'vertical', margin: 'md',
+        contents: [topRow, routeRow, ...bottomContents]
       };
     };
 
@@ -330,7 +356,12 @@ export class ItineraryAgent {
       if (list.length === 0) {
         return [header, sep, { type: 'text', text: emptyText, size: 'sm', color: '#bbbbbb', margin: 'sm' }];
       }
-      return [header, sep, ...list.map(buildFlightRow)];
+      const rows: any[] = [];
+      list.forEach((f, idx) => {
+        if (idx > 0) rows.push({ type: 'separator', margin: 'md' });
+        rows.push(buildFlightRow(f));
+      });
+      return [header, sep, ...rows];
     };
 
     const bodyContents: any[] = [
