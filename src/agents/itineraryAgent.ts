@@ -126,12 +126,6 @@ export class ItineraryAgent {
         ]
       },
       body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: rows },
-      footer: {
-        type: 'box', layout: 'horizontal', spacing: 'sm',
-        contents: [
-          { type: 'button', action: { type: 'postback', label: '新增旅遊行程', data: 'cmd=新增旅遊行程' }, style: 'secondary', height: 'sm', flex: 1 },
-        ]
-      }
     };
   }
 
@@ -142,7 +136,15 @@ export class ItineraryAgent {
 
     const spots = await this.crud.getAllSpots(trip.id);
     if (spots.length === 0) {
-      return `「${trip.trip_name}」還沒有行程！\n輸入「新增旅遊行程」，讓 AI 幫你規劃 ✈️`;
+      return {
+        type: 'text',
+        text: `「${trip.trip_name}」還沒有行程！\n點下方按鈕，讓 AI 幫你規劃 ✈️`,
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'postback', label: '新增旅遊行程', data: 'cmd=新增旅遊行程' } },
+          ]
+        }
+      } as messagingApi.Message;
     }
 
     const byDay = new Map<number, ItinerarySpot[]>();
