@@ -1,5 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD, ItinerarySpot, FlightInfo } from '../db/crud';
+import { getCancelQuickReply } from '../utils/ui';
 
 // 解析一行 AI 輸出：D1 景點名稱 [| maps_url]
 function parseLine(line: string): { day: number; name: string; mapsUrl?: string } | null {
@@ -35,11 +36,7 @@ export class ItineraryAgent {
         `• 可在景點後加 | 地圖連結（選填）\n\n` +
         `⚠️ 注意：現在貼入的內容將直接新增為行程。\n` +
         `若需要先討論，請點「取消」後再操作。`,
-      quickReply: {
-        items: [
-          { type: 'action', action: { type: 'message', label: '取消', text: '取消' } },
-        ]
-      }
+      quickReply: getCancelQuickReply()
     };
 
     // 第二則：純指令，方便長按複製
@@ -51,11 +48,7 @@ export class ItineraryAgent {
         `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
         `D2 景點名稱\n` +
         `D2 另一個景點`,
-      quickReply: {
-        items: [
-          { type: 'action', action: { type: 'message', label: '取消', text: '取消' } },
-        ]
-      }
+      quickReply: getCancelQuickReply()
     };
 
     return [intro, command];
@@ -200,7 +193,7 @@ export class ItineraryAgent {
         `格式： 日期 出發時間 抵達時間 [航班號]\n` +
         `例如：5/10 08:30 13:45 CI-100\n` +
         `或：5/10 08:30 → 13:45`,
-      quickReply: { items: [{ type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+      quickReply: getCancelQuickReply()
     };
   }
 
@@ -214,7 +207,7 @@ export class ItineraryAgent {
       return {
         type: 'text',
         text: `格式不符，請重新輸入：\n例：5/10 08:30 13:45 CI-100`,
-        quickReply: { items: [{ type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+        quickReply: getCancelQuickReply()
       };
     }
 

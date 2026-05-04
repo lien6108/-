@@ -192,6 +192,44 @@ export function getItineraryQuickReply(): messagingApi.QuickReply {
   };
 }
 
+// 單一取消按鈕（等待輸入流程中使用）
+export function getCancelQuickReply(): messagingApi.QuickReply {
+  return { items: [qr(CANCEL, CANCEL)] };
+}
+
+// 修改/刪除特定帳單的快捷（expenseAgent / wizardAgent 共用）
+export function getExpenseEditQuickReply(groupSeq: number): messagingApi.QuickReply {
+  return {
+    items: [
+      qr(`修改金額 #${groupSeq}`, `修改金額 #${groupSeq}`),
+      qr(`修改幣別 #${groupSeq}`, `修改幣別 #${groupSeq}`),
+      qr(`修改支付人 #${groupSeq}`, `修改支付人 #${groupSeq}`),
+      qr(`修改分攤人 #${groupSeq}`, `修改分攤人 #${groupSeq}`),
+      qr(CANCEL, CANCEL),
+    ]
+  };
+}
+
+// 加入群組事件快捷
+export function getJoinQuickReply(): messagingApi.QuickReply {
+  return {
+    items: [
+      qr('加入', '加入'),
+      qr('查看說明', '說明'),
+    ]
+  };
+}
+
+// 追蹤（Follow）事件快捷
+export function getFollowQuickReply(): messagingApi.QuickReply {
+  return {
+    items: [
+      qr('查看說明', '說明'),
+      qr('歷史紀錄', '歷史'),
+    ]
+  };
+}
+
 export function createExpenseListFlex(expenses: any[], totalTwd: number): messagingApi.FlexMessage {
   const rows = expenses.map(exp => {
     const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount

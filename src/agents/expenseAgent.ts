@@ -1,6 +1,6 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
-import { getStandardQuickReply, createExpenseListFlex, createExpenseSuccessFlex, createMyAccountFlex } from '../utils/ui';
+import { getStandardQuickReply, getExpenseEditQuickReply, createExpenseListFlex, createExpenseSuccessFlex, createMyAccountFlex } from '../utils/ui';
 
 function nowTag(): string {
   const now = new Date();
@@ -56,19 +56,7 @@ export class ExpenseAgent {
     return { userIds: Array.from(new Set(userIds)), missing };
   }
 
-  private getExpenseQuickReply(groupSeq: number): messagingApi.QuickReply {
-    const qr = (label: string, text: string): messagingApi.QuickReplyItem =>
-      ({ type: 'action', action: { type: 'message', label, text } });
-    return {
-      items: [
-        qr(`修改金額 #${groupSeq}`, `修改金額 #${groupSeq}`),
-        qr(`修改幣別 #${groupSeq}`, `修改幣別 #${groupSeq}`),
-        qr(`修改支付人 #${groupSeq}`, `修改支付人 #${groupSeq}`),
-        qr(`修改分攤人 #${groupSeq}`, `修改分攤人 #${groupSeq}`),
-        qr('取消', '取消'),
-      ]
-    };
-  }
+
 
   async addExpense(
     groupId: string,
@@ -243,7 +231,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `✅ ${requestName} 已修改 #${groupSeq}！\n金額：${amountDisplay}\n分攤：${splits.length} 人，每人 ${share}`,
-      quickReply: this.getExpenseQuickReply(groupSeq)
+      quickReply: getExpenseEditQuickReply(groupSeq)
     };
   }
 
@@ -270,7 +258,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `✅ ${requestName} 已修改 #${groupSeq} 幣別！\n金額：${amountInfo}\n分攤：${splits.length} 人，每人 ${share}`,
-      quickReply: this.getExpenseQuickReply(groupSeq)
+      quickReply: getExpenseEditQuickReply(groupSeq)
     };
   }
 
@@ -317,7 +305,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `已代墊記帳\n題號：#${exp.group_seq}\n付款人：${payer.display_name}\n紀錄者：${recorderName}\n項目：${description}\n金額：${exp.amount}`,
-      quickReply: this.getExpenseQuickReply(exp.group_seq)
+      quickReply: getExpenseEditQuickReply(exp.group_seq)
     };
   }
 
@@ -332,7 +320,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `#${groupSeq} ${expense.description}\n付款：${expense.payer_name}\n分攤成員：\n${members}\n每人：${share}`,
-      quickReply: this.getExpenseQuickReply(groupSeq)
+      quickReply: getExpenseEditQuickReply(groupSeq)
     };
   }
 
@@ -356,7 +344,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `${requesterName} 已新增：${added.join('、')}\n目前 ${splits.length} 人分攤，每人 ${share}`,
-      quickReply: this.getExpenseQuickReply(groupSeq)
+      quickReply: getExpenseEditQuickReply(groupSeq)
     };
   }
 
@@ -377,7 +365,7 @@ export class ExpenseAgent {
     return {
       type: 'text',
       text: `${requesterName} 已移除：${removed.join('、')}\n目前 ${splits.length} 人分攤，每人 ${share}`,
-      quickReply: this.getExpenseQuickReply(groupSeq)
+      quickReply: getExpenseEditQuickReply(groupSeq)
     };
   }
 

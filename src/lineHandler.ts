@@ -3,6 +3,7 @@ import { Env } from './env';
 import { MainAgent } from './agents/mainAgent';
 import { AdminAgent } from './agents/adminAgent';
 import { CRUD } from './db/crud';
+import { getJoinQuickReply, getFollowQuickReply } from './utils/ui';
 
 const { MessagingApiClient } = messagingApi;
 
@@ -188,12 +189,7 @@ export class LineEventHandler {
     const joinMsg: messagingApi.Message = {
       type: 'text',
       text: '大家好！我是分帳小幫手 🐾\n\n我可以幫你們在這個群組輕鬆記帳、自動換算匯率並結算分帳金額！\n\n✨ 只要@我，然後選擇你要的功能，就可以使用了汪～',
-      quickReply: {
-        items: [
-          { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
-          { type: 'action', action: { type: 'message', label: '查看說明', text: '說明' } },
-        ]
-      }
+      quickReply: getJoinQuickReply()
     };
     await this.reply(event.replyToken, joinMsg);
   }
@@ -203,12 +199,7 @@ export class LineEventHandler {
     const tutorialMsg: messagingApi.Message = {
       type: 'text',
       text: '感謝加入「分帳小幫手」！🐾\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率並結算的工具。\n\n🐕 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. 輸入「開始記帳」即可開始！\n\n🦴 提示：輸入「說明」可查看完整指令清單。',
-      quickReply: {
-        items: [
-          { type: 'action', action: { type: 'message', label: '查看說明', text: '說明' } },
-          { type: 'action', action: { type: 'message', label: '歷史紀錄', text: '歷史' } },
-        ]
-      }
+      quickReply: getFollowQuickReply()
     };
     await this.reply(event.replyToken, tutorialMsg);
   }
