@@ -105,11 +105,7 @@ export class MainAgent {
       // 任何地方輸入「取消」→ 清除 session，統一回覆
       if (input === '取消') {
         if (session) await this.crud.deleteSession(userId);
-        return {
-          type: 'text',
-          text: '已取消當前操作。',
-          quickReply: getMainMenuQuickReply()
-        };
+        return { type: 'text', text: '已取消當前操作。' };
       }
 
       if (session && session.step === 'AWAITING_FLIGHT_INPUT') {
