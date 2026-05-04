@@ -16,27 +16,32 @@ export class ItineraryAgent {
   constructor(private crud: CRUD) {}
 
   // ─── 顯示給使用者複製的 AI 提示詞 ──────────────────────────────────────────
-  async showAIPrompt(groupId: string): Promise<messagingApi.Message> {
+  async showAIPrompt(groupId: string): Promise<messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     const tripName = trip?.trip_name || '旅程';
 
-    const prompt =
-      `📋 請把以下指令複製到 ChatGPT / Gemini：\n\n` +
-      `「幫我規劃${tripName}的行程，每天 3-5 個景點，` +
-      `請依照以下格式輸出，不要多餘說明：\n\n` +
-      `D1 景點名稱\n` +
-      `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
-      `D2 景點名稱\n` +
-      `...」\n\n` +
-      `✅ 生成後直接把結果貼回這個群組即可！\n\n` +
-      `📌 格式說明：\n` +
-      `• D1、D2... 代表第幾天\n` +
-      `• 景點後可加 | 地圖連結（選填）\n` +
-      `• 每個景點一行`;
-
-    return {
+    // 第一則：說明
+    const intro: messagingApi.Message = {
       type: 'text',
-      text: prompt,
+      text:
+        `🗺️ 旅遊行程規劃\n\n` +
+        `請複製下方指令，貼到 ChatGPT 或 Gemini 生成行程。\n\n` +
+        `📌 生成後直接把結果貼回群組，系統會自動匯入！\n\n` +
+        `格式說明：\n` +
+        `• D1、D2... 代表第幾天\n` +
+        `• 每個景點一行\n` +
+        `• 可在景點後加 | 地圖連結（選填）`,
+    };
+
+    // 第二則：純指令，方便長按複製
+    const command: messagingApi.Message = {
+      type: 'text',
+      text:
+        `幫我規劃${tripName}的行程，每天 3-5 個景點，請依照以下格式輸出，不要多餘說明：\n\n` +
+        `D1 景點名稱\n` +
+        `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
+        `D2 景點名稱\n` +
+        `D2 另一個景點`,
       quickReply: {
         items: [
           { type: 'action', action: { type: 'message', label: '查看行程', text: '行程' } },
@@ -44,6 +49,8 @@ export class ItineraryAgent {
         ]
       }
     };
+
+    return [intro, command];
   }
 
   // ─── 解析 AI 貼回的文字，批次匯入景點 ────────────────────────────────────
