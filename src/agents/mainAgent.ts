@@ -7,7 +7,7 @@ import { WizardAgent } from './wizardAgent';
 import { ItineraryAgent } from './itineraryAgent';
 import { resolveCurrency } from '../utils/currency';
 import { Env } from '../env';
-import { getStandardQuickReply, createTemplateGuideMessage } from '../utils/ui';
+import { getStandardQuickReply, getMainMenuQuickReply, getAccountingQuickReply, getItineraryQuickReply, createTemplateGuideMessage } from '../utils/ui';
 
 // ─── 模板格式解析 ─────────────────────────────────────────────────────────────
 // 支援：名稱：晚餐　金額：500　幣別：JPY　支付者：Bob　分攤人：@Alice @Carol
@@ -187,7 +187,7 @@ export class MainAgent {
         return {
           type: 'text',
           text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看去回程班機\n• 班機 去程 / 班機 回程：新增或修改\n• 刪除班機：刪除班機資訊\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程：查看景點（左右滑動切換天數）\n• 行程 D2：查看第 2 天景點\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
-          quickReply: getStandardQuickReply()
+          quickReply: getMainMenuQuickReply()
         };
       }
 
@@ -209,7 +209,23 @@ export class MainAgent {
         return {
           type: 'text',
           text: '有什麼需要幫忙的嗎？🐶',
-          quickReply: getStandardQuickReply()
+          quickReply: getMainMenuQuickReply()
+        };
+      }
+
+      if (input === '記帳功能') {
+        return {
+          type: 'text',
+          text: '💰 記帳功能',
+          quickReply: getAccountingQuickReply()
+        };
+      }
+
+      if (input === '行程功能') {
+        return {
+          type: 'text',
+          text: '🗺️ 行程功能',
+          quickReply: getItineraryQuickReply()
         };
       }
 

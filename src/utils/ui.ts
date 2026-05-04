@@ -144,6 +144,53 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
   return { items: items.slice(0, 13) };
 }
 
+// 主選單快捷（@機器人 第一層）
+export function getMainMenuQuickReply(): messagingApi.QuickReply {
+  return {
+    items: [
+      qr('💰 記帳功能', '記帳功能'),
+      qr('🗺️ 行程功能', '行程功能'),
+      qr('查看成員', '成員'),
+      qr('完整說明', '說明'),
+      qr(CANCEL, CANCEL),
+    ]
+  };
+}
+
+// 記帳功能快捷（第二層）
+export function getAccountingQuickReply(options: QuickReplyOptions = {}): messagingApi.QuickReply {
+  const items: messagingApi.QuickReplyItem[] = [];
+  if (options.groupSeq) {
+    items.push(qr(`刪除 #${options.groupSeq}`, `刪除 #${options.groupSeq}`));
+    items.push(qr(`修改金額 #${options.groupSeq}`, `修改金額 #${options.groupSeq}`));
+    items.push(qr(`修改幣別 #${options.groupSeq}`, `修改幣別 #${options.groupSeq}`));
+    items.push(qr(`修改分攤人 #${options.groupSeq}`, `修改分攤人 #${options.groupSeq}`));
+  }
+  items.push(qr('開始記帳', '開始記帳'));
+  items.push(qr('修改帳單', '修改帳單'));
+  items.push(qr('刪除帳單', '刪除帳單'));
+  items.push(qr('完整清單', '清單'));
+  if (options.showSettlePreview) items.push(qr('結算', '結算'));
+  if (options.showSettleConfirm) items.push(qr('確認結算', '確認結算'));
+  items.push(qr('修改旅程名稱', '修改旅程名稱'));
+  items.push(qr('⬅️ 返回選單', '記帳功能'));
+  return { items: items.slice(0, 13) };
+}
+
+// 行程功能快捷（第二層）
+export function getItineraryQuickReply(): messagingApi.QuickReply {
+  return {
+    items: [
+      qr('✈️ 班機資訊', '班機資訊'),
+      qr('🗺️ 行程', '行程'),
+      qr('新增旅遊行程', '新增旅遊行程'),
+      qr('歷史記錄', '歷史'),
+      qr('⬅️ 返回選單', '行程功能'),
+      qr(CANCEL, CANCEL),
+    ]
+  };
+}
+
 export function createExpenseListFlex(expenses: any[], totalTwd: number): messagingApi.FlexMessage {
   const rows = expenses.map(exp => {
     const amountText = exp.currency && exp.currency !== 'TWD' && exp.original_amount
