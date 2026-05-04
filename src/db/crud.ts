@@ -110,8 +110,10 @@ export interface Accommodation {
   day_from: number;
   day_to: number;
   name: string;
+  checkin_time?: string | null;
+  checkout_time?: string | null;
   maps_url?: string | null;
-  who?: string | null;           // NULL = 全員，有值 = 指定人員（逗號分隔）
+  who?: string | null;
   added_by_name?: string | null;
   created_at: string;
 }
@@ -705,6 +707,8 @@ export class CRUD {
         day_from INTEGER NOT NULL,
         day_to INTEGER NOT NULL,
         name TEXT NOT NULL,
+        checkin_time TEXT,
+        checkout_time TEXT,
         maps_url TEXT,
         who TEXT,
         added_by_name TEXT,
@@ -712,13 +716,15 @@ export class CRUD {
         FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
       )`
     ).run();
+    try { await this.db.prepare(`ALTER TABLE accommodations ADD COLUMN checkin_time TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE accommodations ADD COLUMN checkout_time TEXT`).run(); } catch {}
   }
 
-  async addAccommodation(tripId: number, dayFrom: number, dayTo: number, name: string, mapsUrl?: string, who?: string, addedByName?: string): Promise<void> {
+  async addAccommodation(tripId: number, dayFrom: number, dayTo: number, name: string, checkinTime?: string, checkoutTime?: string, mapsUrl?: string, who?: string, addedByName?: string): Promise<void> {
     await this.ensureAccommodationsTable();
     await this.db.prepare(
-      `INSERT INTO accommodations (trip_id, day_from, day_to, name, maps_url, who, added_by_name) VALUES (?,?,?,?,?,?,?)`
-    ).bind(tripId, dayFrom, dayTo, name, mapsUrl || null, who || null, addedByName || null).run();
+      `INSERT INTO accommodations (trip_id, day_from, day_to, name, checkin_time, checkout_time, maps_url, who, added_by_name) VALUES (?,?,?,?,?,?,?,?,?)`
+    ).bind(tripId, dayFrom, dayTo, name, checkinTime || null, checkoutTime || null, mapsUrl || null, who || null, addedByName || null).run();
   }
 
   async getAccommodations(tripId: number): Promise<Accommodation[]> {

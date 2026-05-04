@@ -485,6 +485,9 @@ export class ItineraryAgent {
         ? `D${a.day_from}（1晚）`
         : `D${a.day_from} - D${a.day_to}（${nights}晚）`;
       const whoLabel = a.who ? a.who : '全員';
+      const timeLabel = (a.checkin_time || a.checkout_time)
+        ? `入住 ${a.checkin_time || '--:--'}  ·  退房 ${a.checkout_time || '--:--'}`
+        : null;
 
       const rowContents: any[] = [
         {
@@ -496,6 +499,9 @@ export class ItineraryAgent {
         },
         { type: 'text', text: `${dayLabel}  ·  ${whoLabel}`, size: 'xs', color: '#888888', margin: 'xs' },
       ];
+      if (timeLabel) {
+        rowContents.push({ type: 'text', text: timeLabel, size: 'xs', color: '#7a9aaa', margin: 'none' });
+      }
       if (a.added_by_name) {
         rowContents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: '#bbbbbb', margin: 'none' });
       }
@@ -540,12 +546,12 @@ export class ItineraryAgent {
       type: 'text',
       text:
         `請輸入住宿資訊：\n\n` +
-        `格式：D開始天[-結束天] 飯店名稱 [/ Maps連結] [@誰]\n\n` +
+        `格式：D開始天[-結束天] 飯店名稱 [check-in-check-out] [/ Maps連結] [@誰]\n\n` +
         `範例：\n` +
-        `D1-D3 台北凱撒大飯店 / https://maps.app.goo.gl/xxx\n` +
-        `D4 大阪難波飯店 @Alice\n` +
-        `D4-D5 京都旅館 / https://maps.app.goo.gl/yyy @Bob @Carol\n\n` +
-        `（Maps連結和@誰均為選填；不標@誰代表全員）`,
+        `D1-D3 台北凱撒大飯店 15:00-11:00 / https://maps.app.goo.gl/xxx\n` +
+        `D4 大阪難波飯店 14:00-12:00 @Alice\n` +
+        `D4-D5 京都旅館 @Bob @Carol\n\n` +
+        `（時間、Maps連結和@誰均為選填）`,
       quickReply: getCancelQuickReply()
     };
   }
@@ -555,23 +561,25 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
-    // 格式：D1[-D3] 名稱 [/ maps] [@who...]
-    const m = text.trim().match(/^[Dd](\d+)(?:-[Dd](\d+))?\s+([^/@]+?)(?:\s*\/\s*(https?:\/\/\S+))?(?:\s+((?:@\S+\s*)+))?$/);
+    // 格式：D1[-D3] 名稱 [HH:MM-HH:MM] [/ maps] [@who...]
+    const m = text.trim().match(/^[Dd](\d+)(?:-[Dd](\d+))?\s+([^/@\d:]+?)(?:\s+(\d{2}:\d{2})-(\d{2}:\d{2}))?(?:\s*\/\s*(https?:\/\/\S+))?(?:\s+((?:@\S+\s*)+))?$/);
     if (!m) {
       return {
         type: 'text',
-        text: '格式不符，請重新輸入：\n格式：D開始天[-結束天] 飯店名稱 [/ Maps連結] [@誰]\n例：D1-D3 台北凱撒大飯店 / https://maps.app.goo.gl/xxx',
+        text: '格式不符，請重新輸入：\n格式：D開始天[-結束天] 飯店名稱 [check-in-check-out] [/ Maps連結] [@誰]\n例：D1-D3 台北凱撒大飯店 15:00-11:00 / https://maps.app.goo.gl/xxx',
         quickReply: getCancelQuickReply()
       };
     }
     const dayFrom = parseInt(m[1], 10);
     const dayTo = m[2] ? parseInt(m[2], 10) : dayFrom;
     const name = m[3].trim();
-    const mapsUrl = m[4]?.trim();
-    const whoRaw = m[5]?.trim();
+    const checkinTime = m[4]?.trim();
+    const checkoutTime = m[5]?.trim();
+    const mapsUrl = m[6]?.trim();
+    const whoRaw = m[7]?.trim();
     const who = whoRaw ? whoRaw.split(/\s+/).map(w => w.replace(/^@/, '')).join('、') : undefined;
 
-    await this.crud.addAccommodation(trip.id, dayFrom, dayTo, name, mapsUrl, who, addedByName);
+    await this.crud.addAccommodation(trip.id, dayFrom, dayTo, name, checkinTime, checkoutTime, mapsUrl, who, addedByName);
     const nights = dayTo - dayFrom + 1;
     const nightLabel = nights === 1 ? '1晚' : `${nights}晚`;
     const whoLabel = who ? `（${who}）` : '';
