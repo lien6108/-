@@ -290,7 +290,14 @@ export class MainAgent {
       }
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
-      if (input === '行程') return await this.itinerary.showDayItinerary(groupId);
+      if (input === '行程') {
+        const trip = await this.crud.getCurrentTrip(groupId);
+        if (trip) {
+          const spots = await this.crud.getAllSpots(trip.id);
+          if (spots.length === 0) return await this.itinerary.showAIPrompt(groupId, userId);
+        }
+        return await this.itinerary.showDayItinerary(groupId);
+      }
       if (input === '全部行程') return await this.itinerary.showFullItinerary(groupId);
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
       if (input === '清空行程') return await this.itinerary.promptClearAllSpots(groupId);

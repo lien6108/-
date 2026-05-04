@@ -140,15 +140,7 @@ export class ItineraryAgent {
 
     const spots = await this.crud.getAllSpots(trip.id);
     if (spots.length === 0) {
-      return {
-        type: 'text',
-        text: `「${trip.trip_name}」還沒有行程！\n點下方按鈕，讓 AI 幫你規劃 ✈️`,
-        quickReply: {
-          items: [
-            { type: 'action', action: { type: 'postback', label: '新增旅遊行程', data: 'cmd=新增旅遊行程' } },
-          ]
-        }
-      } as messagingApi.Message;
+      return '目前沒有行程景點。';
     }
 
     const byDay = new Map<number, ItinerarySpot[]>();
