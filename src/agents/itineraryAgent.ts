@@ -109,7 +109,7 @@ export class ItineraryAgent {
         contents.push({
           type: 'button',
           action: { type: 'uri', label: '🗺️ 導航', uri: s.maps_url },
-          style: 'secondary', height: 'sm', margin: 'xs', color: '#7a9aaa'
+          style: 'secondary', height: 'sm', margin: 'xs'
         });
       }
       return { type: 'box', layout: 'vertical', contents };
