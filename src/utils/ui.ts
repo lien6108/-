@@ -147,7 +147,6 @@ export function getMainMenuQuickReply(): messagingApi.QuickReply {
   return {
     items: [
       { type: 'action', action: { type: 'postback', label: '💰 記帳功能', data: 'action=menu_accounting' } },
-      { type: 'action', action: { type: 'postback', label: '🗺️ 行程功能', data: 'action=menu_itinerary' } },
       qr('修改旅程名稱', '修改旅程名稱'),
       qr('查看成員', '成員'),
       qr('完整說明', '說明'),
@@ -173,20 +172,6 @@ export function getAccountingQuickReply(options: QuickReplyOptions = {}): messag
   items.push({ type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } });
   items.push(qr(CANCEL, CANCEL));
   return { items: items.slice(0, 13) };
-}
-
-// 行程功能快捷（第二層）
-export function getItineraryQuickReply(): messagingApi.QuickReply {
-  return {
-    items: [
-      qr('✈️ 班機資訊', '班機資訊'),
-      qr('🏨 住宿資訊', '住宿資訊'),
-      qr('🗺️ 行程資訊', '行程資訊'),
-      qr('🗑️ 清空行程', '清空行程'),
-      { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
-      qr(CANCEL, CANCEL),
-    ]
-  };
 }
 
 // 單一取消按鈕（等待輸入流程中使用）
