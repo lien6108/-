@@ -102,10 +102,15 @@ export class MainAgent {
       // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
       const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
 
-      // AI 行程格式偵測優先（多行 D1/D2 貼入），不受 session 影響
-      if (ItineraryAgent.isAIItineraryFormat(input)) {
+      if (session && session.step === 'AWAITING_ITINERARY_IMPORT') {
+        if (input === '取消') {
+          await this.crud.deleteSession(userId);
+          return { type: 'text', text: '已取消行程匯入。', quickReply: { items: [{ type: 'action', action: { type: 'message', label: '行程', text: '行程' } }] } };
+        }
+        await this.crud.deleteSession(userId);
         const result = await this.itinerary.importSpots(groupId, input);
         if (result) return result;
+        return { type: 'text', text: '格式不符，無法匯入。\n每行請使用 D1 景點名稱 的格式，例如：\nD1 淺草寺\nD2 新宿御苑' };
       }
 
       if (session && !isModifyDeleteCmd) {
@@ -249,7 +254,7 @@ export class MainAgent {
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程') return await this.itinerary.showDayItinerary(groupId);
       if (input === '全部行程') return await this.itinerary.showFullItinerary(groupId);
-      if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId);
+      if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
 
       // 行程 D1 指定天
       const dayItinMatch = normalizedInput.match(/^行程\s*[Dd](\d+)$/);

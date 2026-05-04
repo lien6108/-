@@ -20,6 +20,7 @@ export enum WizardStep {
   AWAITING_MODIFY_CURRENCY = 'AWAITING_MODIFY_CURRENCY',
   AWAITING_MODIFY_PAYER = 'AWAITING_MODIFY_PAYER',
   AWAITING_MODIFY_SHARERS = 'AWAITING_MODIFY_SHARERS',
+  AWAITING_ITINERARY_IMPORT = 'AWAITING_ITINERARY_IMPORT',
 }
 
 const CANCEL = '取消';
@@ -89,7 +90,7 @@ export class WizardAgent {
 
   async startModifyAmountWizard(groupId: string, userId: string, seq: number): Promise<messagingApi.Message> {
     const expense = await this.crud.getExpenseByGroupSeq(groupId, seq);
-    if (!expense) return { type: 'text', text: `旺？找不到 #${seq} 喔！` };
+    if (!expense) return { type: 'text', text: `找不到 #${seq} 喔！` };
     const currency = expense.currency || 'TWD';
     const currentDisplay = currency !== 'TWD' && expense.original_amount
       ? `${currency} ${expense.original_amount}`
