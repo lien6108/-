@@ -194,10 +194,14 @@ export class ItineraryAgent {
     let i = 0;
     const isAirport = (s: string) => /^[A-Za-z]{2,4}$/.test(s);
     const isTime = (s: string) => /^\d{2}:\d{2}$/.test(s);
-    const isDate = (s: string) => /^\d{1,2}\/\d{1,2}$/.test(s);
+    const isDate = (s: string) => /^(\d{4}\/)?\d{1,2}\/\d{1,2}$/.test(s);
+    const normalizeDate = (s: string) => {
+      if (/^\d{4}\//.test(s)) return s; // already has year
+      return `${new Date().getFullYear()}/${s}`;
+    };
 
     if (!isDate(parts[i] || '')) return null;
-    const departDate = parts[i++];
+    const departDate = normalizeDate(parts[i++]);
 
     let departAirport: string | undefined;
     if (i < parts.length && isAirport(parts[i]) && !isTime(parts[i])) departAirport = parts[i++].toUpperCase();
@@ -227,9 +231,9 @@ export class ItineraryAgent {
         `請輸入${typeLabel}班機資訊：\n\n` +
         `格式：日期 [出發機場] 出發時間 → [抵達機場] 抵達時間 [航班號]\n\n` +
         `範例：\n` +
-        `5/10 08:30 → 13:45 CI-100\n` +
-        `5/10 TPE 08:30 → NRT 13:45 CI-100\n` +
-        `（機場代碼和航班號均為選填）`,
+        `2026/5/10 08:30 → 13:45 CI-100\n` +
+        `2026/5/10 TPE 08:30 → NRT 13:45 CI-100\n` +
+        `（機場代碼和航班號均為選填；日期可略去年份，系統自動補上）`,
       quickReply: getCancelQuickReply()
     };
   }
