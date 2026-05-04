@@ -148,8 +148,8 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
 export function getMainMenuQuickReply(): messagingApi.QuickReply {
   return {
     items: [
-      qr('💰 記帳功能', '記帳功能'),
-      qr('🗺️ 行程功能', '行程功能'),
+      { type: 'action', action: { type: 'postback', label: '💰 記帳功能', data: 'action=menu_accounting' } },
+      { type: 'action', action: { type: 'postback', label: '🗺️ 行程功能', data: 'action=menu_itinerary' } },
       qr('修改旅程名稱', '修改旅程名稱'),
       qr('查看成員', '成員'),
       qr('完整說明', '說明'),

@@ -458,6 +458,22 @@ export class MainAgent {
       const params = new URLSearchParams(data);
       const action = params.get('action');
 
+      if (action === 'menu_accounting') {
+        return {
+          type: 'text',
+          text: '💰 記帳功能',
+          quickReply: getAccountingQuickReply()
+        };
+      }
+
+      if (action === 'menu_itinerary') {
+        return {
+          type: 'text',
+          text: '🗺️ 行程功能',
+          quickReply: getItineraryQuickReply()
+        };
+      }
+
       if (action === 'start_add') {
         if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         const trip = await this.crud.getCurrentTrip(groupId);
