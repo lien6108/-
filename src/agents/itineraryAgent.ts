@@ -464,7 +464,13 @@ export class ItineraryAgent {
     if (list.length === 0) {
       return {
         type: 'text',
-        text: `「${trip.trip_name}」還沒有住宿資訊！\n點下方按鈕新增。`,
+        text: `「${trip.trip_name}」還沒有住宿資訊！`,
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' } },
+            { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
+          ]
+        }
       } as messagingApi.Message;
     }
 
