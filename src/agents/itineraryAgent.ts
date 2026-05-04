@@ -288,17 +288,10 @@ export class ItineraryAgent {
 
     const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!));
 
-    const itinQuickReply: messagingApi.QuickReply = {
-      items: [
-        { type: 'action', action: { type: 'postback', label: '🗑️ 清空行程', data: 'cmd=清空行程' } },
-        { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
-      ]
-    };
-
     if (bubbles.length === 1) {
-      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0], quickReply: itinQuickReply } as any;
+      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0] } as any;
     }
-    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) }, quickReply: itinQuickReply } as any;
+    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
   // ─── showFullItinerary 直接呼叫 showDayItinerary（從第一天開始）────────────
