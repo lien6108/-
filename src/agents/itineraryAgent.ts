@@ -540,11 +540,11 @@ export class ItineraryAgent {
       type: 'text',
       text:
         `請輸入住宿資訊：\n\n` +
-        `格式：D開始天[-結束天] 飯店名稱 [| Maps連結] [@誰]\n\n` +
+        `格式：D開始天[-結束天] 飯店名稱 [/ Maps連結] [@誰]\n\n` +
         `範例：\n` +
-        `D1-D3 台北凱撒大飯店 | https://maps.app.goo.gl/xxx\n` +
+        `D1-D3 台北凱撒大飯店 / https://maps.app.goo.gl/xxx\n` +
         `D4 大阪難波飯店 @Alice\n` +
-        `D4-D5 京都旅館 | https://maps.app.goo.gl/yyy @Bob @Carol\n\n` +
+        `D4-D5 京都旅館 / https://maps.app.goo.gl/yyy @Bob @Carol\n\n` +
         `（Maps連結和@誰均為選填；不標@誰代表全員）`,
       quickReply: getCancelQuickReply()
     };
@@ -555,12 +555,12 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
-    // 格式：D1[-D3] 名稱 [| maps] [@who...]
-    const m = text.trim().match(/^[Dd](\d+)(?:-[Dd](\d+))?\s+([^|@]+?)(?:\s*\|\s*(https?:\/\/\S+))?(?:\s+((?:@\S+\s*)+))?$/);
+    // 格式：D1[-D3] 名稱 [/ maps] [@who...]
+    const m = text.trim().match(/^[Dd](\d+)(?:-[Dd](\d+))?\s+([^/@]+?)(?:\s*\/\s*(https?:\/\/\S+))?(?:\s+((?:@\S+\s*)+))?$/);
     if (!m) {
       return {
         type: 'text',
-        text: '格式不符，請重新輸入：\n格式：D開始天[-結束天] 飯店名稱 [| Maps連結] [@誰]\n例：D1-D3 台北凱撒大飯店 | https://maps.app.goo.gl/xxx',
+        text: '格式不符，請重新輸入：\n格式：D開始天[-結束天] 飯店名稱 [/ Maps連結] [@誰]\n例：D1-D3 台北凱撒大飯店 / https://maps.app.goo.gl/xxx',
         quickReply: getCancelQuickReply()
       };
     }
