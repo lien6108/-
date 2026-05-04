@@ -93,18 +93,18 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const contents: any[] = [
-        {
-          type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
-          contents: [
-            {
-              type: 'box', layout: 'vertical', flex: 0, width: '18px',
-              contents: [{ type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa' }]
-            },
-            { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold' },
-          ]
-        }
-      ];
+      const spotRow: any = {
+        type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
+        contents: [
+          {
+            type: 'box', layout: 'vertical', flex: 0, width: '18px',
+            contents: [{ type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa' }]
+          },
+          { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold' },
+          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0, color: '#dddddd' }
+        ]
+      };
+      const contents: any[] = [spotRow];
       if (s.maps_url) {
         contents.push({
           type: 'button',
@@ -126,6 +126,12 @@ export class ItineraryAgent {
         ]
       },
       body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: rows },
+      footer: {
+        type: 'box', layout: 'vertical',
+        contents: [
+          { type: 'button', action: { type: 'postback', label: `＋ 新增景點`, data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+        ]
+      }
     };
   }
 
@@ -161,10 +167,17 @@ export class ItineraryAgent {
 
     const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!));
 
+    const itinQuickReply: messagingApi.QuickReply = {
+      items: [
+        { type: 'action', action: { type: 'postback', label: '🗑️ 清空行程', data: 'cmd=清空行程' } },
+        { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
+      ]
+    };
+
     if (bubbles.length === 1) {
-      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0] } as any;
+      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0], quickReply: itinQuickReply } as any;
     }
-    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
+    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) }, quickReply: itinQuickReply } as any;
   }
 
   // ─── showFullItinerary 直接呼叫 showDayItinerary（從第一天開始）────────────
@@ -173,11 +186,63 @@ export class ItineraryAgent {
   }
 
   // ─── 刪除景點 ─────────────────────────────────────────────────────────────
-  async deleteSpot(groupId: string, spotId: number): Promise<string> {
+  async deleteSpot(groupId: string, spotId: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     await this.crud.deleteSpot(spotId);
-    return `🗑️ 景點 #${spotId} 已刪除。`;
+    return await this.showDayItinerary(groupId);
+  }
+
+  // ─── 新增單筆景點：啟動 wizard ─────────────────────────────────────────────
+  async startAddSpotWizard(groupId: string, userId: string, day: number): Promise<messagingApi.Message> {
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_SPOT_INPUT', JSON.stringify({ day }));
+    return {
+      type: 'text',
+      text: `請輸入第 ${day} 天新景點：\n\n格式：景點名稱 [| 地圖連結]\n\n範例：\n淺草寺\n新宿御苑 | https://maps.app.goo.gl/xxx`,
+      quickReply: getCancelQuickReply()
+    };
+  }
+
+  // ─── 新增單筆景點：解析並儲存 ─────────────────────────────────────────────
+  async handleAddSpotInput(groupId: string, text: string, day: number): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const [name, mapsUrl] = text.split('|').map(s => s.trim());
+    if (!name) return null as any;
+    await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined);
+    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增景點：${name}（第 ${day} 天）` };
+    const carousel = await this.showDayItinerary(groupId, day);
+    return [successMsg, carousel as messagingApi.Message];
+  }
+
+  // ─── 清空行程：確認提示 ────────────────────────────────────────────────────
+  async promptClearAllSpots(groupId: string): Promise<messagingApi.Message> {
+    return {
+      type: 'text',
+      text: '⚠️ 確定要清空所有行程景點嗎？此操作無法復原。',
+      quickReply: {
+        items: [
+          { type: 'action', action: { type: 'postback', label: '✅ 確認清空', data: 'cmd=確認清空行程' } },
+          { type: 'action', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' } },
+        ]
+      }
+    };
+  }
+
+  // ─── 清空行程：執行 ────────────────────────────────────────────────────────
+  async confirmClearAllSpots(groupId: string): Promise<messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
+    await this.crud.clearAllSpots(trip.id);
+    return {
+      type: 'text',
+      text: '🗑️ 已清空所有行程。',
+      quickReply: {
+        items: [
+          { type: 'action', action: { type: 'postback', label: '新增旅遊行程', data: 'cmd=新增旅遊行程' } },
+        ]
+      }
+    };
   }
 
   // ─── 偵測貼入文字是否為 AI 行程格式（≥2 行符合 D\d 格式）────────────────

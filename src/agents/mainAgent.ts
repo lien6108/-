@@ -128,6 +128,13 @@ export class MainAgent {
         return { type: 'text', text: '格式不符，無法匯入。\n每行請使用 D1 景點名稱 的格式，例如：\nD1 淺草寺\nD2 新宿御苑' };
       }
 
+      if (session && session.step === 'AWAITING_SPOT_INPUT') {
+        const data = JSON.parse(session.data || '{}');
+        const day = data.day as number;
+        await this.crud.deleteSession(userId);
+        return await this.itinerary.handleAddSpotInput(groupId, input, day);
+      }
+
       if (session && !isModifyDeleteCmd) {
         return await this.wizard.handleNext(session, input, displayName);
       }
@@ -286,10 +293,16 @@ export class MainAgent {
       if (input === '行程') return await this.itinerary.showDayItinerary(groupId);
       if (input === '全部行程') return await this.itinerary.showFullItinerary(groupId);
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
+      if (input === '清空行程') return await this.itinerary.promptClearAllSpots(groupId);
+      if (input === '確認清空行程') return await this.itinerary.confirmClearAllSpots(groupId);
 
       // 行程 D1 指定天
       const dayItinMatch = normalizedInput.match(/^行程\s*[Dd](\d+)$/);
       if (dayItinMatch) return await this.itinerary.showDayItinerary(groupId, parseInt(dayItinMatch[1], 10));
+
+      // 新增景點 D1
+      const addSpotMatch = normalizedInput.match(/^新增景點\s*[Dd](\d+)$/);
+      if (addSpotMatch) return await this.itinerary.startAddSpotWizard(groupId, userId, parseInt(addSpotMatch[1], 10));
 
       // 刪除景點 #N
       const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);

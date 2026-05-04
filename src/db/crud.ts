@@ -639,6 +639,10 @@ export class CRUD {
     await this.db.prepare(`DELETE FROM itinerary_spots WHERE id = ?`).bind(spotId).run();
   }
 
+  async clearAllSpots(tripId: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM itinerary_spots WHERE trip_id = ?`).bind(tripId).run();
+  }
+
   // ─── Shopping ────────────────────────────────────────────────────────────────
 
   async addShoppingItem(tripId: number, assignee: string, item: string): Promise<void> {
