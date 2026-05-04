@@ -107,7 +107,6 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
 export interface QuickReplyOptions {
   groupSeq?: number;
   showSettlePreview?: boolean;
-  showSettleConfirm?: boolean;
   showList?: boolean;
   showModify?: boolean;
   showDelete?: boolean;
@@ -137,7 +136,6 @@ export function getStandardQuickReply(options: QuickReplyOptions = {}): messagin
   items.push(qr('查看成員', '成員'));
   items.push(qr('完整說明', '說明'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
-  if (options.showSettleConfirm) items.push({ type: 'action', action: { type: 'message', label: '確認結算', text: '確認結算' } });
   items.push(qr('修改旅程名稱', '修改旅程名稱'));
   items.push(qr(CANCEL, CANCEL));
 
@@ -172,7 +170,6 @@ export function getAccountingQuickReply(options: QuickReplyOptions = {}): messag
   items.push(qr('刪除帳單', '刪除帳單'));
   items.push(qr('完整清單', '清單'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
-  if (options.showSettleConfirm) items.push({ type: 'action', action: { type: 'message', label: '確認結算', text: '確認結算' } });
   items.push({ type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } });
   items.push(qr(CANCEL, CANCEL));
   return { items: items.slice(0, 13) };
