@@ -195,10 +195,19 @@ export class ItineraryAgent {
     const isTime = (s: string) => /^\d{2}:\d{2}$/.test(s);
     const isDate = (s: string) => /^(\d{4}\/)?\d{1,2}\/\d{1,2}$/.test(s);
     const isArrow = (s: string) => /^[→>\-]$/.test(s);
-    // 機場：非時間、非日期、非箭頭，且下一個 token 是時間
+    const isTerminal = (s: string) => /^T\d+$/i.test(s);
+    // 機場：非時間、非日期、非箭頭，且後面緊接時間（可能中間夾一個航廈 token，如 T1）
     const isAirport = (idx: number) => {
       const s = parts[idx] || '';
-      return !isTime(s) && !isDate(s) && !isArrow(s) && isTime(parts[idx + 1] || '');
+      if (isTime(s) || isDate(s) || isArrow(s)) return false;
+      const next = parts[idx + 1] || '';
+      return isTime(next) || (isTerminal(next) && isTime(parts[idx + 2] || ''));
+    };
+    // 讀取機場（含可選航廈），回傳合併字串並推進 i
+    const readAirport = (): string => {
+      let name = parts[i++];
+      if (isTerminal(parts[i] || '')) name += ' ' + parts[i++];
+      return name;
     };
     const normalizeDate = (s: string) => {
       if (/^\d{4}\//.test(s)) return s;
@@ -209,7 +218,7 @@ export class ItineraryAgent {
     const departDate = normalizeDate(parts[i++]);
 
     let departAirport: string | undefined;
-    if (isAirport(i)) departAirport = parts[i++];
+    if (isAirport(i)) departAirport = readAirport();
 
     if (!isTime(parts[i] || '')) return null;
     const departTime = parts[i++];
@@ -217,7 +226,7 @@ export class ItineraryAgent {
     if (i < parts.length && isArrow(parts[i])) i++;
 
     let arriveAirport: string | undefined;
-    if (isAirport(i)) arriveAirport = parts[i++];
+    if (isAirport(i)) arriveAirport = readAirport();
 
     if (!isTime(parts[i] || '')) return null;
     const arriveTime = parts[i++];
@@ -234,11 +243,11 @@ export class ItineraryAgent {
       type: 'text',
       text:
         `請輸入${typeLabel}班機資訊：\n\n` +
-        `格式：日期 [出發機場] 出發時間 - [抵達機場] 抵達時間 [航班號]\n\n` +
+        `格式：日期 [機場 航廈] 出發時間 - [機場 航廈] 抵達時間 [航班號]\n\n` +
         `範例：\n` +
         `2026/5/10 08:30 - 13:45 CI-100\n` +
-        `2026/9/24 桃園T1 16:10 - 香港T1 18:10 CX443\n` +
-        `（機場和航班號均為選填；日期可略去年份，系統自動補上）`,
+        `2026/9/24 桃園 T1 16:10 - 香港 T1 18:10 CX443\n` +
+        `（機場、航廈和航班號均為選填；日期可略去年份，系統自動補上）`,
       quickReply: getCancelQuickReply()
     };
   }
