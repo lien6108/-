@@ -198,7 +198,7 @@ export class ItineraryAgent {
   }
 
   // ─── 班機資訊：解析輸入並儲存 ─────────────────────────────────────────────
-  async handleFlightInput(groupId: string, text: string, flightType: 'outbound' | 'return'): Promise<string | messagingApi.Message> {
+  async handleFlightInput(groupId: string, text: string, flightType: 'outbound' | 'return'): Promise<string | messagingApi.Message | messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
@@ -212,8 +212,14 @@ export class ItineraryAgent {
     }
 
     const [, departDate, departTime, arriveTime, flightNo] = m;
+    const typeLabel = flightType === 'outbound' ? '去程' : '回程';
     await this.crud.upsertFlight(trip.id, flightType, departDate, departTime, arriveTime, flightNo);
-    return this.showFlights(groupId);
+    const flexMsg = await this.showFlights(groupId);
+    const successMsg: messagingApi.Message = {
+      type: 'text',
+      text: `✅ ${typeLabel}班機已儲存！${flightNo ? `（${flightNo}）` : ''}\n${departDate} ${departTime} → ${arriveTime}`
+    };
+    return [successMsg, flexMsg as messagingApi.Message];
   }
 
   // ─── 班機資訊：顯示 Flex ───────────────────────────────────────────────────
