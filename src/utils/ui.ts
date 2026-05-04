@@ -150,6 +150,7 @@ export function getMainMenuQuickReply(): messagingApi.QuickReply {
     items: [
       qr('💰 記帳功能', '記帳功能'),
       qr('🗺️ 行程功能', '行程功能'),
+      qr('修改旅程名稱', '修改旅程名稱'),
       qr('查看成員', '成員'),
       qr('完整說明', '說明'),
       qr(CANCEL, CANCEL),
@@ -172,7 +173,6 @@ export function getAccountingQuickReply(options: QuickReplyOptions = {}): messag
   items.push(qr('完整清單', '清單'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
   if (options.showSettleConfirm) items.push(qr('確認結算', '確認結算'));
-  items.push(qr('修改旅程名稱', '修改旅程名稱'));
   items.push(qr('⬅️ 返回選單', '記帳功能'));
   return { items: items.slice(0, 13) };
 }
