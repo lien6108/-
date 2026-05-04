@@ -93,26 +93,24 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const spotRow: any = {
-        type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
-        contents: [
-          {
-            type: 'box', layout: 'vertical', flex: 0, width: '18px',
-            contents: [{ type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa' }]
-          },
-          { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold' },
-          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
-        ]
-      };
-      const contents: any[] = [spotRow];
+      const bodyContents: any[] = [
+        {
+          type: 'box', layout: 'horizontal', margin: idx === 0 ? 'none' : 'md',
+          contents: [
+            { type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa', flex: 0 },
+            { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold', margin: 'sm' },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
+          ]
+        }
+      ];
       if (s.maps_url) {
-        contents.push({
+        bodyContents.push({
           type: 'button',
           action: { type: 'uri', label: '🗺️ 導航', uri: s.maps_url },
           style: 'secondary', height: 'sm', margin: 'xs'
         });
       }
-      return { type: 'box', layout: 'vertical', contents };
+      return { type: 'box', layout: 'vertical', contents: bodyContents };
     });
 
     return {
@@ -129,7 +127,7 @@ export class ItineraryAgent {
       footer: {
         type: 'box', layout: 'vertical',
         contents: [
-          { type: 'button', action: { type: 'postback', label: `＋ 新增景點`, data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+          { type: 'button', action: { type: 'postback', label: '＋ 新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
         ]
       }
     };
