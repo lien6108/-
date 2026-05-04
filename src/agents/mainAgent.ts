@@ -158,7 +158,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n🗺️ 行程功能\n• 行程：今天的景點清單\n• 全部行程：所有天行程總覽\n• 行程 D1：第 1 天行程\n• 下一站：下一個未完成景點\n• 到了：標記當前景點完成\n• 新增行程 D1 景點名稱 [地圖連結]\n• 刪除景點 #N：刪除景點\n\n🛍️ 購物清單\n• 買 品項：加入自己的購物清單\n• 購物清單：查看所有人的清單\n• 買到了 #N：標記已購買\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程：查看第一天景點\n• 行程 D2：查看第 2 天景點\n• 全部行程：所有天總覽\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
           quickReply: getStandardQuickReply()
         };
       }
@@ -242,36 +242,21 @@ export class MainAgent {
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程') return await this.itinerary.showDayItinerary(groupId);
       if (input === '全部行程') return await this.itinerary.showFullItinerary(groupId);
-      if (input === '下一站') return await this.itinerary.showNextSpot(groupId);
-      if (input === '到了') return await this.itinerary.markArrived(groupId);
-      if (input === '購物清單') return await this.itinerary.showShoppingList(groupId);
+      if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId);
 
       // 行程 D1 指定天
       const dayItinMatch = normalizedInput.match(/^行程\s*[Dd](\d+)$/);
       if (dayItinMatch) return await this.itinerary.showDayItinerary(groupId, parseInt(dayItinMatch[1], 10));
 
-      // 新增行程 D1 景點名稱 [maps_url]
-      const addSpotMatch = normalizedInput.match(/^新增行程\s*[Dd](\d+)\s+(.+)$/);
-      if (addSpotMatch) {
-        const day = parseInt(addSpotMatch[1], 10);
-        const rest = addSpotMatch[2].trim();
-        const urlMatch = rest.match(/^(.+?)\s+(https?:\/\/\S+)$/);
-        const name = urlMatch ? urlMatch[1].trim() : rest;
-        const mapsUrl = urlMatch ? urlMatch[2] : undefined;
-        return await this.itinerary.addSpot(groupId, day, name, mapsUrl);
-      }
-
-      // 删除景點 #N
-      const delSpotMatch = normalizedInput.match(/^删除景點\s*#(\d+)$/);
+      // 刪除景點 #N
+      const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);
       if (delSpotMatch) return await this.itinerary.deleteSpot(groupId, parseInt(delSpotMatch[1], 10));
 
-      // 買 品項
-      const buyMatch = input.match(/^買\s+(.+)$/);
-      if (buyMatch) return await this.itinerary.addShoppingItem(groupId, displayName, buyMatch[1].trim());
-
-      // 買到了 #N
-      const boughtMatch = normalizedInput.match(/^買到了\s*#(\d+)$/);
-      if (boughtMatch) return await this.itinerary.markItemBought(groupId, parseInt(boughtMatch[1], 10));
+      // AI 行程格式偵測（貼入 D1/D2 格式多行文字）
+      if (ItineraryAgent.isAIItineraryFormat(input)) {
+        const result = await this.itinerary.importSpots(groupId, input);
+        if (result) return result;
+      }
 
       const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
