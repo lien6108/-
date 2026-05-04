@@ -97,7 +97,10 @@ export class ItineraryAgent {
         {
           type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
           contents: [
-            { type: 'text', text: `${idx + 1}.`, size: 'xs', flex: 0, color: '#7a9aaa', gravity: 'top', minWidth: '18px' },
+            {
+              type: 'box', layout: 'vertical', flex: 0, width: '18px',
+              contents: [{ type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa' }]
+            },
             { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold' },
           ]
         }
@@ -251,9 +254,12 @@ export class ItineraryAgent {
     const buildRow = (label: string, f: FlightInfo | undefined): any[] => {
       if (!f) {
         return [{
-          type: 'box', layout: 'horizontal', margin: 'md',
+          type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
           contents: [
-            { type: 'text', text: label, size: 'sm', color: '#888888', flex: 0, minWidth: '48px' },
+            {
+              type: 'box', layout: 'vertical', flex: 0, width: '48px',
+              contents: [{ type: 'text', text: label, size: 'sm', color: '#888888' }]
+            },
             { type: 'text', text: '尚未設定', size: 'sm', color: '#bbbbbb', flex: 1 }
           ]
         }];
@@ -263,7 +269,10 @@ export class ItineraryAgent {
         {
           type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
           contents: [
-            { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#7a8898', flex: 0, minWidth: '48px', gravity: 'center' },
+            {
+              type: 'box', layout: 'vertical', flex: 0, width: '48px', justifyContent: 'center',
+              contents: [{ type: 'text', text: label, size: 'sm', weight: 'bold', color: '#7a8898' }]
+            },
             {
               type: 'box', layout: 'vertical', flex: 1,
               contents: [
