@@ -107,9 +107,11 @@ export interface FlightInfo {
 export interface Accommodation {
   id: number;
   trip_id: number;
-  day: number;
+  day_from: number;
+  day_to: number;
   name: string;
   maps_url?: string | null;
+  who?: string | null;           // NULL = 全員，有值 = 指定人員（逗號分隔）
   added_by_name?: string | null;
   created_at: string;
 }
@@ -695,39 +697,35 @@ export class CRUD {
 
   // ─── Accommodations ──────────────────────────────────────────────────────────
 
-  async addAccommodation(tripId: number, day: number, name: string, mapsUrl?: string, addedByName?: string): Promise<void> {
-    try { await this.db.prepare(`ALTER TABLE accommodations ADD COLUMN added_by_name TEXT`).run(); } catch {}
+  private async ensureAccommodationsTable(): Promise<void> {
     await this.db.prepare(
       `CREATE TABLE IF NOT EXISTS accommodations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trip_id INTEGER NOT NULL,
-        day INTEGER NOT NULL,
+        day_from INTEGER NOT NULL,
+        day_to INTEGER NOT NULL,
         name TEXT NOT NULL,
         maps_url TEXT,
+        who TEXT,
         added_by_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
       )`
     ).run();
+  }
+
+  async addAccommodation(tripId: number, dayFrom: number, dayTo: number, name: string, mapsUrl?: string, who?: string, addedByName?: string): Promise<void> {
+    await this.ensureAccommodationsTable();
     await this.db.prepare(
-      `INSERT INTO accommodations (trip_id, day, name, maps_url, added_by_name) VALUES (?,?,?,?,?)`
-    ).bind(tripId, day, name, mapsUrl || null, addedByName || null).run();
+      `INSERT INTO accommodations (trip_id, day_from, day_to, name, maps_url, who, added_by_name) VALUES (?,?,?,?,?,?,?)`
+    ).bind(tripId, dayFrom, dayTo, name, mapsUrl || null, who || null, addedByName || null).run();
   }
 
   async getAccommodations(tripId: number): Promise<Accommodation[]> {
-    await this.db.prepare(
-      `CREATE TABLE IF NOT EXISTS accommodations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_id INTEGER NOT NULL,
-        day INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        maps_url TEXT,
-        added_by_name TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
-      )`
-    ).run();
-    const res = await this.db.prepare(`SELECT * FROM accommodations WHERE trip_id = ? ORDER BY day ASC, created_at ASC`).bind(tripId).all<Accommodation>();
+    await this.ensureAccommodationsTable();
+    const res = await this.db.prepare(
+      `SELECT * FROM accommodations WHERE trip_id = ? ORDER BY day_from ASC, created_at ASC`
+    ).bind(tripId).all<Accommodation>();
     return res.results || [];
   }
 

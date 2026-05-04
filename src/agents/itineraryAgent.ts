@@ -476,35 +476,38 @@ export class ItineraryAgent {
       } as messagingApi.Message;
     }
 
-    const rows: any[] = list.map(a => {
-      const contents: any[] = [
+    const body: any[] = [];
+    list.forEach((a, i) => {
+      if (i > 0) body.push({ type: 'separator', margin: 'md' });
+
+      const nights = a.day_to - a.day_from + 1;
+      const dayLabel = a.day_from === a.day_to
+        ? `D${a.day_from}（1晚）`
+        : `D${a.day_from} - D${a.day_to}（${nights}晚）`;
+      const whoLabel = a.who ? a.who : '全員';
+
+      const rowContents: any[] = [
         {
-          type: 'box', layout: 'horizontal',
+          type: 'box', layout: 'horizontal', margin: i === 0 ? 'none' : 'md',
           contents: [
-            { type: 'text', text: `第 ${a.day} 天`, size: 'xs', color: '#7a9aaa', flex: 0 },
-            { type: 'text', text: a.name, size: 'sm', weight: 'bold', color: '#333333', flex: 1, wrap: true, margin: 'sm' },
+            { type: 'text', text: a.name, size: 'sm', weight: 'bold', color: '#333333', flex: 1, wrap: true },
             { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除住宿 #${a.id}` }, style: 'secondary', height: 'sm', flex: 0 }
           ]
-        }
+        },
+        { type: 'text', text: `${dayLabel}  ·  ${whoLabel}`, size: 'xs', color: '#888888', margin: 'xs' },
       ];
       if (a.added_by_name) {
-        contents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: '#aaaaaa', margin: 'xs' });
+        rowContents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: '#bbbbbb', margin: 'none' });
       }
       if (a.maps_url) {
-        contents.push({
+        rowContents.push({
           type: 'button',
           action: { type: 'uri', label: '🗺️ 導航', uri: a.maps_url },
           style: 'secondary', height: 'sm', margin: 'xs'
         });
       }
-      return { type: 'box', layout: 'vertical', contents, margin: 'md' };
-    });
 
-    // 分隔線插入
-    const body: any[] = [];
-    rows.forEach((r, i) => {
-      if (i > 0) body.push({ type: 'separator', margin: 'md' });
-      body.push(r);
+      body.push({ type: 'box', layout: 'vertical', contents: rowContents, margin: 'md' });
     });
 
     return {
@@ -537,11 +540,12 @@ export class ItineraryAgent {
       type: 'text',
       text:
         `請輸入住宿資訊：\n\n` +
-        `格式：D天數 飯店名稱 | Google Maps 連結\n\n` +
+        `格式：D開始天[-結束天] 飯店名稱 [| Maps連結] [@誰]\n\n` +
         `範例：\n` +
-        `D1 台北凱撒大飯店 | https://maps.app.goo.gl/xxx\n` +
-        `D2 大阪難波飯店\n\n` +
-        `（Google Maps 連結選填，但有的話可以直接導航）`,
+        `D1-D3 台北凱撒大飯店 | https://maps.app.goo.gl/xxx\n` +
+        `D4 大阪難波飯店 @Alice\n` +
+        `D4-D5 京都旅館 | https://maps.app.goo.gl/yyy @Bob @Carol\n\n` +
+        `（Maps連結和@誰均為選填；不標@誰代表全員）`,
       quickReply: getCancelQuickReply()
     };
   }
@@ -551,19 +555,27 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
-    const m = text.trim().match(/^[Dd](\d+)\s+([^|]+?)(?:\s*\|\s*(https?:\/\/\S+))?$/);
+    // 格式：D1[-D3] 名稱 [| maps] [@who...]
+    const m = text.trim().match(/^[Dd](\d+)(?:-[Dd](\d+))?\s+([^|@]+?)(?:\s*\|\s*(https?:\/\/\S+))?(?:\s+((?:@\S+\s*)+))?$/);
     if (!m) {
       return {
         type: 'text',
-        text: '格式不符，請重新輸入：\n格式：D天數 飯店名稱 | Google Maps 連結\n例：D1 台北凱撒大飯店 | https://maps.app.goo.gl/xxx',
+        text: '格式不符，請重新輸入：\n格式：D開始天[-結束天] 飯店名稱 [| Maps連結] [@誰]\n例：D1-D3 台北凱撒大飯店 | https://maps.app.goo.gl/xxx',
         quickReply: getCancelQuickReply()
       };
     }
-    const day = parseInt(m[1], 10);
-    const name = m[2].trim();
-    const mapsUrl = m[3]?.trim();
-    await this.crud.addAccommodation(trip.id, day, name, mapsUrl, addedByName);
-    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增第 ${day} 天住宿：${name}` };
+    const dayFrom = parseInt(m[1], 10);
+    const dayTo = m[2] ? parseInt(m[2], 10) : dayFrom;
+    const name = m[3].trim();
+    const mapsUrl = m[4]?.trim();
+    const whoRaw = m[5]?.trim();
+    const who = whoRaw ? whoRaw.split(/\s+/).map(w => w.replace(/^@/, '')).join('、') : undefined;
+
+    await this.crud.addAccommodation(trip.id, dayFrom, dayTo, name, mapsUrl, who, addedByName);
+    const nights = dayTo - dayFrom + 1;
+    const nightLabel = nights === 1 ? '1晚' : `${nights}晚`;
+    const whoLabel = who ? `（${who}）` : '';
+    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增住宿：${name}，D${dayFrom}${dayTo !== dayFrom ? `-D${dayTo}` : ''}（${nightLabel}）${whoLabel}` };
     const flex = await this.showAccommodations(groupId);
     return [successMsg, flex as messagingApi.Message];
   }
