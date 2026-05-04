@@ -62,19 +62,19 @@ export class ItineraryAgent {
   }
 
   // ─── 解析 AI 貼回的文字，批次匯入景點 ────────────────────────────────────
-  async importSpots(groupId: string, text: string): Promise<string | messagingApi.Message | null> {
+  async importSpots(groupId: string, text: string): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程，請先輸入「開始記帳」建立旅程 🗺️';
 
     const lines = text.split('\n');
     const valid: { day: number; name: string; mapsUrl?: string }[] = [];
-    const skipped: number[] = [];
+    const skipped: string[] = [];
 
-    lines.forEach((line, i) => {
+    lines.forEach((line) => {
       if (!line.trim()) return;
       const parsed = parseLine(line);
       if (parsed) valid.push(parsed);
-      else skipped.push(i + 1);
+      else skipped.push(line.trim());
     });
 
     if (valid.length === 0) return null;
@@ -83,10 +83,18 @@ export class ItineraryAgent {
       await this.crud.addSpot(trip.id, spot.day, spot.name, spot.mapsUrl);
     }
 
-    if (skipped.length > 0) console.log(`Itinerary import: skipped lines ${skipped.join(', ')}`);
+    const days = [...new Set(valid.map(v => v.day))].sort((a, b) => a - b);
+    const skippedNote = skipped.length > 0
+      ? `\n\n⚠️ 以下 ${skipped.length} 行格式不符已略過：\n${skipped.slice(0, 5).map(l => `• ${l}`).join('\n')}${skipped.length > 5 ? '\n...' : ''}`
+      : '';
 
-    // 匯入後直接用 carousel 展示結果
-    return this.showDayItinerary(groupId);
+    const successMsg: messagingApi.Message = {
+      type: 'text',
+      text: `✅ 已匯入 ${valid.length} 個景點，共 ${days.length} 天${skippedNote}`,
+    };
+
+    const carousel = await this.showDayItinerary(groupId);
+    return [successMsg, carousel as messagingApi.Message];
   }
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
