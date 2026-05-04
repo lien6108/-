@@ -88,22 +88,28 @@ export class ItineraryAgent {
         '2. 最後一天根據回程班機出發時間安排，需預留前往機場的交通時間（至少2小時前）\n' +
         '3. 每天路線從當晚住宿地點附近出發，最終回到當晚住宿地點附近\n' +
         '4. 如同天更換飯店，下午行程安排在新飯店附近\n' +
-        '5. 入住／退房時間前後的景點需安排在飯店附近';
+        '5. 入住／退房時間前後的景點需安排在飯店附近\n' +
+        '6. 每個景點都必須附上 Google Maps 連結（住宿地點除外）';
     }
 
     const prompt =
       `幫我規劃【${tripName}】${daysHint ? daysHint : ''}的旅遊行程，每天3-5個景點，路線要最順（減少重複移動）。${contextBlock}\n\n` +
-      `請按以下格式輸出，不要多餘說明：\n` +
-      `D1 景點名稱\n` +
-      `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
-      `D2 景點名稱`;
+      `========== 以下格式請勿修改 ==========\n` +
+      `請按以下格式輸出，不要多餘說明，每個景點一行：\n` +
+      `D1 景點名稱 | https://www.google.com/maps/search/景點名稱\n` +
+      `D1 另一個景點 | https://www.google.com/maps/place/景點名稱\n` +
+      `D2 景點名稱 | https://maps.app.goo.gl/對應短網址\n` +
+      `（每個景點都必須附 Google Maps 連結；住宿地點不需要輸出）\n` +
+      `======================================`;
 
     const intro: messagingApi.Message = {
       type: 'text',
       text:
         `🤖 AI 行程規劃\n\n` +
         `請複製下方指令，貼到 ChatGPT 或 Gemini，生成後再貼回群組。\n\n` +
-        `⚠️ 貼回後將直接匯入，若需先確認請點「取消」。`,
+        `📝 【 】內的資訊可以自行修改\n` +
+        `⚠️ 格式區段（=== 以下格式請勿修改 === 至 ====== 之間）切勿調整，否則可能導致匯入失敗\n\n` +
+        `貼回後將直接匯入，若需先確認請點「取消」。`,
       quickReply: getCancelQuickReply()
     };
 
