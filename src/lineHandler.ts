@@ -412,10 +412,18 @@ export class LineEventHandler {
     if (source?.type === 'room') groupId = source.roomId;
 
     const displayName = await this.getDisplayName(groupId, userId);
-    const replyText = await this.mainAgent.processPostback(groupId, userId, displayName, data);
-
-    if (replyText && event.replyToken) {
-      await this.reply(event.replyToken, replyText);
+    try {
+      const replyText = await this.mainAgent.processPostback(groupId, userId, displayName, data);
+      if (replyText && event.replyToken) {
+        await this.reply(event.replyToken, replyText);
+      }
+    } catch (e: any) {
+      console.error('[handlePostback] error:', e);
+      if (event.replyToken) {
+        try {
+          await this.reply(event.replyToken, `⚠️ 發生錯誤：${e?.message || String(e)}`);
+        } catch (_) {}
+      }
     }
   }
 
