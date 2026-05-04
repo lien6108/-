@@ -465,6 +465,7 @@ export class ItineraryAgent {
       items: [
         { type: 'action', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' } },
         { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
+        { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
       ]
     };
 
