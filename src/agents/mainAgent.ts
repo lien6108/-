@@ -101,6 +101,13 @@ export class MainAgent {
       const session = await this.crud.getSession(userId);
       // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
       const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
+
+      // AI 行程格式偵測優先（多行 D1/D2 貼入），不受 session 影響
+      if (ItineraryAgent.isAIItineraryFormat(input)) {
+        const result = await this.itinerary.importSpots(groupId, input);
+        if (result) return result;
+      }
+
       if (session && !isModifyDeleteCmd) {
         return await this.wizard.handleNext(session, input, displayName);
       }
@@ -251,12 +258,6 @@ export class MainAgent {
       // 刪除景點 #N
       const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);
       if (delSpotMatch) return await this.itinerary.deleteSpot(groupId, parseInt(delSpotMatch[1], 10));
-
-      // AI 行程格式偵測（貼入 D1/D2 格式多行文字）
-      if (ItineraryAgent.isAIItineraryFormat(input)) {
-        const result = await this.itinerary.importSpots(groupId, input);
-        if (result) return result;
-      }
 
       const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
