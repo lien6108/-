@@ -89,6 +89,18 @@ export interface ShoppingItem {
   created_at: string;
 }
 
+export interface FlightInfo {
+  id: number;
+  trip_id: number;
+  type: 'outbound' | 'return';
+  flight_no?: string | null;
+  depart_date: string;   // e.g. "5/10"
+  depart_time: string;  // e.g. "08:30"
+  arrive_time: string;  // e.g. "13:45"
+  note?: string | null;
+  created_at: string;
+}
+
 export class CRUD {
   private db: D1Database;
 
@@ -564,6 +576,18 @@ export class CRUD {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
     )`).run();
+    await this.db.prepare(`CREATE TABLE IF NOT EXISTS flight_info (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      flight_no TEXT,
+      depart_date TEXT NOT NULL,
+      depart_time TEXT NOT NULL,
+      arrive_time TEXT NOT NULL,
+      note TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )`).run();
   }
 
   async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
@@ -625,5 +649,27 @@ export class CRUD {
 
   async deleteShoppingItem(itemId: number): Promise<void> {
     await this.db.prepare(`DELETE FROM shopping_items WHERE id = ?`).bind(itemId).run();
+  }
+
+  // ─── Flight Info ─────────────────────────────────────────────────────────────
+
+  async upsertFlight(tripId: number, type: 'outbound' | 'return', departDate: string, departTime: string, arriveTime: string, flightNo?: string, note?: string): Promise<void> {
+    const existing = await this.db.prepare(`SELECT id FROM flight_info WHERE trip_id = ? AND type = ?`).bind(tripId, type).first<{ id: number }>();
+    if (existing) {
+      await this.db.prepare(`UPDATE flight_info SET flight_no=?, depart_date=?, depart_time=?, arrive_time=?, note=? WHERE id=?`)
+        .bind(flightNo || null, departDate, departTime, arriveTime, note || null, existing.id).run();
+    } else {
+      await this.db.prepare(`INSERT INTO flight_info (trip_id, type, flight_no, depart_date, depart_time, arrive_time, note) VALUES (?,?,?,?,?,?,?)`)
+        .bind(tripId, type, flightNo || null, departDate, departTime, arriveTime, note || null).run();
+    }
+  }
+
+  async getFlights(tripId: number): Promise<FlightInfo[]> {
+    const res = await this.db.prepare(`SELECT * FROM flight_info WHERE trip_id = ? ORDER BY type ASC`).bind(tripId).all<FlightInfo>();
+    return res.results || [];
+  }
+
+  async deleteFlight(tripId: number, type: 'outbound' | 'return'): Promise<void> {
+    await this.db.prepare(`DELETE FROM flight_info WHERE trip_id = ? AND type = ?`).bind(tripId, type).run();
   }
 }

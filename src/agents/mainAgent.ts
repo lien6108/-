@@ -102,6 +102,22 @@ export class MainAgent {
       // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
       const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
 
+      if (session && session.step === 'AWAITING_FLIGHT_INPUT') {
+        if (input === '取消') {
+          await this.crud.deleteSession(userId);
+          return { type: 'text', text: '已取消班機資訊輸入。', quickReply: { items: [{ type: 'action', action: { type: 'message', label: '班機資訊', text: '班機資訊' } }] } };
+        }
+        const data = JSON.parse(session.data || '{}');
+        const flightType = data.flightType as 'outbound' | 'return';
+        await this.crud.deleteSession(userId);
+        // 若格式錯要求重試，重建 session
+        const result = await this.itinerary.handleFlightInput(groupId, input, flightType);
+        if (typeof result === 'object' && (result as any).type === 'text' && (result as any).text?.startsWith('格式不符')) {
+          await this.crud.upsertSession(userId, groupId, 'AWAITING_FLIGHT_INPUT', JSON.stringify({ flightType }));
+        }
+        return result;
+      }
+
       if (session && session.step === 'AWAITING_ITINERARY_IMPORT') {
         if (input === '取消') {
           await this.crud.deleteSession(userId);
@@ -170,7 +186,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程：查看第一天景點\n• 行程 D2：查看第 2 天景點\n• 全部行程：所有天總覽\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看去回程班機\n• 班機 去程 / 班機 回程：新增或修改\n• 刪除班機：刪除班機資訊\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程：查看景點（左右滑動切換天數）\n• 行程 D2：查看第 2 天景點\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
           quickReply: getStandardQuickReply()
         };
       }
@@ -263,6 +279,14 @@ export class MainAgent {
       // 刪除景點 #N
       const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);
       if (delSpotMatch) return await this.itinerary.deleteSpot(groupId, parseInt(delSpotMatch[1], 10));
+
+      // ─── 班機指令 ────────────────────────────────────────────────────────────────
+      if (input === '班機資訊') return await this.itinerary.showFlights(groupId);
+      if (input === '班機 去程') return await this.itinerary.startFlightWizard(groupId, userId, 'outbound');
+      if (input === '班機 回程') return await this.itinerary.startFlightWizard(groupId, userId, 'return');
+      if (input === '刪除班機') return await this.itinerary.startDeleteFlightWizard(groupId, userId);
+      if (input === '刪除班機 去程') return await this.itinerary.deleteFlight(groupId, 'outbound');
+      if (input === '刪除班機 回程') return await this.itinerary.deleteFlight(groupId, 'return');
 
       const deleteMatch = normalizedInput.match(/^刪除\s*#(\d+)\s*$/);
       if (deleteMatch) {
