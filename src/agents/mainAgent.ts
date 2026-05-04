@@ -326,7 +326,14 @@ export class MainAgent {
       const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);
       if (delSpotMatch) return await this.itinerary.deleteSpot(groupId, parseInt(delSpotMatch[1], 10));
 
-      if (input === '住宿資訊') return await this.itinerary.showAccommodations(groupId);
+      if (input === '住宿資訊') {
+        const trip = await this.crud.getCurrentTrip(groupId);
+        if (trip) {
+          const accoms = await this.crud.getAccommodations(trip.id);
+          if (accoms.length === 0) return await this.itinerary.startAccommodationWizard(groupId, userId, displayName);
+        }
+        return await this.itinerary.showAccommodations(groupId);
+      }
       if (input === '新增住宿') return await this.itinerary.startAccommodationWizard(groupId, userId, displayName);
 
       // 刪除住宿 #N
