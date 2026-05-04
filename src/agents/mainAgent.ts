@@ -102,11 +102,17 @@ export class MainAgent {
       // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
       const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
 
+      // 任何地方輸入「取消」→ 清除 session，統一回覆
+      if (input === '取消') {
+        if (session) await this.crud.deleteSession(userId);
+        return {
+          type: 'text',
+          text: '已取消當前操作。',
+          quickReply: getMainMenuQuickReply()
+        };
+      }
+
       if (session && session.step === 'AWAITING_FLIGHT_INPUT') {
-        if (input === '取消') {
-          await this.crud.deleteSession(userId);
-          return { type: 'text', text: '已取消班機資訊輸入。', quickReply: { items: [{ type: 'action', action: { type: 'message', label: '班機資訊', text: '班機資訊' } }] } };
-        }
         const data = JSON.parse(session.data || '{}');
         const flightType = data.flightType as 'outbound' | 'return';
         await this.crud.deleteSession(userId);
@@ -119,10 +125,6 @@ export class MainAgent {
       }
 
       if (session && session.step === 'AWAITING_ITINERARY_IMPORT') {
-        if (input === '取消') {
-          await this.crud.deleteSession(userId);
-          return { type: 'text', text: '已取消行程匯入。', quickReply: { items: [{ type: 'action', action: { type: 'message', label: '行程', text: '行程' } }] } };
-        }
         await this.crud.deleteSession(userId);
         const result = await this.itinerary.importSpots(groupId, input);
         if (result) return result;
