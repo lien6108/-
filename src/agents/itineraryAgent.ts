@@ -225,6 +225,23 @@ export class ItineraryAgent {
     const outbound = flights.find(f => f.type === 'outbound');
     const returnF = flights.find(f => f.type === 'return');
 
+    // 尚無任何班機 → 顯示輸入說明
+    if (!outbound && !returnF) {
+      return {
+        type: 'text',
+        text:
+          '✈️ 目前尚未設定班機資訊。\n\n' +
+          '請選擇要新增的方向：',
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' } },
+            { type: 'action', action: { type: 'postback', label: '新增回程', data: 'cmd=班機 回程' } },
+            { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
+          ]
+        }
+      };
+    }
+
     const buildRow = (label: string, f: FlightInfo | undefined): any[] => {
       if (!f) {
         return [{
