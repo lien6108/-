@@ -181,7 +181,6 @@ export function getItineraryQuickReply(): messagingApi.QuickReply {
     items: [
       qr('✈️ 班機資訊', '班機資訊'),
       qr('🗺️ 行程', '行程'),
-      qr('歷史記錄', '歷史'),
       { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
       qr(CANCEL, CANCEL),
     ]
