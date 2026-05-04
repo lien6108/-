@@ -421,13 +421,13 @@ export class ItineraryAgent {
     return {
       type: 'text',
       text:
-        `請輸入${typeLabel}班機資訊：\n\n` +
+        `請輸入${typeLabel}班機資訊（有轉機可一次貼多行，每行一段）：\n\n` +
         `格式：日期 [機場 航廈] 出發時間 → [機場 航廈] 抵達時間 [航班號]\n\n` +
         `範例（直飛）：\n` +
         `2026/5/10 桃園 T1 08:30 → 東京成田 13:45 CI-100\n\n` +
-        `範例（轉機）請分兩筆輸入，每段各一行：\n` +
-        `第一段：2026/5/10 桃園 T1 08:30 → 香港 T1 10:30 CX456\n` +
-        `第二段：2026/5/10 香港 T1 12:00 → 東京成田 17:00 CX102\n\n` +
+        `範例（轉機，一次貼兩行）：\n` +
+        `2026/5/10 桃園 T1 08:30 → 香港 T1 10:30 CX456\n` +
+        `2026/5/10 香港 T1 12:00 → 東京成田 17:00 CX102\n\n` +
         `（機場、航廈和航班號均為選填；日期可略去年份，系統自動補上）`,
       quickReply: getCancelQuickReply()
     };
@@ -438,25 +438,40 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
-    const parsed = this.parseFlightInput(text);
-    if (!parsed) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const typeLabel = flightType === 'outbound' ? '去程' : '回程';
+
+    const successes: string[] = [];
+    const failures: string[] = [];
+
+    for (const line of lines) {
+      const parsed = this.parseFlightInput(line);
+      if (!parsed) {
+        failures.push(line);
+        continue;
+      }
+      const { departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport } = parsed;
+      await this.crud.addFlight(trip.id, flightType, departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport, addedByName);
+      const routeText = departAirport && arriveAirport ? ` ${departAirport}→${arriveAirport}` : '';
+      successes.push(`${departDate} ${departTime}→${arriveTime}${routeText}${flightNo ? `（${flightNo}）` : ''}`);
+    }
+
+    if (successes.length === 0) {
       return {
         type: 'text',
-        text: `格式不符，請重新輸入：\n例：5/10 TPE 08:30 → NRT 13:45 CI-100\n（機場代碼和航班號均為選填）`,
+        text: `格式不符，請重新輸入。\n\n每行一筆，例：\n5/10 桃園 T1 08:30 → 香港 T1 10:30 CX456\n5/10 香港 T1 12:00 → 東京成田 17:00 CX102`,
         quickReply: getCancelQuickReply()
       };
     }
 
-    const { departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport } = parsed;
-    const typeLabel = flightType === 'outbound' ? '去程' : '回程';
-    await this.crud.addFlight(trip.id, flightType, departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport, addedByName);
-
-    const routeText = departAirport && arriveAirport ? ` ${departAirport}→${arriveAirport}` : '';
-    const flexMsg = await this.showFlights(groupId);
+    const failNote = failures.length > 0
+      ? `\n\n⚠️ 以下 ${failures.length} 行格式不符已略過：\n${failures.map(l => `• ${l}`).join('\n')}`
+      : '';
     const successMsg: messagingApi.Message = {
       type: 'text',
-      text: `✅ ${typeLabel}班機已新增！${flightNo ? `（${flightNo}）` : ''}${routeText}\n${departDate} ${departTime} → ${arriveTime}`
+      text: `✅ 已新增 ${successes.length} 筆${typeLabel}班機：\n${successes.map(s => `• ${s}`).join('\n')}${failNote}`
     };
+    const flexMsg = await this.showFlights(groupId);
     return [successMsg, flexMsg as messagingApi.Message];
   }
 
