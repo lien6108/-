@@ -3,7 +3,7 @@ import { CRUD } from '../db/crud';
 import { MemberAgent } from './memberAgent';
 import { ExpenseAgent } from './expenseAgent';
 import { SettlementAgent } from './settlementAgent';
-import { WizardAgent } from './wizardAgent';
+import { WizardAgent, WizardStep } from './wizardAgent';
 import { ItineraryAgent } from './itineraryAgent';
 import { resolveCurrency } from '../utils/currency';
 import { Env } from '../env';
@@ -148,7 +148,7 @@ export class MainAgent {
 
       if (session && !isModifyDeleteCmd) {
         // 只有 wizard 管理的 step 才交給 wizard；其他未知 step 直接清除避免卡住
-        const knownSteps = ['AWAITING_TRIP_NAME','AWAITING_FEEDBACK','AWAITING_EXPENSE_DRAFT_MENU','AWAITING_EXPENSE_DRAFT_CURRENCY','AWAITING_EXPENSE_DRAFT_AMOUNT','AWAITING_EXPENSE_DRAFT_DESC','AWAITING_EXPENSE_DRAFT_PAYER','AWAITING_EXPENSE_DRAFT_SPLIT_MODE','AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM','AWAITING_EXPENSE_TO_MODIFY','AWAITING_EXPENSE_TO_DELETE','AWAITING_MODIFY_AMOUNT','AWAITING_MODIFY_CURRENCY','AWAITING_MODIFY_PAYER','AWAITING_MODIFY_SHARERS'];
+        const knownSteps: string[] = Object.values(WizardStep);
         if (knownSteps.includes(session.step)) {
           return await this.wizard.handleNext(session, input, displayName);
         }
