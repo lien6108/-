@@ -17,37 +17,133 @@ export class ItineraryAgent {
   constructor(private crud: CRUD) {}
 
   // ─── 顯示給使用者複製的 AI 提示詞，並進入等待匯入狀態 ─────────────────────
-  async showAIPrompt(groupId: string, userId: string): Promise<messagingApi.Message[]> {
+  // ─── 新增行程：先讓使用者選方式 ──────────────────────────────────────────
+  async showAIPrompt(groupId: string, userId: string): Promise<messagingApi.Message> {
+    return {
+      type: 'text',
+      text: '🗺️ 請選擇新增行程的方式：\n\n🤖 AI 規劃\n讓 AI 根據班機、住宿資訊幫你安排最順的路線\n\n📋 轉換格式\n你已有規劃，讓 AI 幫你轉換成系統格式',
+      quickReply: {
+        items: [
+          { type: 'action', action: { type: 'postback', label: '🤖 AI 規劃', data: 'cmd=行程 AI規劃' } },
+          { type: 'action', action: { type: 'postback', label: '📋 轉換格式', data: 'cmd=行程 轉換格式' } },
+          { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
+        ]
+      }
+    };
+  }
+
+  // ─── AI 規劃：組出含班機/住宿 context 的 prompt ────────────────────────────
+  async showAIPlanPrompt(groupId: string, userId: string): Promise<messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     const tripName = trip?.trip_name || '旅程';
 
-    // 設定 session，等待使用者貼回 AI 結果
     await this.crud.upsertSession(userId, groupId, 'AWAITING_ITINERARY_IMPORT', '{}');
 
-    // 第一則：說明 + 警語
+    // 讀取班機與住宿
+    let flightContext = '';
+    let accommodationContext = '';
+    let daysHint = '';
+
+    if (trip) {
+      const flights = await this.crud.getFlights(trip.id);
+      const outbounds = flights.filter(f => f.type === 'outbound').sort((a, b) => a.depart_date.localeCompare(b.depart_date) || a.depart_time.localeCompare(b.depart_time));
+      const returns = flights.filter(f => f.type === 'return').sort((a, b) => a.depart_date.localeCompare(b.depart_date) || a.depart_time.localeCompare(b.depart_time));
+
+      if (outbounds.length > 0) {
+        const f = outbounds[0];
+        const dept = f.depart_airport ? `${f.depart_airport} ` : '';
+        const arr = f.arrive_airport ? `→ ${f.arrive_airport} ` : '';
+        flightContext += `去程：${f.depart_date} ${dept}${f.depart_time} ${arr}抵達 ${f.arrive_time}${f.flight_no ? `（${f.flight_no}）` : ''}\n`;
+      }
+      if (returns.length > 0) {
+        const f = returns[0];
+        const dept = f.depart_airport ? `${f.depart_airport} ` : '';
+        const arr = f.arrive_airport ? `→ ${f.arrive_airport} ` : '';
+        flightContext += `回程：${f.depart_date} ${dept}${f.depart_time} ${arr}抵達 ${f.arrive_time}${f.flight_no ? `（${f.flight_no}）` : ''}\n`;
+      }
+
+      const accoms = await this.crud.getAccommodations(trip.id);
+      if (accoms.length > 0) {
+        const maxDay = Math.max(...accoms.map(a => a.day_to));
+        daysHint = `${maxDay + 1}天${maxDay}夜`;
+        for (const a of accoms) {
+          const range = a.day_from === a.day_to ? `D${a.day_from}` : `D${a.day_from}-D${a.day_to}`;
+          const ci = a.checkin_time ? ` 入住${a.checkin_time}` : '';
+          const co = a.checkout_time ? ` 退房${a.checkout_time}` : '';
+          const who = a.who ? `（${a.who}）` : '';
+          accommodationContext += `${range}：${a.name}${ci}${co}${who}\n`;
+        }
+      }
+    }
+
+    // 組 context 區段
+    let contextBlock = '';
+    if (flightContext || accommodationContext) {
+      contextBlock += '\n\n【旅程資訊】\n';
+      if (flightContext) contextBlock += flightContext;
+      if (accommodationContext) contextBlock += '住宿：\n' + accommodationContext;
+      contextBlock +=
+        '\n【規劃原則】\n' +
+        '1. 第一天根據去程班機抵達時間安排，抵達前不排景點\n' +
+        '2. 最後一天根據回程班機出發時間安排，需預留前往機場的交通時間（至少2小時前）\n' +
+        '3. 每天路線從當晚住宿地點附近出發，最終回到當晚住宿地點附近\n' +
+        '4. 如同天更換飯店，下午行程安排在新飯店附近\n' +
+        '5. 入住／退房時間前後的景點需安排在飯店附近';
+    }
+
+    const prompt =
+      `幫我規劃【${tripName}】${daysHint ? daysHint : ''}的旅遊行程，每天3-5個景點，路線要最順（減少重複移動）。${contextBlock}\n\n` +
+      `請按以下格式輸出，不要多餘說明：\n` +
+      `D1 景點名稱\n` +
+      `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
+      `D2 景點名稱`;
+
     const intro: messagingApi.Message = {
       type: 'text',
       text:
-        `🗺️ 旅遊行程規劃\n\n` +
-        `請複製下方指令，貼到 ChatGPT 或 Gemini 生成行程後，再貼回群組。\n\n` +
-        `格式說明：\n` +
-        `• D1、D2... 代表第幾天\n` +
-        `• 每個景點一行\n` +
-        `• 可在景點後加 | 地圖連結（選填）\n\n` +
-        `⚠️ 注意：現在貼入的內容將直接新增為行程。\n` +
-        `若需要先討論，請點「取消」後再操作。`,
+        `🤖 AI 行程規劃\n\n` +
+        `請複製下方指令，貼到 ChatGPT 或 Gemini，生成後再貼回群組。\n\n` +
+        `⚠️ 貼回後將直接匯入，若需先確認請點「取消」。`,
       quickReply: getCancelQuickReply()
     };
 
-    // 第二則：純指令，方便長按複製
+    const command: messagingApi.Message = {
+      type: 'text',
+      text: prompt,
+      quickReply: getCancelQuickReply()
+    };
+
+    return [intro, command];
+  }
+
+  // ─── 轉換格式：給使用者格式轉換 prompt ────────────────────────────────────
+  async showConvertPrompt(groupId: string, userId: string): Promise<messagingApi.Message[]> {
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_ITINERARY_IMPORT', '{}');
+
+    const intro: messagingApi.Message = {
+      type: 'text',
+      text:
+        `📋 行程格式轉換\n\n` +
+        `請複製下方指令，貼到 ChatGPT 或 Gemini，\n` +
+        `再把你自己的行程計畫貼在指令後面，讓 AI 轉換格式後再貼回群組。\n\n` +
+        `⚠️ 貼回後將直接匯入，若需先確認請點「取消」。`,
+      quickReply: getCancelQuickReply()
+    };
+
     const command: messagingApi.Message = {
       type: 'text',
       text:
-        `幫我規劃${tripName}的行程，每天 3-5 個景點，請依照以下格式輸出，不要多餘說明：\n\n` +
-        `D1 景點名稱\n` +
-        `D1 另一個景點 | https://maps.app.goo.gl/xxx\n` +
-        `D2 景點名稱\n` +
-        `D2 另一個景點`,
+        `請將以下行程轉換成指定格式，不要多餘說明，每個景點一行：\n\n` +
+        `格式規則：\n` +
+        `• D1、D2... 代表第幾天\n` +
+        `• 每行：D天數 景點名稱（可加 | Google Maps 連結）\n` +
+        `• 同一天多個景點請分多行\n\n` +
+        `輸出範例：\n` +
+        `D1 淺草寺 | https://maps.app.goo.gl/xxx\n` +
+        `D1 上野公園\n` +
+        `D2 新宿御苑\n\n` +
+        `--- 以下是我的行程 ---\n` +
+        `（請在此貼上你的行程）`,
       quickReply: getCancelQuickReply()
     };
 

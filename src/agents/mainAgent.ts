@@ -311,6 +311,8 @@ export class MainAgent {
       }
       if (input === '全部行程') return await this.itinerary.showFullItinerary(groupId);
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
+      if (input === '行程 AI規劃') return await this.itinerary.showAIPlanPrompt(groupId, userId);
+      if (input === '行程 轉換格式') return await this.itinerary.showConvertPrompt(groupId, userId);
       if (input === '清空行程') return await this.itinerary.promptClearAllSpots(groupId);
       if (input === '確認清空行程') return await this.itinerary.confirmClearAllSpots(groupId);
 
