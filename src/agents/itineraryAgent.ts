@@ -256,10 +256,7 @@ export class ItineraryAgent {
         return [{
           type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
           contents: [
-            {
-              type: 'box', layout: 'vertical', flex: 0, width: '48px',
-              contents: [{ type: 'text', text: label, size: 'sm', color: '#888888' }]
-            },
+            { type: 'text', text: label, size: 'sm', color: '#888888', flex: 0 },
             { type: 'text', text: '尚未設定', size: 'sm', color: '#bbbbbb', flex: 1 }
           ]
         }];
@@ -269,10 +266,7 @@ export class ItineraryAgent {
         {
           type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
           contents: [
-            {
-              type: 'box', layout: 'vertical', flex: 0, width: '48px', justifyContent: 'center',
-              contents: [{ type: 'text', text: label, size: 'sm', weight: 'bold', color: '#7a8898' }]
-            },
+            { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#7a8898', flex: 0 },
             {
               type: 'box', layout: 'vertical', flex: 1,
               contents: [
