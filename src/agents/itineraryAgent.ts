@@ -461,19 +461,10 @@ export class ItineraryAgent {
 
     const list = await this.crud.getAccommodations(trip.id);
 
-    const addQR: messagingApi.QuickReply = {
-      items: [
-        { type: 'action', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' } },
-        { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
-        { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
-      ]
-    };
-
     if (list.length === 0) {
       return {
         type: 'text',
         text: `「${trip.trip_name}」還沒有住宿資訊！\n點下方按鈕新增。`,
-        quickReply: addQR
       } as messagingApi.Message;
     }
 
@@ -535,8 +526,7 @@ export class ItineraryAgent {
             { type: 'button', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm', color: '#7a9aaa' }
           ]
         }
-      },
-      quickReply: addQR
+      }
     } as any;
   }
 
