@@ -147,7 +147,13 @@ export class MainAgent {
       }
 
       if (session && !isModifyDeleteCmd) {
-        return await this.wizard.handleNext(session, input, displayName);
+        // 只有 wizard 管理的 step 才交給 wizard；其他未知 step 直接清除避免卡住
+        const knownSteps = ['AWAITING_TRIP_NAME','AWAITING_FEEDBACK','AWAITING_EXPENSE_DRAFT_MENU','AWAITING_EXPENSE_DRAFT_CURRENCY','AWAITING_EXPENSE_DRAFT_AMOUNT','AWAITING_EXPENSE_DRAFT_DESC','AWAITING_EXPENSE_DRAFT_PAYER','AWAITING_EXPENSE_DRAFT_SPLIT_MODE','AWAITING_EXPENSE_DRAFT_SPLIT_CUSTOM','AWAITING_EXPENSE_TO_MODIFY','AWAITING_EXPENSE_TO_DELETE','AWAITING_MODIFY_AMOUNT','AWAITING_MODIFY_CURRENCY','AWAITING_MODIFY_PAYER','AWAITING_MODIFY_SHARERS'];
+        if (knownSteps.includes(session.step)) {
+          return await this.wizard.handleNext(session, input, displayName);
+        }
+        // 未知 step（舊版殘留）：清除並繼續正常流程
+        await this.crud.deleteSession(userId);
       }
       if (session && isModifyDeleteCmd) {
         await this.crud.deleteSession(userId);
