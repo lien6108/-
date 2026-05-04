@@ -564,7 +564,7 @@ export class CRUD {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
     )`).run();
-  } ───────────────────────────────────────────────────────────────
+  }
 
   async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
     const res = await this.db.prepare(
