@@ -97,6 +97,9 @@ export interface FlightInfo {
   depart_date: string;   // e.g. "5/10"
   depart_time: string;  // e.g. "08:30"
   arrive_time: string;  // e.g. "13:45"
+  depart_airport?: string | null;  // e.g. "TPE"
+  arrive_airport?: string | null;  // e.g. "NRT"
+  added_by_name?: string | null;
   note?: string | null;
   created_at: string;
 }
@@ -588,6 +591,14 @@ export class CRUD {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
     )`).run();
+    // 新欄位 migration
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
+    // 新欄位 migration
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
   }
 
   async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
@@ -653,23 +664,18 @@ export class CRUD {
 
   // ─── Flight Info ─────────────────────────────────────────────────────────────
 
-  async upsertFlight(tripId: number, type: 'outbound' | 'return', departDate: string, departTime: string, arriveTime: string, flightNo?: string, note?: string): Promise<void> {
-    const existing = await this.db.prepare(`SELECT id FROM flight_info WHERE trip_id = ? AND type = ?`).bind(tripId, type).first<{ id: number }>();
-    if (existing) {
-      await this.db.prepare(`UPDATE flight_info SET flight_no=?, depart_date=?, depart_time=?, arrive_time=?, note=? WHERE id=?`)
-        .bind(flightNo || null, departDate, departTime, arriveTime, note || null, existing.id).run();
-    } else {
-      await this.db.prepare(`INSERT INTO flight_info (trip_id, type, flight_no, depart_date, depart_time, arrive_time, note) VALUES (?,?,?,?,?,?,?)`)
-        .bind(tripId, type, flightNo || null, departDate, departTime, arriveTime, note || null).run();
-    }
+  async addFlight(tripId: number, type: 'outbound' | 'return', departDate: string, departTime: string, arriveTime: string, flightNo?: string, departAirport?: string, arriveAirport?: string, addedByName?: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO flight_info (trip_id, type, flight_no, depart_date, depart_time, arrive_time, depart_airport, arrive_airport, added_by_name) VALUES (?,?,?,?,?,?,?,?,?)`
+    ).bind(tripId, type, flightNo || null, departDate, departTime, arriveTime, departAirport || null, arriveAirport || null, addedByName || null).run();
   }
 
   async getFlights(tripId: number): Promise<FlightInfo[]> {
-    const res = await this.db.prepare(`SELECT * FROM flight_info WHERE trip_id = ? ORDER BY type ASC`).bind(tripId).all<FlightInfo>();
+    const res = await this.db.prepare(`SELECT * FROM flight_info WHERE trip_id = ? ORDER BY type ASC, created_at ASC`).bind(tripId).all<FlightInfo>();
     return res.results || [];
   }
 
-  async deleteFlight(tripId: number, type: 'outbound' | 'return'): Promise<void> {
-    await this.db.prepare(`DELETE FROM flight_info WHERE trip_id = ? AND type = ?`).bind(tripId, type).run();
+  async deleteFlightById(id: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM flight_info WHERE id = ?`).bind(id).run();
   }
 }

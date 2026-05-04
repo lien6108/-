@@ -185,62 +185,96 @@ export class ItineraryAgent {
     return matches.length >= 2;
   }
 
+  // ─── 班機輸入解析（tokenizer 方式，支援機場代碼）──────────────────────────
+  private parseFlightInput(text: string): {
+    departDate: string; departTime: string; arriveTime: string;
+    flightNo?: string; departAirport?: string; arriveAirport?: string;
+  } | null {
+    const parts = text.trim().split(/\s+/);
+    let i = 0;
+    const isAirport = (s: string) => /^[A-Za-z]{2,4}$/.test(s);
+    const isTime = (s: string) => /^\d{2}:\d{2}$/.test(s);
+    const isDate = (s: string) => /^\d{1,2}\/\d{1,2}$/.test(s);
+
+    if (!isDate(parts[i] || '')) return null;
+    const departDate = parts[i++];
+
+    let departAirport: string | undefined;
+    if (i < parts.length && isAirport(parts[i]) && !isTime(parts[i])) departAirport = parts[i++].toUpperCase();
+
+    if (!isTime(parts[i] || '')) return null;
+    const departTime = parts[i++];
+
+    if (i < parts.length && /^[→>]$/.test(parts[i])) i++;
+
+    let arriveAirport: string | undefined;
+    if (i < parts.length && isAirport(parts[i]) && !isTime(parts[i])) arriveAirport = parts[i++].toUpperCase();
+
+    if (!isTime(parts[i] || '')) return null;
+    const arriveTime = parts[i++];
+
+    const flightNo = i < parts.length ? parts.slice(i).join(' ') : undefined;
+    return { departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport };
+  }
+
   // ─── 班機資訊：啟動 wizard ─────────────────────────────────────────────────
-  async startFlightWizard(groupId: string, userId: string, flightType: 'outbound' | 'return'): Promise<messagingApi.Message> {
+  async startFlightWizard(groupId: string, userId: string, flightType: 'outbound' | 'return', addedByName?: string): Promise<messagingApi.Message> {
     const typeLabel = flightType === 'outbound' ? '去程' : '回程';
-    await this.crud.upsertSession(userId, groupId, 'AWAITING_FLIGHT_INPUT', JSON.stringify({ flightType }));
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_FLIGHT_INPUT', JSON.stringify({ flightType, addedByName: addedByName || '' }));
     return {
       type: 'text',
       text:
         `請輸入${typeLabel}班機資訊：\n\n` +
-        `格式： 日期 出發時間 抵達時間 [航班號]\n` +
-        `例如：5/10 08:30 13:45 CI-100\n` +
-        `或：5/10 08:30 → 13:45`,
+        `格式：日期 [出發機場] 出發時間 → [抵達機場] 抵達時間 [航班號]\n\n` +
+        `範例：\n` +
+        `5/10 08:30 → 13:45 CI-100\n` +
+        `5/10 TPE 08:30 → NRT 13:45 CI-100\n` +
+        `（機場代碼和航班號均為選填）`,
       quickReply: getCancelQuickReply()
     };
   }
 
   // ─── 班機資訊：解析輸入並儲存 ─────────────────────────────────────────────
-  async handleFlightInput(groupId: string, text: string, flightType: 'outbound' | 'return'): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+  async handleFlightInput(groupId: string, text: string, flightType: 'outbound' | 'return', addedByName?: string): Promise<string | messagingApi.Message | messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
-    const m = text.trim().match(/^(\d{1,2}\/\d{1,2})\s+(\d{2}:\d{2})\s*[→>-]?\s*(\d{2}:\d{2})(?:\s+([\w-]+))?/);
-    if (!m) {
+    const parsed = this.parseFlightInput(text);
+    if (!parsed) {
       return {
         type: 'text',
-        text: `格式不符，請重新輸入：\n例：5/10 08:30 13:45 CI-100`,
+        text: `格式不符，請重新輸入：\n例：5/10 TPE 08:30 → NRT 13:45 CI-100\n（機場代碼和航班號均為選填）`,
         quickReply: getCancelQuickReply()
       };
     }
 
-    const [, departDate, departTime, arriveTime, flightNo] = m;
+    const { departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport } = parsed;
     const typeLabel = flightType === 'outbound' ? '去程' : '回程';
-    await this.crud.upsertFlight(trip.id, flightType, departDate, departTime, arriveTime, flightNo);
+    await this.crud.addFlight(trip.id, flightType, departDate, departTime, arriveTime, flightNo, departAirport, arriveAirport, addedByName);
+
+    const routeText = departAirport && arriveAirport ? ` ${departAirport}→${arriveAirport}` : '';
     const flexMsg = await this.showFlights(groupId);
     const successMsg: messagingApi.Message = {
       type: 'text',
-      text: `✅ ${typeLabel}班機已儲存！${flightNo ? `（${flightNo}）` : ''}\n${departDate} ${departTime} → ${arriveTime}`
+      text: `✅ ${typeLabel}班機已新增！${flightNo ? `（${flightNo}）` : ''}${routeText}\n${departDate} ${departTime} → ${arriveTime}`
     };
     return [successMsg, flexMsg as messagingApi.Message];
   }
 
-  // ─── 班機資訊：顯示 Flex ───────────────────────────────────────────────────
+  // ─── 班機資訊：顯示 Flex（支援多筆、每筆有刪除鈕）─────────────────────────
   async showFlights(groupId: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
     const flights = await this.crud.getFlights(trip.id);
-    const outbound = flights.find(f => f.type === 'outbound');
-    const returnF = flights.find(f => f.type === 'return');
+    const outbounds = flights.filter(f => f.type === 'outbound');
+    const returns = flights.filter(f => f.type === 'return');
 
     // 尚無任何班機 → 顯示輸入說明
-    if (!outbound && !returnF) {
+    if (outbounds.length === 0 && returns.length === 0) {
       return {
         type: 'text',
-        text:
-          '✈️ 目前尚未設定班機資訊。\n\n' +
-          '請選擇要新增的方向：',
+        text: '✈️ 目前尚未設定班機資訊。\n\n請選擇要新增的方向：',
         quickReply: {
           items: [
             { type: 'action', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' } },
@@ -251,52 +285,40 @@ export class ItineraryAgent {
       };
     }
 
-    const buildRow = (label: string, f: FlightInfo | undefined): any[] => {
-      if (!f) {
-        return [{
-          type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
-          contents: [
-            { type: 'text', text: label, size: 'sm', color: '#888888', flex: 0 },
-            { type: 'text', text: '尚未設定', size: 'sm', color: '#bbbbbb', flex: 1 }
-          ]
-        }];
-      }
-      const flightNoText = f.flight_no ? ` ${f.flight_no}` : '';
-      return [
-        {
-          type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
-          contents: [
-            { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#7a8898', flex: 0 },
-            {
-              type: 'box', layout: 'vertical', flex: 1,
-              contents: [
-                { type: 'text', text: `${f.depart_date}${flightNoText}`, size: 'xs', color: '#888888' },
-                { type: 'text', text: `${f.depart_time} → ${f.arrive_time}`, size: 'lg', weight: 'bold', color: '#333333', margin: 'xs' },
-              ]
-            }
-          ]
-        },
-        { type: 'separator', margin: 'md' }
+    const buildFlightRow = (f: FlightInfo): any => {
+      const flightNoText = f.flight_no ? `${f.flight_no}  ` : '';
+      const routeText = f.depart_airport && f.arrive_airport
+        ? `${f.depart_airport} ${f.depart_time} → ${f.arrive_airport} ${f.arrive_time}`
+        : `${f.depart_time} → ${f.arrive_time}`;
+      const infoLines: any[] = [
+        { type: 'text', text: `${flightNoText}${f.depart_date}`, size: 'sm', weight: 'bold', color: '#333333' },
+        { type: 'text', text: routeText, size: 'xs', color: '#555555', margin: 'xs' },
       ];
+      if (f.added_by_name) {
+        infoLines.push({ type: 'text', text: f.added_by_name, size: 'xs', color: '#aaaaaa', margin: 'xs' });
+      }
+      return {
+        type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'sm',
+        contents: [
+          { type: 'box', layout: 'vertical', flex: 1, contents: infoLines },
+          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除班機 #${f.id}` }, style: 'secondary', height: 'sm', flex: 0 }
+        ]
+      };
+    };
+
+    const buildSection = (label: string, list: FlightInfo[], emptyText: string): any[] => {
+      const header = { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#6b7f8c', margin: 'lg' };
+      const sep = { type: 'separator', margin: 'sm' };
+      if (list.length === 0) {
+        return [header, sep, { type: 'text', text: emptyText, size: 'sm', color: '#bbbbbb', margin: 'sm' }];
+      }
+      return [header, sep, ...list.map(buildFlightRow)];
     };
 
     const bodyContents: any[] = [
-      ...buildRow('✈️ 去程', outbound),
-      ...buildRow('🛬 回程', returnF),
+      ...buildSection('✈️ 去程', outbounds, '尚未設定'),
+      ...buildSection('🛬 回程', returns, '尚未設定'),
     ];
-
-    const footerBtns: any[] = [
-      { type: 'button', action: { type: 'postback', label: (outbound ? '修改' : '新增') + '去程', data: 'cmd=班機 去程' }, style: outbound ? 'secondary' : 'primary', height: 'sm', ...(outbound ? {} : { color: '#7a9aaa' }) },
-      { type: 'button', action: { type: 'postback', label: (returnF ? '修改' : '新增') + '回程', data: 'cmd=班機 回程' }, style: returnF ? 'secondary' : 'primary', height: 'sm', ...(returnF ? {} : { color: '#7a9aaa' }) },
-    ];
-
-    if (outbound || returnF) {
-      footerBtns.push({
-        type: 'button',
-        action: { type: 'postback', label: '刪除班機', data: 'cmd=刪除班機' },
-        style: 'secondary', height: 'sm'
-      });
-    }
 
     return {
       type: 'flex', altText: '班機資訊',
@@ -310,35 +332,19 @@ export class ItineraryAgent {
           ]
         },
         body: { type: 'box', layout: 'vertical', contents: bodyContents },
-        footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerBtns }
+        footer: {
+          type: 'box', layout: 'horizontal', spacing: 'sm',
+          contents: [
+            { type: 'button', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1, color: '#7a9aaa' },
+            { type: 'button', action: { type: 'postback', label: '新增回程', data: 'cmd=班機 回程' }, style: 'primary', height: 'sm', flex: 1, color: '#7a9aaa' },
+          ]
+        }
       }
     } as any;
   }
 
-  // ─── 班機資訊：刪除選擇 ────────────────────────────────────────────────────
-  async startDeleteFlightWizard(groupId: string, userId: string): Promise<messagingApi.Message> {
-    const trip = await this.crud.getCurrentTrip(groupId);
-    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
-
-    const flights = await this.crud.getFlights(trip.id);
-    if (flights.length === 0) return { type: 'text', text: '目前沒有班機資訊可刪除。' };
-
-    const items: messagingApi.QuickReplyItem[] = [];
-    if (flights.find(f => f.type === 'outbound')) {
-      items.push({ type: 'action', action: { type: 'postback', label: '刪除去程', data: 'cmd=刪除班機 去程' } });
-    }
-    if (flights.find(f => f.type === 'return')) {
-      items.push({ type: 'action', action: { type: 'postback', label: '刪除回程', data: 'cmd=刪除班機 回程' } });
-    }
-    items.push({ type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } });
-
-    return { type: 'text', text: '請選擇要刪除哪一段班機：', quickReply: { items } };
-  }
-
-  async deleteFlight(groupId: string, type: 'outbound' | 'return'): Promise<string | messagingApi.Message> {
-    const trip = await this.crud.getCurrentTrip(groupId);
-    if (!trip) return '目前沒有進行中的旅程 🗺️';
-    await this.crud.deleteFlight(trip.id, type);
+  async deleteFlightById(groupId: string, flightId: number): Promise<string | messagingApi.Message> {
+    await this.crud.deleteFlightById(flightId);
     return this.showFlights(groupId);
   }
 }
