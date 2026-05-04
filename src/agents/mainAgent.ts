@@ -445,7 +445,7 @@ export class MainAgent {
     return null;
   }
 
-  async processPostback(groupId: string, userId: string, displayName: string, data: string): Promise<string | messagingApi.Message | null> {
+  async processPostback(groupId: string, userId: string, displayName: string, data: string): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) return null;
 
