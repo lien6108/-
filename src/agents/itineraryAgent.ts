@@ -96,9 +96,9 @@ export class ItineraryAgent {
       `幫我規劃【${tripName}】${daysHint ? daysHint : ''}的旅遊行程，每天3-5個景點，路線要最順（減少重複移動）。${contextBlock}\n\n` +
       `========== 以下格式請勿修改 ==========\n` +
       `請按以下格式輸出，不要多餘說明，每個景點一行：\n` +
-      `D1 景點名稱 | https://www.google.com/maps/search/景點名稱\n` +
-      `D1 另一個景點 | https://www.google.com/maps/place/景點名稱\n` +
-      `D2 景點名稱 | https://maps.app.goo.gl/對應短網址\n` +
+      `D1 景點名稱 | google map對應連結\n` +
+      `D1 另一個景點 | google map對應連結\n` +
+      `D2 景點名稱 | google map對應連結\n` +
       `（每個景點都必須附 Google Maps 連結；住宿地點不需要輸出）\n` +
       `======================================`;
 
@@ -188,8 +188,26 @@ export class ItineraryAgent {
       text: `✅ 已匯入 ${valid.length} 個景點，共 ${days.length} 天${skippedNote}`,
     };
 
+    // 補上住宿位置連結（有填寫 maps_url 才顯示）
+    const accomList = await this.crud.getAccommodations(trip.id);
+    const accomWithUrl = accomList.filter(a => a.maps_url &&
+      days.some(d => d >= a.day_from && d <= a.day_to)
+    );
+    const messages: messagingApi.Message[] = [successMsg];
+    if (accomWithUrl.length > 0) {
+      const lines = accomWithUrl.map(a => {
+        const range = a.day_from === a.day_to ? `D${a.day_from}` : `D${a.day_from}-D${a.day_to}`;
+        return `${range} 🏨 ${a.name}\n${a.maps_url}`;
+      });
+      messages.push({
+        type: 'text',
+        text: `🏨 住宿位置連結：\n\n${lines.join('\n\n')}`,
+      });
+    }
+
     const carousel = await this.showDayItinerary(groupId);
-    return [successMsg, carousel as messagingApi.Message];
+    messages.push(carousel as messagingApi.Message);
+    return messages;
   }
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
