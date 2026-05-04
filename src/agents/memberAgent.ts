@@ -32,8 +32,8 @@ export class MemberAgent {
       text: `${displayName}，確定要退出分帳嗎？`,
       quickReply: {
         items: [
-          { type: 'action', action: { type: 'message', label: '確認退出', text: '確認退出' } },
-          { type: 'action', action: { type: 'message', label: '取消', text: '取消' } }
+          { type: 'action', action: { type: 'postback', label: '確認退出', data: 'cmd=確認退出' } },
+          { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } }
         ]
       }
     };
@@ -65,8 +65,8 @@ export class MemberAgent {
         text: '目前還沒有夥伴加入耶～輸入「加入」一起分帳吧！',
         quickReply: {
           items: [
-            { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
-            { type: 'action', action: { type: 'message', label: '說明', text: '說明' } }
+            { type: 'action', action: { type: 'postback', label: '加入', data: 'cmd=加入' } },
+            { type: 'action', action: { type: 'postback', label: '說明', data: 'cmd=說明' } }
           ]
         }
       };
@@ -107,8 +107,8 @@ export class MemberAgent {
           layout: 'horizontal',
           spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'message', label: '加入', text: '加入' }, style: 'primary', height: 'sm', color: '#dac04f', flex: 1 },
-            { type: 'button', action: { type: 'message', label: '退出', text: '退出' }, style: 'secondary', height: 'sm', flex: 1 }
+            { type: 'button', action: { type: 'postback', label: '加入', data: 'cmd=加入' }, style: 'primary', height: 'sm', color: '#dac04f', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '退出', data: 'cmd=退出' }, style: 'secondary', height: 'sm', flex: 1 }
           ]
         }
       }

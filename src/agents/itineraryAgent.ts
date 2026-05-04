@@ -126,7 +126,7 @@ export class ItineraryAgent {
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '新增旅遊行程', text: '新增旅遊行程' }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'postback', label: '新增旅遊行程', data: 'cmd=新增旅遊行程' }, style: 'secondary', height: 'sm', flex: 1 },
         ]
       }
     };
@@ -260,14 +260,14 @@ export class ItineraryAgent {
     ];
 
     const footerBtns: any[] = [
-      { type: 'button', action: { type: 'message', label: (outbound ? '修改' : '新增') + '去程', text: '班機 去程' }, style: outbound ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(outbound ? {} : { color: '#7a9aaa' }) },
-      { type: 'button', action: { type: 'message', label: (returnF ? '修改' : '新增') + '回程', text: '班機 回程' }, style: returnF ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(returnF ? {} : { color: '#7a9aaa' }) },
+      { type: 'button', action: { type: 'postback', label: (outbound ? '修改' : '新增') + '去程', data: 'cmd=班機 去程' }, style: outbound ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(outbound ? {} : { color: '#7a9aaa' }) },
+      { type: 'button', action: { type: 'postback', label: (returnF ? '修改' : '新增') + '回程', data: 'cmd=班機 回程' }, style: returnF ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(returnF ? {} : { color: '#7a9aaa' }) },
     ];
 
     if (outbound || returnF) {
       footerBtns.push({
         type: 'button',
-        action: { type: 'message', label: '刪除班機', text: '刪除班機' },
+        action: { type: 'postback', label: '刪除班機', data: 'cmd=刪除班機' },
         style: 'secondary', height: 'sm', flex: 1
       });
     }
@@ -299,12 +299,12 @@ export class ItineraryAgent {
 
     const items: messagingApi.QuickReplyItem[] = [];
     if (flights.find(f => f.type === 'outbound')) {
-      items.push({ type: 'action', action: { type: 'message', label: '刪除去程', text: '刪除班機 去程' } });
+      items.push({ type: 'action', action: { type: 'postback', label: '刪除去程', data: 'cmd=刪除班機 去程' } });
     }
     if (flights.find(f => f.type === 'return')) {
-      items.push({ type: 'action', action: { type: 'message', label: '刪除回程', text: '刪除班機 回程' } });
+      items.push({ type: 'action', action: { type: 'postback', label: '刪除回程', data: 'cmd=刪除班機 回程' } });
     }
-    items.push({ type: 'action', action: { type: 'message', label: '取消', text: '取消' } });
+    items.push({ type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } });
 
     return { type: 'text', text: '請選擇要刪除哪一段班機：', quickReply: { items } };
   }

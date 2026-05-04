@@ -80,8 +80,8 @@ export class SettlementAgent {
         footer: {
           type: 'box', layout: 'horizontal', spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'message', label: '取消', text: '取消' }, style: 'secondary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', color: '#b87070', flex: 2 }
+            { type: 'button', action: { type: 'postback', label: '取消', data: 'cmd=取消' }, style: 'secondary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '確認結算', data: 'cmd=確認結算' }, style: 'primary', height: 'sm', color: '#b87070', flex: 2 }
           ]
         }
       }
@@ -129,7 +129,7 @@ export class SettlementAgent {
           },
           {
             type: 'button',
-            action: { type: 'message', label: '查看', text: `歷史 #${t.id}` },
+            action: { type: 'postback', label: '查看', data: `cmd=歷史 #${t.id}` },
             style: 'secondary', height: 'sm', flex: 2
           }
         ]
@@ -212,7 +212,7 @@ export class SettlementAgent {
         footer: {
           type: 'box', layout: 'horizontal',
           contents: [
-            { type: 'button', action: { type: 'message', label: '返回歷史', text: '歷史' }, style: 'secondary', height: 'sm' }
+            { type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=歷史' }, style: 'secondary', height: 'sm' }
           ]
         }
       }

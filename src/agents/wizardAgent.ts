@@ -309,7 +309,7 @@ export class WizardAgent {
   }
 
   private qr(label: string, text: string): messagingApi.QuickReplyItem {
-    return { type: 'action', action: { type: 'message', label, text } };
+    return { type: 'action', action: { type: 'postback', label, data: 'cmd=' + text } };
   }
 
 
@@ -341,7 +341,7 @@ export class WizardAgent {
             },
             {
               type: 'button',
-              action: { type: 'message', label: '選擇', text },
+              action: { type: 'postback', label: '選擇', data: 'cmd=' + text },
               style: 'primary', height: 'sm', flex: 2, color: '#7a8898'
             }
           ]
@@ -363,7 +363,7 @@ export class WizardAgent {
           },
           {
             type: 'button',
-            action: { type: 'message', label: '刪除', text },
+            action: { type: 'postback', label: '刪除', data: 'cmd=' + text },
             style: 'secondary', height: 'sm', flex: 2
           }
         ]
@@ -387,7 +387,7 @@ export class WizardAgent {
         footer: {
           type: 'box', layout: 'vertical',
           contents: [
-            { type: 'button', action: { type: 'message', label: '取消', text: '取消' }, style: 'secondary', height: 'sm' }
+            { type: 'button', action: { type: 'postback', label: '取消', data: 'cmd=取消' }, style: 'secondary', height: 'sm' }
           ]
         }
       }

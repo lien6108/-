@@ -304,7 +304,7 @@ export class LineEventHandler {
               { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end' },
               {
                 type: 'button',
-                action: { type: 'message', label: '查看', text: `歷史 #${t.id}` },
+                action: { type: 'postback', label: '查看', data: `cmd=歷史 #${t.id}` },
                 style: 'secondary', height: 'sm', margin: 'xs'
               }
             ]
@@ -380,7 +380,7 @@ export class LineEventHandler {
         body: { type: 'box', layout: 'vertical', contents: rows },
         footer: {
           type: 'box', layout: 'horizontal',
-          contents: [{ type: 'button', action: { type: 'message', label: '返回歷史', text: '查看歷史分帳' }, style: 'secondary', height: 'sm' }]
+          contents: [{ type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=查看歷史分帳' }, style: 'secondary', height: 'sm' }]
         }
       }
     } as any;

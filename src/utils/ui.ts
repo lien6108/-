@@ -44,9 +44,9 @@ export function createExpenseSuccessFlex(
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '修改', text: `修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '刪除', text: `刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'message', label: '清單', text: '清單' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '修改', data: `cmd=修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'postback', label: '清單', data: 'cmd=清單' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
         ]
       }
     }
@@ -77,12 +77,12 @@ export function createTemplateGuideMessage(members: { display_name: string }[]):
       `目前成員：${memberList}`,
     quickReply: {
       items: [
-        { type: 'action', action: { type: 'message', label: '🍴 餐費 500', text: '記帳 餐費 500' } },
-        { type: 'action', action: { type: 'message', label: '🚗 交通 100', text: '記帳 交通 100' } },
-        { type: 'action', action: { type: 'message', label: '🛍️ 購物 300', text: '記帳 購物 300' } },
-        { type: 'action', action: { type: 'message', label: '🏠 住宿 1000', text: '記帳 住宿 1000' } },
-        { type: 'action', action: { type: 'message', label: '🍹 飲料 150', text: '記帳 飲料 150' } },
-        { type: 'action', action: { type: 'message', label: '🎁 雜支 200', text: '記帳 雜支 200' } },
+        { type: 'action', action: { type: 'postback', label: '🍴 餐費 500', data: 'cmd=記帳 餐費 500' } },
+        { type: 'action', action: { type: 'postback', label: '🚗 交通 100', data: 'cmd=記帳 交通 100' } },
+        { type: 'action', action: { type: 'postback', label: '🛍️ 購物 300', data: 'cmd=記帳 購物 300' } },
+        { type: 'action', action: { type: 'postback', label: '🏠 住宿 1000', data: 'cmd=記帳 住宿 1000' } },
+        { type: 'action', action: { type: 'postback', label: '🍹 飲料 150', data: 'cmd=記帳 飲料 150' } },
+        { type: 'action', action: { type: 'postback', label: '🎁 雜支 200', data: 'cmd=記帳 雜支 200' } },
       ]
     }
   };
@@ -117,7 +117,7 @@ export interface QuickReplyOptions {
 const CANCEL = '取消';
 
 function qr(label: string, text: string): messagingApi.QuickReplyItem {
-  return { type: 'action', action: { type: 'message', label, text } };
+  return { type: 'action', action: { type: 'postback', label, data: 'cmd=' + text } };
 }
 
 export function getStandardQuickReply(options: QuickReplyOptions = {}): messagingApi.QuickReply {
@@ -311,8 +311,8 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         layout: 'horizontal',
         spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '只看我的帳', text: '只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
-          { type: 'button', action: { type: 'message', label: '結算', text: '結算' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '只看我的帳', data: 'cmd=只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
+          { type: 'button', action: { type: 'postback', label: '結算', data: 'cmd=結算' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
         ]
       }
     }
@@ -409,7 +409,7 @@ export function createMyAccountFlex(
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'message', label: '完整清單', text: '清單' }, style: 'secondary', height: 'sm', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '完整清單', data: 'cmd=清單' }, style: 'secondary', height: 'sm', flex: 1 }
         ]
       }
     }
@@ -463,7 +463,7 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
         contents: [
           { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#7c8a78' },
           { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm', color: '#c07878' }
+          { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm', color: '#c07878' }
         ]
       }
     }
@@ -541,7 +541,7 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
     type: 'box', layout: 'vertical', spacing: 'sm', margin: 'lg', contents: [
       { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm', color: '#7c8a78' },
       { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm', color: '#7a8898' },
-      { type: 'button', action: { type: 'message', label: '❌ 取消', text: '取消' }, style: 'link', height: 'sm' }
+      { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm' }
     ]
   };
 

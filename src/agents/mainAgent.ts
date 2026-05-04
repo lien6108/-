@@ -173,7 +173,7 @@ export class MainAgent {
           type: 'text',
           text: trip ? `目前旅程名稱：「${trip.trip_name}」
 請輸入新的旅程名稱：` : '請輸入旅程名稱：',
-          quickReply: { items: [{ type: 'action', action: { type: 'message', label: '取消', text: '取消' } }] }
+          quickReply: { items: [{ type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } }] }
         };
       }
 
@@ -196,10 +196,10 @@ export class MainAgent {
             text: '你還沒加入分帳名單，加入後就能和大家一起記帳啦！🐶',
             quickReply: {
               items: [
-                { type: 'action', action: { type: 'message', label: '加入', text: '加入' } },
-                { type: 'action', action: { type: 'message', label: '查看成員', text: '成員' } },
-                { type: 'action', action: { type: 'message', label: '完整說明', text: '說明' } },
-                { type: 'action', action: { type: 'message', label: '取消', text: '取消' } },
+                { type: 'action', action: { type: 'postback', label: '加入', data: 'cmd=加入' } },
+                { type: 'action', action: { type: 'postback', label: '查看成員', data: 'cmd=成員' } },
+                { type: 'action', action: { type: 'postback', label: '完整說明', data: 'cmd=說明' } },
+                { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
               ]
             }
           };
@@ -490,6 +490,11 @@ export class MainAgent {
       if (action === 'start_edit') {
         if (!isParticipating) return '你還沒加入分帳喔，請先輸入「加入」！';
         return await this.wizard.startModifyWizard(groupId, userId);
+      }
+
+      const cmd = params.get('cmd');
+      if (cmd) {
+        return await this.processMessage(groupId, userId, displayName, cmd);
       }
 
       const session = await this.crud.getSession(userId);
