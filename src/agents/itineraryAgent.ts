@@ -286,15 +286,15 @@ export class ItineraryAgent {
     ];
 
     const footerBtns: any[] = [
-      { type: 'button', action: { type: 'postback', label: (outbound ? '修改' : '新增') + '去程', data: 'cmd=班機 去程' }, style: outbound ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(outbound ? {} : { color: '#7a9aaa' }) },
-      { type: 'button', action: { type: 'postback', label: (returnF ? '修改' : '新增') + '回程', data: 'cmd=班機 回程' }, style: returnF ? 'secondary' : 'primary', height: 'sm', flex: 1, ...(returnF ? {} : { color: '#7a9aaa' }) },
+      { type: 'button', action: { type: 'postback', label: (outbound ? '修改' : '新增') + '去程', data: 'cmd=班機 去程' }, style: outbound ? 'secondary' : 'primary', height: 'sm', ...(outbound ? {} : { color: '#7a9aaa' }) },
+      { type: 'button', action: { type: 'postback', label: (returnF ? '修改' : '新增') + '回程', data: 'cmd=班機 回程' }, style: returnF ? 'secondary' : 'primary', height: 'sm', ...(returnF ? {} : { color: '#7a9aaa' }) },
     ];
 
     if (outbound || returnF) {
       footerBtns.push({
         type: 'button',
         action: { type: 'postback', label: '刪除班機', data: 'cmd=刪除班機' },
-        style: 'secondary', height: 'sm', flex: 1
+        style: 'secondary', height: 'sm'
       });
     }
 
@@ -310,7 +310,7 @@ export class ItineraryAgent {
           ]
         },
         body: { type: 'box', layout: 'vertical', contents: bodyContents },
-        footer: { type: 'box', layout: 'horizontal', spacing: 'sm', contents: footerBtns }
+        footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: footerBtns }
       }
     } as any;
   }
