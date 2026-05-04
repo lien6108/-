@@ -135,6 +135,17 @@ export class MainAgent {
         return await this.itinerary.handleAddSpotInput(groupId, input, day);
       }
 
+      if (session && session.step === 'AWAITING_ACCOMMODATION_INPUT') {
+        const data = JSON.parse(session.data || '{}');
+        const addedByName = data.addedByName as string || displayName;
+        await this.crud.deleteSession(userId);
+        const result = await this.itinerary.handleAccommodationInput(groupId, input, addedByName);
+        if (typeof result === 'object' && !Array.isArray(result) && (result as any).type === 'text' && (result as any).text?.startsWith('格式不符')) {
+          await this.crud.upsertSession(userId, groupId, 'AWAITING_ACCOMMODATION_INPUT', JSON.stringify({ addedByName }));
+        }
+        return result;
+      }
+
       if (session && !isModifyDeleteCmd) {
         return await this.wizard.handleNext(session, input, displayName);
       }
@@ -314,6 +325,13 @@ export class MainAgent {
       // 刪除景點 #N
       const delSpotMatch = normalizedInput.match(/^[刪删]除景點\s*#(\d+)$/);
       if (delSpotMatch) return await this.itinerary.deleteSpot(groupId, parseInt(delSpotMatch[1], 10));
+
+      if (input === '住宿資訊') return await this.itinerary.showAccommodations(groupId);
+      if (input === '新增住宿') return await this.itinerary.startAccommodationWizard(groupId, userId, displayName);
+
+      // 刪除住宿 #N
+      const delAccomMatch = normalizedInput.match(/^[刪删]除住宿\s*#(\d+)$/);
+      if (delAccomMatch) return await this.itinerary.deleteAccommodationById(groupId, parseInt(delAccomMatch[1], 10));
 
       // ─── 班機指令 ────────────────────────────────────────────────────────────────
       if (input === '班機資訊') return await this.itinerary.showFlights(groupId);

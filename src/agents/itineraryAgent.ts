@@ -1,5 +1,5 @@
 import { messagingApi } from '@line/bot-sdk';
-import { CRUD, ItinerarySpot, FlightInfo } from '../db/crud';
+import { CRUD, ItinerarySpot, FlightInfo, Accommodation } from '../db/crud';
 import { getCancelQuickReply } from '../utils/ui';
 
 // 解析一行 AI 輸出：D1 景點名稱 [| maps_url]
@@ -452,5 +452,125 @@ export class ItineraryAgent {
   async deleteFlightById(groupId: string, flightId: number): Promise<string | messagingApi.Message> {
     await this.crud.deleteFlightById(flightId);
     return this.showFlights(groupId);
+  }
+
+  // ─── 住宿資訊：顯示 ────────────────────────────────────────────────────────
+  async showAccommodations(groupId: string): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+
+    const list = await this.crud.getAccommodations(trip.id);
+
+    const addQR: messagingApi.QuickReply = {
+      items: [
+        { type: 'action', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' } },
+        { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
+      ]
+    };
+
+    if (list.length === 0) {
+      return {
+        type: 'text',
+        text: `「${trip.trip_name}」還沒有住宿資訊！\n點下方按鈕新增。`,
+        quickReply: addQR
+      } as messagingApi.Message;
+    }
+
+    const rows: any[] = list.map(a => {
+      const contents: any[] = [
+        {
+          type: 'box', layout: 'horizontal',
+          contents: [
+            { type: 'text', text: `第 ${a.day} 天`, size: 'xs', color: '#7a9aaa', flex: 0 },
+            { type: 'text', text: a.name, size: 'sm', weight: 'bold', color: '#333333', flex: 1, wrap: true, margin: 'sm' },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除住宿 #${a.id}` }, style: 'secondary', height: 'sm', flex: 0 }
+          ]
+        }
+      ];
+      if (a.added_by_name) {
+        contents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: '#aaaaaa', margin: 'xs' });
+      }
+      if (a.maps_url) {
+        contents.push({
+          type: 'button',
+          action: { type: 'uri', label: '🗺️ 導航', uri: a.maps_url },
+          style: 'secondary', height: 'sm', margin: 'xs'
+        });
+      }
+      return { type: 'box', layout: 'vertical', contents, margin: 'md' };
+    });
+
+    // 分隔線插入
+    const body: any[] = [];
+    rows.forEach((r, i) => {
+      if (i > 0) body.push({ type: 'separator', margin: 'md' });
+      body.push(r);
+    });
+
+    return {
+      type: 'flex', altText: '住宿資訊',
+      contents: {
+        type: 'bubble', size: 'mega',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: '#7a8898',
+          contents: [
+            { type: 'text', text: `🏨 ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md' },
+            { type: 'text', text: '住宿資訊', size: 'xs', color: '#cccccc', margin: 'xs' }
+          ]
+        },
+        body: { type: 'box', layout: 'vertical', contents: body },
+        footer: {
+          type: 'box', layout: 'vertical',
+          contents: [
+            { type: 'button', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+          ]
+        }
+      },
+      quickReply: addQR
+    } as any;
+  }
+
+  // ─── 住宿資訊：啟動 wizard ─────────────────────────────────────────────────
+  async startAccommodationWizard(groupId: string, userId: string, addedByName?: string): Promise<messagingApi.Message> {
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_ACCOMMODATION_INPUT', JSON.stringify({ addedByName: addedByName || '' }));
+    return {
+      type: 'text',
+      text:
+        `請輸入住宿資訊：\n\n` +
+        `格式：D天數 飯店名稱 | Google Maps 連結\n\n` +
+        `範例：\n` +
+        `D1 台北凱撒大飯店 | https://maps.app.goo.gl/xxx\n` +
+        `D2 大阪難波飯店\n\n` +
+        `（Google Maps 連結選填，但有的話可以直接導航）`,
+      quickReply: getCancelQuickReply()
+    };
+  }
+
+  // ─── 住宿資訊：解析並儲存 ─────────────────────────────────────────────────
+  async handleAccommodationInput(groupId: string, text: string, addedByName?: string): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+
+    const m = text.trim().match(/^[Dd](\d+)\s+([^|]+?)(?:\s*\|\s*(https?:\/\/\S+))?$/);
+    if (!m) {
+      return {
+        type: 'text',
+        text: '格式不符，請重新輸入：\n格式：D天數 飯店名稱 | Google Maps 連結\n例：D1 台北凱撒大飯店 | https://maps.app.goo.gl/xxx',
+        quickReply: getCancelQuickReply()
+      };
+    }
+    const day = parseInt(m[1], 10);
+    const name = m[2].trim();
+    const mapsUrl = m[3]?.trim();
+    await this.crud.addAccommodation(trip.id, day, name, mapsUrl, addedByName);
+    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增第 ${day} 天住宿：${name}` };
+    const flex = await this.showAccommodations(groupId);
+    return [successMsg, flex as messagingApi.Message];
+  }
+
+  // ─── 住宿資訊：刪除 ────────────────────────────────────────────────────────
+  async deleteAccommodationById(groupId: string, id: number): Promise<string | messagingApi.Message> {
+    await this.crud.deleteAccommodation(id);
+    return this.showAccommodations(groupId);
   }
 }

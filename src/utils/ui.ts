@@ -180,6 +180,7 @@ export function getItineraryQuickReply(): messagingApi.QuickReply {
   return {
     items: [
       qr('✈️ 班機資訊', '班機資訊'),
+      qr('🏨 住宿資訊', '住宿資訊'),
       qr('🗺️ 行程', '行程'),
       qr('🗑️ 清空行程', '清空行程'),
       { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },

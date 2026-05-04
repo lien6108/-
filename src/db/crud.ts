@@ -104,6 +104,16 @@ export interface FlightInfo {
   created_at: string;
 }
 
+export interface Accommodation {
+  id: number;
+  trip_id: number;
+  day: number;
+  name: string;
+  maps_url?: string | null;
+  added_by_name?: string | null;
+  created_at: string;
+}
+
 export class CRUD {
   private db: D1Database;
 
@@ -681,5 +691,47 @@ export class CRUD {
 
   async deleteFlightById(id: number): Promise<void> {
     await this.db.prepare(`DELETE FROM flight_info WHERE id = ?`).bind(id).run();
+  }
+
+  // ─── Accommodations ──────────────────────────────────────────────────────────
+
+  async addAccommodation(tripId: number, day: number, name: string, mapsUrl?: string, addedByName?: string): Promise<void> {
+    try { await this.db.prepare(`ALTER TABLE accommodations ADD COLUMN added_by_name TEXT`).run(); } catch {}
+    await this.db.prepare(
+      `CREATE TABLE IF NOT EXISTS accommodations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id INTEGER NOT NULL,
+        day INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        maps_url TEXT,
+        added_by_name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      )`
+    ).run();
+    await this.db.prepare(
+      `INSERT INTO accommodations (trip_id, day, name, maps_url, added_by_name) VALUES (?,?,?,?,?)`
+    ).bind(tripId, day, name, mapsUrl || null, addedByName || null).run();
+  }
+
+  async getAccommodations(tripId: number): Promise<Accommodation[]> {
+    await this.db.prepare(
+      `CREATE TABLE IF NOT EXISTS accommodations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id INTEGER NOT NULL,
+        day INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        maps_url TEXT,
+        added_by_name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      )`
+    ).run();
+    const res = await this.db.prepare(`SELECT * FROM accommodations WHERE trip_id = ? ORDER BY day ASC, created_at ASC`).bind(tripId).all<Accommodation>();
+    return res.results || [];
+  }
+
+  async deleteAccommodation(id: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM accommodations WHERE id = ?`).bind(id).run();
   }
 }
