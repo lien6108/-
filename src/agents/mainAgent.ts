@@ -458,6 +458,14 @@ export class MainAgent {
       const params = new URLSearchParams(data);
       const action = params.get('action');
 
+      if (action === 'menu_main') {
+        return {
+          type: 'text',
+          text: '有什麼需要幫忙的嗎？🐶',
+          quickReply: getMainMenuQuickReply()
+        };
+      }
+
       if (action === 'menu_accounting') {
         return {
           type: 'text',

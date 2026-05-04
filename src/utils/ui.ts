@@ -173,7 +173,8 @@ export function getAccountingQuickReply(options: QuickReplyOptions = {}): messag
   items.push(qr('完整清單', '清單'));
   if (options.showSettlePreview) items.push(qr('結算', '結算'));
   if (options.showSettleConfirm) items.push(qr('確認結算', '確認結算'));
-  items.push(qr('⬅️ 返回選單', '記帳功能'));
+  items.push({ type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } });
+  items.push(qr(CANCEL, CANCEL));
   return { items: items.slice(0, 13) };
 }
 
@@ -185,7 +186,7 @@ export function getItineraryQuickReply(): messagingApi.QuickReply {
       qr('🗺️ 行程', '行程'),
       qr('新增旅遊行程', '新增旅遊行程'),
       qr('歷史記錄', '歷史'),
-      qr('⬅️ 返回選單', '行程功能'),
+      { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
       qr(CANCEL, CANCEL),
     ]
   };
