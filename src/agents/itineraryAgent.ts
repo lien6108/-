@@ -50,16 +50,18 @@ export class ItineraryAgent {
       const returns = flights.filter(f => f.type === 'return').sort((a, b) => a.depart_date.localeCompare(b.depart_date) || a.depart_time.localeCompare(b.depart_time));
 
       if (outbounds.length > 0) {
-        const f = outbounds[0];
-        const dept = f.depart_airport ? `${f.depart_airport} ` : '';
-        const arr = f.arrive_airport ? `→ ${f.arrive_airport} ` : '';
-        flightContext += `去程：${f.depart_date} ${dept}${f.depart_time} ${arr}抵達 ${f.arrive_time}${f.flight_no ? `（${f.flight_no}）` : ''}\n`;
+        const first = outbounds[0];
+        const last = outbounds[outbounds.length - 1];
+        const dept = first.depart_airport ? `${first.depart_airport} ` : '';
+        const arr = last.arrive_airport ? `→ ${last.arrive_airport} ` : '';
+        flightContext += `去程：${first.depart_date} ${dept}${first.depart_time} ${arr}抵達 ${last.arrive_time}${outbounds.length > 1 ? `（含 ${outbounds.length - 1} 次轉機）` : first.flight_no ? `（${first.flight_no}）` : ''}\n`;
       }
       if (returns.length > 0) {
-        const f = returns[0];
-        const dept = f.depart_airport ? `${f.depart_airport} ` : '';
-        const arr = f.arrive_airport ? `→ ${f.arrive_airport} ` : '';
-        flightContext += `回程：${f.depart_date} ${dept}${f.depart_time} ${arr}抵達 ${f.arrive_time}${f.flight_no ? `（${f.flight_no}）` : ''}\n`;
+        const first = returns[0];
+        const last = returns[returns.length - 1];
+        const dept = first.depart_airport ? `${first.depart_airport} ` : '';
+        const arr = last.arrive_airport ? `→ ${last.arrive_airport} ` : '';
+        flightContext += `回程：${first.depart_date} ${dept}${first.depart_time} ${arr}抵達 ${last.arrive_time}${returns.length > 1 ? `（含 ${returns.length - 1} 次轉機）` : first.flight_no ? `（${first.flight_no}）` : ''}\n`;
       }
 
       const accoms = await this.crud.getAccommodations(trip.id);
