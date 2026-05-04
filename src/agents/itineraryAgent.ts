@@ -101,7 +101,7 @@ export class ItineraryAgent {
             contents: [{ type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa' }]
           },
           { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold' },
-          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0, color: '#dddddd' }
+          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
         ]
       };
       const contents: any[] = [spotRow];
