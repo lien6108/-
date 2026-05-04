@@ -203,7 +203,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看所有人的班機\n• 班機 去程 / 班機 回程：新增一筆班機（可多筆）\n• 格式：日期 [機場] 出發 → [機場] 抵達 [航班號]\n• 例：5/10 TPE 08:30 → NRT 13:45 CI-100\n• 刪除：點班機資訊卡片中的「刪除」鈕\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程：查看景點（左右滑動切換天數）\n• 行程 D2：查看第 2 天景點\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看所有人的班機\n• 班機 去程 / 班機 回程：新增一筆班機（可多筆）\n• 格式：日期 [機場] 出發 → [機場] 抵達 [航班號]\n• 例：5/10 TPE 08:30 → NRT 13:45 CI-100\n• 刪除：點班機資訊卡片中的「刪除」鈕\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞，貼到 GPT/Gemini 生成行程後再貼回來\n• 行程資訊：查看景點（左右滑動切換天數）\n• 行程資訊 D2：查看第 2 天景點\n• 刪除景點 #N：刪除景點\n\n👥 成員\n• 加入 / 退出 / 成員',
           quickReply: getMainMenuQuickReply()
         };
       }
@@ -301,7 +301,7 @@ export class MainAgent {
       }
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
-      if (input === '行程') {
+      if (input === '行程資訊' || input === '行程') {
         const trip = await this.crud.getCurrentTrip(groupId);
         if (trip) {
           const spots = await this.crud.getAllSpots(trip.id);
@@ -317,7 +317,7 @@ export class MainAgent {
       if (input === '確認清空行程') return await this.itinerary.confirmClearAllSpots(groupId);
 
       // 行程 D1 指定天
-      const dayItinMatch = normalizedInput.match(/^行程\s*[Dd](\d+)$/);
+      const dayItinMatch = normalizedInput.match(/^行程資訊?\s*[Dd](\d+)$/);
       if (dayItinMatch) return await this.itinerary.showDayItinerary(groupId, parseInt(dayItinMatch[1], 10));
 
       // 新增景點 D1
