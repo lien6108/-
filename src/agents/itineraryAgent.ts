@@ -215,13 +215,22 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
+      const actionBtns: any[] = [];
+      if (idx > 0) {
+        actionBtns.push({ type: 'button', action: { type: 'postback', label: '↑', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
+      }
+      if (idx < daySpots.length - 1) {
+        actionBtns.push({ type: 'button', action: { type: 'postback', label: '↓', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
+      }
+      actionBtns.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
+
       const bodyContents: any[] = [
         {
           type: 'box', layout: 'horizontal', margin: idx === 0 ? 'none' : 'md',
           contents: [
             { type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa', flex: 0 },
             { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold', margin: 'sm' },
-            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
+            ...actionBtns
           ]
         }
       ];
@@ -298,6 +307,11 @@ export class ItineraryAgent {
   }
 
   // ─── 刪除景點 ─────────────────────────────────────────────────────────────
+  async moveSpot(groupId: string, spotId: number, direction: 'up' | 'down'): Promise<messagingApi.Message | messagingApi.Message[] | string> {
+    await this.crud.moveSpot(spotId, direction);
+    return await this.showDayItinerary(groupId);
+  }
+
   async deleteSpot(groupId: string, spotId: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';

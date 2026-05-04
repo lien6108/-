@@ -649,6 +649,20 @@ export class CRUD {
     ).bind(tripId).first<ItinerarySpot>();
   }
 
+  async moveSpot(spotId: number, direction: 'up' | 'down'): Promise<void> {
+    const spot = await this.db.prepare(`SELECT * FROM itinerary_spots WHERE id = ?`).bind(spotId).first<ItinerarySpot>();
+    if (!spot) return;
+    const peers = (await this.db.prepare(
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? ORDER BY sort_order ASC`
+    ).bind(spot.trip_id, spot.day).all<ItinerarySpot>()).results || [];
+    const idx = peers.findIndex(p => p.id === spotId);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= peers.length) return;
+    const other = peers[swapIdx];
+    await this.db.prepare(`UPDATE itinerary_spots SET sort_order = ? WHERE id = ?`).bind(other.sort_order, spot.id).run();
+    await this.db.prepare(`UPDATE itinerary_spots SET sort_order = ? WHERE id = ?`).bind(spot.sort_order, other.id).run();
+  }
+
   async deleteSpot(spotId: number): Promise<void> {
     await this.db.prepare(`DELETE FROM itinerary_spots WHERE id = ?`).bind(spotId).run();
   }
