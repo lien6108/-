@@ -219,28 +219,24 @@ export class ItineraryAgent {
         {
           type: 'button',
           action: { type: 'postback', label: '↑', data: `cmd=景點上移 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1,
-          adjustMode: 'shrink-to-fit'
+          style: 'secondary', height: 'sm', flex: 1
         },
         {
           type: 'button',
           action: { type: 'postback', label: '↓', data: `cmd=景點下移 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1,
-          adjustMode: 'shrink-to-fit'
+          style: 'secondary', height: 'sm', flex: 1
         },
         {
           type: 'button',
           action: { type: 'postback', label: '🗑', data: `cmd=刪除景點 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1,
-          adjustMode: 'shrink-to-fit'
+          style: 'secondary', height: 'sm', flex: 1
         },
       ];
       if (s.maps_url) {
         btnRow.push({
           type: 'button',
           action: { type: 'uri', label: '🗺️', uri: s.maps_url },
-          style: 'secondary', height: 'sm', flex: 1,
-          adjustMode: 'shrink-to-fit'
+          style: 'secondary', height: 'sm', flex: 1
         });
       }
 
