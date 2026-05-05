@@ -308,7 +308,14 @@ export class MainAgent {
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程資訊' || input === '行程') {
-        return '你好';
+        try {
+          const result = await this.itinerary.showDayItinerary(groupId);
+          if (typeof result === 'string') return result;
+          // 回傳 Flex 訊息前先序列化成文字看內容
+          return `【debug Flex】${JSON.stringify(result).substring(0, 500)}`;
+        } catch (e: any) {
+          return `【debug 錯誤】${e?.message || String(e)}`;
+        }
       }
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
       if (input === '行程 AI規劃') return await this.itinerary.showAIPlanPrompt(groupId, userId);
