@@ -215,19 +215,25 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const actionBtns: any[] = [];
       if (s.maps_url) {
-        actionBtns.push({ type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 2 });
+        return {
+          type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
+          contents: [
+            { type: 'box', layout: 'vertical', flex: 5, contents: [
+              { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
+            ]},
+            { type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 2 },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 2 }
+          ]
+        };
       }
-      actionBtns.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 2 });
-
       return {
         type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
         contents: [
           { type: 'box', layout: 'vertical', flex: 5, contents: [
             { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
           ]},
-          ...actionBtns
+          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 2 }
         ]
       };
     });
