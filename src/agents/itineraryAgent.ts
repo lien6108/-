@@ -218,24 +218,24 @@ export class ItineraryAgent {
       const btnRow: any[] = [
         {
           type: 'button',
-          action: { type: 'postback', label: '↑', data: `cmd=景點上移 #${s.id}` },
+          action: { type: 'postback', label: '上移', data: `cmd=景點上移 #${s.id}` },
           style: 'secondary', height: 'sm', flex: 1
         },
         {
           type: 'button',
-          action: { type: 'postback', label: '↓', data: `cmd=景點下移 #${s.id}` },
+          action: { type: 'postback', label: '下移', data: `cmd=景點下移 #${s.id}` },
           style: 'secondary', height: 'sm', flex: 1
         },
         {
           type: 'button',
-          action: { type: 'postback', label: '🗑', data: `cmd=刪除景點 #${s.id}` },
+          action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` },
           style: 'secondary', height: 'sm', flex: 1
         },
       ];
       if (s.maps_url) {
         btnRow.push({
           type: 'button',
-          action: { type: 'uri', label: '🗺️', uri: s.maps_url },
+          action: { type: 'uri', label: '導航', uri: s.maps_url },
           style: 'secondary', height: 'sm', flex: 1
         });
       }
@@ -264,7 +264,7 @@ export class ItineraryAgent {
       footer: {
         type: 'box', layout: 'vertical',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '＋ 新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
         ]
       }
     };
