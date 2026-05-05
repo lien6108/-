@@ -216,14 +216,15 @@ export class ItineraryAgent {
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
     const rows: any[] = daySpots.map((s, idx) => {
       // carousel 模式：純文字（有地圖連結者可點） + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
+      const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       if (forCarousel) {
         const nameEl: any = {
           type: 'text',
-          text: s.maps_url ? `${idx + 1}. ${s.name} »` : `${idx + 1}. ${s.name}`,
+          text: validUrl ? `${idx + 1}. ${s.name} »` : `${idx + 1}. ${s.name}`,
           size: 'sm', wrap: true, weight: 'bold',
-          color: s.maps_url ? '#1a6aaa' : '#333333'
+          color: validUrl ? '#1a6aaa' : '#333333'
         };
-        if (s.maps_url) nameEl.action = { type: 'uri', uri: s.maps_url };
+        if (validUrl) nameEl.action = { type: 'uri', uri: validUrl };
         return {
           type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
           contents: [
@@ -238,8 +239,8 @@ export class ItineraryAgent {
           { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
         ]}
       ];
-      if (s.maps_url) {
-        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 0 });
+      if (validUrl) {
+        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
       }
       rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
       return {
