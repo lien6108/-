@@ -214,54 +214,26 @@ export class ItineraryAgent {
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
-    const rows: any[] = daySpots.map((s, idx) => {
-      // 第一行：序號 + 名稱
-      const nameRow: any = {
-        type: 'box', layout: 'horizontal', margin: idx === 0 ? 'none' : 'md',
-        contents: [
-          { type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa', flex: 0 },
-          { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold', margin: 'sm' }
-        ]
-      };
-
-      // 第二行：操作按鈕（各佔 flex:1，避免 flex:0 導致 LINE API 拒絕）
-      const btnContents: any[] = [];
-      if (idx > 0) {
-        btnContents.push({ type: 'button', action: { type: 'postback', label: '↑ 上移', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
-      }
-      if (idx < daySpots.length - 1) {
-        btnContents.push({ type: 'button', action: { type: 'postback', label: '↓ 下移', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
-      }
-      if (s.maps_url) {
-        btnContents.push({ type: 'button', action: { type: 'uri', label: '🗺️ 導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 1 });
-      }
-      btnContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
-
-      return {
-        type: 'box', layout: 'vertical',
-        contents: [
-          nameRow,
-          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: btnContents }
-        ]
-      };
-    });
+    // 最簡版：只有純文字，無任何按鈕
+    const rows: any[] = daySpots.map((s, idx) => ({
+      type: 'text',
+      text: `${idx + 1}. ${s.name}`,
+      size: 'sm',
+      wrap: true,
+      color: '#333333'
+    }));
 
     return {
-      type: 'bubble', size: 'mega',
+      type: 'bubble',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: '#7a8898', paddingAll: 'lg',
         contents: [
-          { type: 'text', text: `🗺️ ${tripName}`, size: 'xs', color: '#cccccc' },
-          { type: 'text', text: `第 ${day} 天`, weight: 'bold', color: '#ffffff', size: 'xl', margin: 'xs' },
-          { type: 'text', text: `共 ${daySpots.length} 個景點`, size: 'xs', color: '#cccccc', margin: 'xs' }
+          { type: 'text', text: `第 ${day} 天　${tripName}`, weight: 'bold', color: '#ffffff', size: 'md' }
         ]
       },
-      body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: rows },
-      footer: {
-        type: 'box', layout: 'vertical',
-        contents: [
-          { type: 'button', action: { type: 'postback', label: '＋ 新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
-        ]
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm',
+        contents: rows
       }
     };
   }
