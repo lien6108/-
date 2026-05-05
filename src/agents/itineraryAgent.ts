@@ -266,7 +266,7 @@ export class ItineraryAgent {
     };
   }
 
-  // ─── 顯示所有天行程（純文字版，避免 Flex 格式問題）───────────────────────
+  // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
@@ -287,19 +287,12 @@ export class ItineraryAgent {
       days = [day, ...days.filter(d => d !== day)];
     }
 
-    const lines: string[] = [`🗺️ ${trip.trip_name} 行程\n`];
-    for (const d of days) {
-      const daySpots = byDay.get(d)!;
-      lines.push(`【第 ${d} 天】`);
-      daySpots.forEach((s, i) => {
-        const nav = s.maps_url ? ` 📍` : '';
-        lines.push(`${i + 1}. ${s.name}${nav}`);
-        if (s.maps_url) lines.push(`   ${s.maps_url}`);
-      });
-      lines.push('');
-    }
+    const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!));
 
-    return lines.join('\n').trim();
+    if (bubbles.length === 1) {
+      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0] } as any;
+    }
+    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
   // ─── showFullItinerary 直接呼叫 showDayItinerary（從第一天開始）────────────
