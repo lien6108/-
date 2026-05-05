@@ -266,14 +266,14 @@ export class ItineraryAgent {
     };
   }
 
-  // ─── 顯示所有天行程（carousel），可指定從哪天開始 ────────────────────────
+  // ─── 顯示所有天行程（純文字版，避免 Flex 格式問題）───────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
     const spots = await this.crud.getAllSpots(trip.id);
     if (spots.length === 0) {
-      return '目前沒有行程景點。';
+      return '目前沒有行程景點。\n\n輸入「新增旅遊行程」取得 AI 提示詞來匯入行程。';
     }
 
     const byDay = new Map<number, ItinerarySpot[]>();
@@ -282,18 +282,24 @@ export class ItineraryAgent {
       byDay.get(s.day)!.push(s);
     }
 
-    // 排序所有天，指定天排到第一張
     let days = [...byDay.keys()].sort((a, b) => a - b);
     if (day && byDay.has(day)) {
       days = [day, ...days.filter(d => d !== day)];
     }
 
-    const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!));
-
-    if (bubbles.length === 1) {
-      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0] } as any;
+    const lines: string[] = [`🗺️ ${trip.trip_name} 行程\n`];
+    for (const d of days) {
+      const daySpots = byDay.get(d)!;
+      lines.push(`【第 ${d} 天】`);
+      daySpots.forEach((s, i) => {
+        const nav = s.maps_url ? ` 📍` : '';
+        lines.push(`${i + 1}. ${s.name}${nav}`);
+        if (s.maps_url) lines.push(`   ${s.maps_url}`);
+      });
+      lines.push('');
     }
-    return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
+
+    return lines.join('\n').trim();
   }
 
   // ─── showFullItinerary 直接呼叫 showDayItinerary（從第一天開始）────────────
