@@ -215,38 +215,16 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const btnRow: any[] = [
-        {
-          type: 'button',
-          action: { type: 'postback', label: '上移', data: `cmd=景點上移 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1
-        },
-        {
-          type: 'button',
-          action: { type: 'postback', label: '下移', data: `cmd=景點下移 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1
-        },
-        {
-          type: 'button',
-          action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` },
-          style: 'secondary', height: 'sm', flex: 1
-        },
+      const contents: any[] = [
+        { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+        { type: 'button', action: { type: 'postback', label: '上移', data: `cmd=景點上移 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
+        { type: 'button', action: { type: 'postback', label: '下移', data: `cmd=景點下移 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
+        { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
       ];
       if (s.maps_url) {
-        btnRow.push({
-          type: 'button',
-          action: { type: 'uri', label: '導航', uri: s.maps_url },
-          style: 'secondary', height: 'sm', flex: 1
-        });
+        contents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', margin: 'xs' });
       }
-
-      return {
-        type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
-        contents: [
-          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
-          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: btnRow }
-        ]
-      };
+      return { type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md', contents };
     });
 
     return {
