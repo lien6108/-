@@ -213,21 +213,31 @@ export class ItineraryAgent {
   }
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
-  private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
+  private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const nameText: any = {
-        type: 'text',
-        text: s.maps_url ? `${idx + 1}. ${s.name} 🗺` : `${idx + 1}. ${s.name}`,
-        size: 'sm', wrap: true, color: s.maps_url ? '#2255aa' : '#333333', weight: 'bold'
-      };
-      if (s.maps_url) nameText.action = { type: 'uri', uri: s.maps_url };
-
+      // carousel 模式：純文字 + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
+      if (forCarousel) {
+        return {
+          type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
+          contents: [
+            { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' }
+          ]
+        };
+      }
+      // single bubble 模式：horizontal，可加導航按鈕
+      const rowContents: any[] = [
+        { type: 'box', layout: 'vertical', flex: 5, contents: [
+          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
+        ]}
+      ];
+      if (s.maps_url) {
+        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 0 });
+      }
+      rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
       return {
-        type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
-        contents: [
-          nameText,
-          { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' }
-        ]
+        type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
+        contents: rowContents
       };
     });
 
@@ -296,11 +306,11 @@ export class ItineraryAgent {
       days = [day, ...days.filter(d => d !== day)];
     }
 
-    const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!));
-
-    if (bubbles.length === 1) {
-      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubbles[0] } as any;
+    if (days.length === 1) {
+      const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, false);
+      return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubble } as any;
     }
+    const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!, true));
     return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
