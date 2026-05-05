@@ -215,12 +215,19 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      // carousel 模式：純文字 + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
+      // carousel 模式：純文字（有地圖連結者可點） + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
       if (forCarousel) {
+        const nameEl: any = {
+          type: 'text',
+          text: s.maps_url ? `${idx + 1}. ${s.name} »` : `${idx + 1}. ${s.name}`,
+          size: 'sm', wrap: true, weight: 'bold',
+          color: s.maps_url ? '#1a6aaa' : '#333333'
+        };
+        if (s.maps_url) nameEl.action = { type: 'uri', uri: s.maps_url };
         return {
           type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
           contents: [
-            { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+            nameEl,
             { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' }
           ]
         };
