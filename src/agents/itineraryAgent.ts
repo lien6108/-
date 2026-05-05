@@ -215,33 +215,35 @@ export class ItineraryAgent {
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
     const rows: any[] = daySpots.map((s, idx) => {
-      const actionBtns: any[] = [];
+      // 第一行：序號 + 名稱
+      const nameRow: any = {
+        type: 'box', layout: 'horizontal', margin: idx === 0 ? 'none' : 'md',
+        contents: [
+          { type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa', flex: 0 },
+          { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold', margin: 'sm' }
+        ]
+      };
+
+      // 第二行：操作按鈕（各佔 flex:1，避免 flex:0 導致 LINE API 拒絕）
+      const btnContents: any[] = [];
       if (idx > 0) {
-        actionBtns.push({ type: 'button', action: { type: 'postback', label: '↑', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
+        btnContents.push({ type: 'button', action: { type: 'postback', label: '↑ 上移', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
       }
       if (idx < daySpots.length - 1) {
-        actionBtns.push({ type: 'button', action: { type: 'postback', label: '↓', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
+        btnContents.push({ type: 'button', action: { type: 'postback', label: '↓ 下移', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
       }
-      actionBtns.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
-
-      const bodyContents: any[] = [
-        {
-          type: 'box', layout: 'horizontal', margin: idx === 0 ? 'none' : 'md',
-          contents: [
-            { type: 'text', text: `${idx + 1}.`, size: 'xs', color: '#7a9aaa', flex: 0 },
-            { type: 'text', text: s.name, size: 'sm', flex: 1, wrap: true, color: '#333333', weight: 'bold', margin: 'sm' },
-            ...actionBtns
-          ]
-        }
-      ];
       if (s.maps_url) {
-        bodyContents.push({
-          type: 'button',
-          action: { type: 'uri', label: '🗺️ 導航', uri: s.maps_url },
-          style: 'secondary', height: 'sm', margin: 'xs'
-        });
+        btnContents.push({ type: 'button', action: { type: 'uri', label: '🗺️ 導航', uri: s.maps_url }, style: 'secondary', height: 'sm', flex: 1 });
       }
-      return { type: 'box', layout: 'vertical', contents: bodyContents };
+      btnContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 });
+
+      return {
+        type: 'box', layout: 'vertical',
+        contents: [
+          nameRow,
+          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: btnContents }
+        ]
+      };
     });
 
     return {
