@@ -308,13 +308,7 @@ export class MainAgent {
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程資訊' || input === '行程') {
-        try {
-          const result = await this.itinerary.showDayItinerary(groupId);
-          if (!result) return '【debug】showDayItinerary 回傳空值';
-          return result;
-        } catch (e: any) {
-          return `【debug】行程資訊錯誤：${e?.message || String(e)}`;
-        }
+        return '你好';
       }
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
       if (input === '行程 AI規劃') return await this.itinerary.showAIPlanPrompt(groupId, userId);
