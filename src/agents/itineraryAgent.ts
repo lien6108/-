@@ -217,18 +217,13 @@ export class ItineraryAgent {
     const rows: any[] = daySpots.map((s, idx) => {
       const contents: any[] = [
         { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
-        { type: 'button', action: { type: 'postback', label: '上移', data: `cmd=景點上移 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
-        { type: 'button', action: { type: 'postback', label: '下移', data: `cmd=景點下移 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
         { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' },
       ];
-      if (s.maps_url) {
-        contents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: s.maps_url }, style: 'secondary', height: 'sm', margin: 'xs' });
-      }
       return { type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md', contents };
     });
 
     return {
-      type: 'bubble', size: 'mega',
+      type: 'bubble',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: '#7a8898', paddingAll: 'lg',
         contents: [
