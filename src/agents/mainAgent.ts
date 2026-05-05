@@ -324,6 +324,10 @@ export class MainAgent {
       const addSpotMatch = normalizedInput.match(/^新增景點\s*[Dd](\d+)$/);
       if (addSpotMatch) return await this.itinerary.startAddSpotWizard(groupId, userId, parseInt(addSpotMatch[1], 10));
 
+      // 調整景點順序 D1
+      const moveMenuMatch = normalizedInput.match(/^調整景點順序\s*[Dd](\d+)$/);
+      if (moveMenuMatch) return await this.itinerary.showMoveSpotMenu(groupId, parseInt(moveMenuMatch[1], 10));
+
       // 上移/下移景點 #N
       const moveUpMatch = normalizedInput.match(/^上移景點\s*#(\d+)$/);
       if (moveUpMatch) return await this.itinerary.moveSpot(groupId, parseInt(moveUpMatch[1], 10), 'up');

@@ -235,11 +235,34 @@ export class ItineraryAgent {
         contents: rows.length > 0 ? rows : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: '#aaaaaa' }]
       },
       footer: {
-        type: 'box', layout: 'vertical',
+        type: 'box', layout: 'vertical', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' },
+          { type: 'button', action: { type: 'postback', label: '調整順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
         ]
       }
+    };
+  }
+
+  async showMoveSpotMenu(groupId: string, day: number): Promise<messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
+    const spots = await this.crud.getSpotsByDay(trip.id, day);
+    if (spots.length <= 1) return { type: 'text', text: `第 ${day} 天只有 ${spots.length} 個景點，無需調整順序。` };
+
+    const items: messagingApi.QuickReplyItem[] = [];
+    for (const s of spots) {
+      const shortName = s.name.length > 8 ? s.name.slice(0, 8) + '..' : s.name;
+      items.push({ type: 'action', action: { type: 'postback', label: `${shortName} 上移`, data: `cmd=上移景點 #${s.id}` } });
+      items.push({ type: 'action', action: { type: 'postback', label: `${shortName} 下移`, data: `cmd=下移景點 #${s.id}` } });
+    }
+    items.push({ type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } });
+
+    const spotList = spots.map((s, i) => `${i + 1}. ${s.name}`).join('\n');
+    return {
+      type: 'text',
+      text: `第 ${day} 天景點順序：\n\n${spotList}\n\n請選擇要移動的景點：`,
+      quickReply: { items: items.slice(0, 13) }
     };
   }
 
