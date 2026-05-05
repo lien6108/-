@@ -214,13 +214,16 @@ export class ItineraryAgent {
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
-    // 最簡版：只有純文字，無任何按鈕
     const rows: any[] = daySpots.map((s, idx) => ({
-      type: 'text',
-      text: `${idx + 1}. ${s.name}`,
-      size: 'sm',
-      wrap: true,
-      color: '#333333'
+      type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
+      contents: [
+        { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+        {
+          type: 'button',
+          action: { type: 'postback', label: '🗑 刪除', data: `cmd=刪除景點 #${s.id}` },
+          style: 'secondary', height: 'sm', margin: 'xs'
+        }
+      ]
     }));
 
     return {
@@ -234,6 +237,12 @@ export class ItineraryAgent {
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm',
         contents: rows
+      },
+      footer: {
+        type: 'box', layout: 'vertical',
+        contents: [
+          { type: 'button', action: { type: 'postback', label: '＋ 新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+        ]
       }
     };
   }
