@@ -214,20 +214,47 @@ export class ItineraryAgent {
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[]): any {
-    const rows: any[] = daySpots.map((s, idx) => ({
-      type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
-      contents: [
-        { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+    const rows: any[] = daySpots.map((s, idx) => {
+      const btnRow: any[] = [
         {
           type: 'button',
-          action: { type: 'postback', label: '🗑 刪除', data: `cmd=刪除景點 #${s.id}` },
-          style: 'secondary', height: 'sm', margin: 'xs'
-        }
-      ]
-    }));
+          action: { type: 'postback', label: '↑', data: `cmd=景點上移 #${s.id}` },
+          style: 'secondary', height: 'sm', flex: 1,
+          adjustMode: 'shrink-to-fit'
+        },
+        {
+          type: 'button',
+          action: { type: 'postback', label: '↓', data: `cmd=景點下移 #${s.id}` },
+          style: 'secondary', height: 'sm', flex: 1,
+          adjustMode: 'shrink-to-fit'
+        },
+        {
+          type: 'button',
+          action: { type: 'postback', label: '🗑', data: `cmd=刪除景點 #${s.id}` },
+          style: 'secondary', height: 'sm', flex: 1,
+          adjustMode: 'shrink-to-fit'
+        },
+      ];
+      if (s.maps_url) {
+        btnRow.push({
+          type: 'button',
+          action: { type: 'uri', label: '🗺️', uri: s.maps_url },
+          style: 'secondary', height: 'sm', flex: 1,
+          adjustMode: 'shrink-to-fit'
+        });
+      }
+
+      return {
+        type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
+        contents: [
+          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' },
+          { type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: btnRow }
+        ]
+      };
+    });
 
     return {
-      type: 'bubble',
+      type: 'bubble', size: 'mega',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: '#7a8898', paddingAll: 'lg',
         contents: [
@@ -236,7 +263,7 @@ export class ItineraryAgent {
       },
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm',
-        contents: rows
+        contents: rows.length > 0 ? rows : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: '#aaaaaa' }]
       },
       footer: {
         type: 'box', layout: 'vertical',
