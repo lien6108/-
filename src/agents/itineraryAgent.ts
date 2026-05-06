@@ -525,13 +525,13 @@ export class ItineraryAgent {
     const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(url);
     const buildShoppingBubble = (targetDay: number, items: any[]): any => {
       const rows = items.length > 0 ? items.map(item => {
-        // 向後相容：若 url 欄位為空，但 item 中包含 " / http"，則 parse 出來
+        // 向後相容：若 url 欄位為空，但 item 中包含 "/http"，則 parse 出來
         let itemName = item.item;
         let itemUrl = item.url;
-        if (!itemUrl && typeof item.item === 'string' && item.item.includes(' / http')) {
-          const slashIdx = item.item.lastIndexOf(' / ');
+        if (!itemUrl && typeof item.item === 'string') {
+          const slashIdx = item.item.lastIndexOf('/');
           if (slashIdx > 0) {
-            const possibleUrl = item.item.slice(slashIdx + 3).trim();
+            const possibleUrl = item.item.slice(slashIdx + 1).trim();
             if (possibleUrl.startsWith('http')) {
               itemName = item.item.slice(0, slashIdx).trim();
               itemUrl = possibleUrl;
