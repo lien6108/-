@@ -173,6 +173,50 @@ export class CRUD {
     return row?.value === '1';
   }
 
+  // --- Admin diagnostics ---
+
+  /** 回傳 D1 資料庫目前估算大小（bytes）*/
+  async getDbSize(): Promise<number> {
+    const row = await this.db.prepare(
+      `SELECT (SELECT * FROM pragma_page_count()) * (SELECT * FROM pragma_page_size()) AS size_bytes`
+    ).first<{ size_bytes: number }>();
+    return row?.size_bytes ?? 0;
+  }
+
+  /** 回傳系統概況統計 */
+  async getSystemStats(): Promise<{ groups: number; trips: number; expenses: number; members: number; sessions: number }> {
+    const [groups, trips, expenses, members, sessions] = await Promise.all([
+      this.db.prepare(`SELECT COUNT(*) AS c FROM groups`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM trips`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM expenses`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM group_members`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM sessions`).first<{ c: number }>(),
+    ]);
+    return {
+      groups: groups?.c ?? 0,
+      trips: trips?.c ?? 0,
+      expenses: expenses?.c ?? 0,
+      members: members?.c ?? 0,
+      sessions: sessions?.c ?? 0,
+    };
+  }
+
+  /** 回傳所有有活躍旅程的群組 ID（用於推播公告）*/
+  async getActiveGroupIds(): Promise<string[]> {
+    const rows = await this.db.prepare(
+      `SELECT id FROM groups WHERE current_trip_id IS NOT NULL`
+    ).all<{ id: string }>();
+    return rows.results.map(r => r.id);
+  }
+
+  /** 清除超過 N 小時的殭屍 session，回傳刪除筆數 */
+  async clearExpiredSessions(hours = 24): Promise<number> {
+    const result = await this.db.prepare(
+      `DELETE FROM sessions WHERE updated_at < datetime('now', ? || ' hours')`
+    ).bind(`-${hours}`).run();
+    return result.meta?.changes ?? 0;
+  }
+
   // --- Trip ---
   async getCurrentTrip(groupId: string): Promise<Trip | null> {
     await this.getOrCreateGroup(groupId);

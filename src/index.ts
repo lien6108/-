@@ -3,6 +3,7 @@ import { validateSignature } from '@line/bot-sdk';
 import { Env } from './env';
 import { LineEventHandler } from './lineHandler';
 import { CRUD } from './db/crud';
+import { AdminAgent } from './agents/adminAgent';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -305,6 +306,11 @@ import { fetchExchangeRates } from './utils/currency';
 export default {
   fetch: app.fetch,
   scheduled: async (event: any, env: Env, ctx: any) => {
-    ctx.waitUntil(fetchExchangeRates(env));
+    const crud = new CRUD(env);
+    const adminAgent = new AdminAgent(env, crud);
+    ctx.waitUntil(Promise.all([
+      fetchExchangeRates(env),
+      adminAgent.checkDbCapacity(0.8),
+    ]));
   }
 };
