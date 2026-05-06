@@ -442,6 +442,18 @@ export class LineEventHandler {
     } else {
       messages = [message];
     }
-    await this.client.replyMessage({ replyToken, messages });
+    console.log('[LineHandler.reply] 準備發送訊息，數量:', messages.length, '第一則類型:', messages[0]?.type);
+    if (messages[0]?.type === 'flex') {
+      console.log('[LineHandler.reply] Flex Message altText:', (messages[0] as any).altText);
+      console.log('[LineHandler.reply] Flex contents type:', (messages[0] as any).contents?.type);
+      console.log('[LineHandler.reply] Flex JSON (前500字):', JSON.stringify(messages[0]).substring(0, 500));
+    }
+    try {
+      await this.client.replyMessage({ replyToken, messages });
+      console.log('[LineHandler.reply] 發送成功');
+    } catch (e: any) {
+      console.error('[LineHandler.reply] 發送失敗:', e.message);
+      throw e;
+    }
   }
 }
