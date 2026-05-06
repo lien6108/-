@@ -172,12 +172,12 @@ export class ItineraryAgent {
         `請將以下行程轉換成指定格式，不要多餘說明，每個景點一行：\n\n` +
         `格式規則：\n` +
         `• D1、D2... 代表第幾天\n` +
-        `• 每行：D天數 景點名稱（可加 | Google Maps 連結）\n` +
+        `• 每行：D天數 景點名稱（需加 | Google Maps 連結）\n` +
         `• 同一天多個景點請分多行\n\n` +
         `輸出範例：\n` +
-        `D1 淺草寺 | https://maps.app.goo.gl/xxx\n` +
-        `D1 上野公園\n` +
-        `D2 新宿御苑\n\n` +
+        `D1 淺草寺 | google map 連結\n` +
+        `D1 上野公園 | google map 連結\n` +
+        `D2 新宿御苑 | google map 連結\n\n` +
         `--- 以下是我的行程 ---\n` +
         `（請在此貼上你的行程）`,
       quickReply: getCancelQuickReply()
