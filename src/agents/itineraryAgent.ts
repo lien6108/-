@@ -243,7 +243,7 @@ export class ItineraryAgent {
           }
         ];
         if (validUrl) {
-          contents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
+          contents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
         }
         return {
           type: 'box', layout: 'horizontal', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
@@ -258,7 +258,7 @@ export class ItineraryAgent {
         ]}
       ];
       if (validUrl) {
-        rowContents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
+        rowContents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
       }
       rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
       return {
@@ -272,11 +272,11 @@ export class ItineraryAgent {
 
     const footerContents = forCarousel
       ? [
-          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' }
         ]
       : [
-          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
         ];
 
@@ -662,7 +662,7 @@ export class ItineraryAgent {
         footer: {
           type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '去程', data: 'cmd=班機 去程' }, style: 'secondary', height: 'sm', flex: 1 },
             { type: 'button', action: { type: 'postback', label: '回程', data: 'cmd=班機 回程' }, style: 'secondary', height: 'sm', flex: 1 },
           ]
         }
@@ -738,7 +738,7 @@ export class ItineraryAgent {
       if (a.maps_url) {
         rowContents.push({
           type: 'button',
-          action: { type: 'uri', label: '地圖', uri: a.maps_url },
+          action: { type: 'uri', label: '🗺️', uri: a.maps_url },
           style: 'secondary', height: 'sm', margin: 'xs'
         });
       }
@@ -764,7 +764,7 @@ export class ItineraryAgent {
         footer: {
           type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm' }
+            { type: 'button', action: { type: 'postback', label: '新增住宿', data: 'cmd=新增住宿' }, style: 'secondary', height: 'sm' }
           ]
         }
       }
