@@ -91,6 +91,18 @@ export interface ShoppingItem {
   created_at: string;
 }
 
+export interface FoodItem {
+  id: number;
+  trip_id: number;
+  spot_id?: number | null;
+  spot_name: string;
+  day: number;
+  assignee: string;
+  item: string;
+  is_eaten: number;
+  created_at: string;
+}
+
 export interface FlightInfo {
   id: number;
   trip_id: number;
@@ -696,6 +708,18 @@ export class CRUD {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
     )`).run();
+    await this.db.prepare(`CREATE TABLE IF NOT EXISTS food_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_id INTEGER NOT NULL,
+      spot_id INTEGER,
+      spot_name TEXT NOT NULL DEFAULT '',
+      day INTEGER NOT NULL DEFAULT 1,
+      assignee TEXT NOT NULL,
+      item TEXT NOT NULL,
+      is_eaten INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+    )`).run();
     await this.db.prepare(`CREATE TABLE IF NOT EXISTS flight_info (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trip_id INTEGER NOT NULL,
@@ -832,6 +856,35 @@ export class CRUD {
 
   async deleteShoppingItem(itemId: number): Promise<void> {
     await this.db.prepare(`DELETE FROM shopping_items WHERE id = ?`).bind(itemId).run();
+  }
+
+  // ─── Food Items ────────────────────────────────────────────────────────────────────────────
+
+  async addFoodItem(tripId: number, spotId: number | null, spotName: string, day: number, assignee: string, item: string): Promise<void> {
+    await this.db.prepare(
+      `INSERT INTO food_items (trip_id, spot_id, spot_name, day, assignee, item) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(tripId, spotId ?? null, spotName, day, assignee, item).run();
+  }
+
+  async getFoodItems(tripId: number, assignee?: string): Promise<FoodItem[]> {
+    let sql = `SELECT * FROM food_items WHERE trip_id = ?`;
+    const params: any[] = [tripId];
+    if (assignee) { sql += ` AND assignee = ?`; params.push(assignee); }
+    sql += ` ORDER BY day ASC, spot_name ASC, created_at ASC`;
+    const res = await this.db.prepare(sql).bind(...params).all<FoodItem>();
+    return res.results ?? [];
+  }
+
+  async getFoodItemById(itemId: number): Promise<FoodItem | null> {
+    return this.db.prepare(`SELECT * FROM food_items WHERE id = ?`).bind(itemId).first<FoodItem>();
+  }
+
+  async markFoodEaten(itemId: number): Promise<void> {
+    await this.db.prepare(`UPDATE food_items SET is_eaten = 1 WHERE id = ?`).bind(itemId).run();
+  }
+
+  async deleteFoodItem(itemId: number): Promise<void> {
+    await this.db.prepare(`DELETE FROM food_items WHERE id = ?`).bind(itemId).run();
   }
 
   // ─── Flight Info ─────────────────────────────────────────────────────────────

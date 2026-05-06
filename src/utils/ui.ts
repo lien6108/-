@@ -163,6 +163,7 @@ export function getMainMenuQuickReply(): messagingApi.QuickReply {
       { type: 'action', action: { type: 'postback', label: '💰 記帳功能', data: 'action=menu_accounting' } },
       { type: 'action', action: { type: 'postback', label: '🗺️ 行程功能', data: 'action=menu_itinerary' } },
       qr('🛍️ 購物車', '購物車'),
+      qr('🍜 美食清單', '美食清單'),
       qr('修改旅程名稱', '修改旅程名稱'),
       qr('查看成員', '成員'),
       qr('完整說明', '說明'),

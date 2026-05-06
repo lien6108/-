@@ -1,5 +1,5 @@
 import { messagingApi } from '@line/bot-sdk';
-import { CRUD, ItinerarySpot, FlightInfo, Accommodation } from '../db/crud';
+import { CRUD, ItinerarySpot, FlightInfo, Accommodation, FoodItem } from '../db/crud';
 import { getCancelQuickReply } from '../utils/ui';
 
 type DayRef = { day: number; branch: string };
@@ -1088,5 +1088,150 @@ export class ItineraryAgent {
   async deleteAccommodationById(groupId: string, id: number): Promise<string | messagingApi.Message> {
     await this.crud.deleteAccommodation(id);
     return this.showAccommodations(groupId);
+  }
+
+  // ─── 美食清單：顯示 ──────────────────────────────────────────────────────────
+  async showFoodList(groupId: string, displayName: string): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const palette = {
+      green: '#6aaa8c', cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328',
+      muted: '#8f7a62', border: '#ead8b8'
+    };
+
+    const items = await this.crud.getFoodItems(trip.id, displayName);
+
+    if (items.length === 0) {
+      return {
+        type: 'text',
+        text: '🍜 還沒有美食清單！\n\n選擇景點並點「新增美食」就能記錄想吃的店。',
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'postback', label: '新增美食', data: 'cmd=新增美食' } },
+            { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
+          ]
+        }
+      } as messagingApi.Message;
+    }
+
+    const bySpot = new Map<string, FoodItem[]>();
+    for (const item of items) {
+      const key = `${item.day}|${item.spot_name}`;
+      if (!bySpot.has(key)) bySpot.set(key, []);
+      bySpot.get(key)!.push(item);
+    }
+
+    const buildSpotBubble = (spotKey: string, spotItems: FoodItem[]): any => {
+      const pipeIdx = spotKey.indexOf('|');
+      const day = parseInt(spotKey.slice(0, pipeIdx), 10);
+      const spotName = spotKey.slice(pipeIdx + 1);
+      const spotId = spotItems[0].spot_id;
+
+      const rows = spotItems.map(fi => {
+        const contents: any[] = [
+          { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true }
+        ];
+        if (!fi.is_eaten) {
+          contents.push({
+            type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
+              { type: 'button', action: { type: 'postback', label: '吃了', data: `cmd=美食吃了 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+              { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除美食 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+            ]
+          });
+        }
+        return {
+          type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm',
+          backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+          contents
+        };
+      });
+
+      return {
+        type: 'bubble', size: 'kilo',
+        header: {
+          type: 'box', layout: 'vertical', backgroundColor: palette.green, paddingAll: 'md', spacing: 'xs',
+          contents: [
+            { type: 'text', text: `DAY ${day}`, size: 'xs', weight: 'bold', color: palette.cream },
+            { type: 'text', text: `🍜 ${spotName}`, size: 'md', weight: 'bold', color: '#ffffff', wrap: true }
+          ]
+        },
+        body: {
+          type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+          contents: rows
+        },
+        footer: {
+          type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md',
+          contents: [
+            { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=美食選景點 #${spotId ?? 0}` }, style: 'secondary', height: 'sm' }
+          ]
+        }
+      };
+    };
+
+    const keys = [...bySpot.keys()].sort((a, b) => parseInt(a.split('|')[0], 10) - parseInt(b.split('|')[0], 10));
+    const bubbles = keys.map(k => buildSpotBubble(k, bySpot.get(k)!));
+    return {
+      type: 'flex', altText: '美食清單',
+      contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles.slice(0, 10) }
+    } as any;
+  }
+
+  // ─── 美食清單：啟動 wizard（快捷選景點）──────────────────────────────────────
+  async startFoodWizard(groupId: string): Promise<messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
+    const spots = await this.crud.getAllSpots(trip.id);
+    if (spots.length === 0) {
+      return { type: 'text', text: '目前行程還沒有景點，請先新增景點後再來記錄想吃的店。', quickReply: getCancelQuickReply() };
+    }
+    const qrItems: messagingApi.QuickReplyItem[] = spots.slice(0, 12).map(s => {
+      const raw = `D${s.day} ${s.name}`;
+      const label = raw.length > 20 ? raw.slice(0, 19) + '…' : raw;
+      return { type: 'action', action: { type: 'postback', label, data: `cmd=美食選景點 #${s.id}` } };
+    });
+    qrItems.push({ type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } });
+    return { type: 'text', text: '請選擇要新增美食的景點：', quickReply: { items: qrItems } };
+  }
+
+  // ─── 美食清單：選好景點 → 設定 session 等待輸入 ────────────────────────────
+  async promptFoodForSpot(groupId: string, userId: string, spotId: number, displayName: string): Promise<messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
+    const spot = await this.crud.getSpotById(spotId);
+    if (!spot) return { type: 'text', text: '找不到該景點，請重新選擇。', quickReply: getCancelQuickReply() };
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_FOOD_INPUT', JSON.stringify({
+      spotId: spot.id, spotName: spot.name, day: spot.day, assignee: displayName
+    }));
+    return {
+      type: 'text',
+      text: `請輸入在「${spot.name}」想吃的東西，可一次多行：\n\n例：\n一蘭拉麵\n元祖牛舌`,
+      quickReply: getCancelQuickReply()
+    };
+  }
+
+  // ─── 美食清單：解析並儲存 ─────────────────────────────────────────────────────
+  async handleFoodInput(groupId: string, text: string, spotId: number | null, spotName: string, day: number, assignee: string): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return '請輸入要記錄的美食。';
+    for (const line of lines) {
+      await this.crud.addFoodItem(trip.id, spotId, spotName, day, assignee, line);
+    }
+    const msg: messagingApi.Message = { type: 'text', text: `✅ 已新增 ${lines.length} 個美食項目。` };
+    const list = await this.showFoodList(groupId, assignee);
+    return [msg, list as messagingApi.Message];
+  }
+
+  // ─── 美食清單：標記已吃 ───────────────────────────────────────────────────────
+  async markFoodEaten(groupId: string, displayName: string, itemId: number): Promise<string | messagingApi.Message> {
+    await this.crud.markFoodEaten(itemId);
+    return await this.showFoodList(groupId, displayName);
+  }
+
+  // ─── 美食清單：刪除項目 ───────────────────────────────────────────────────────
+  async deleteFoodItem(groupId: string, displayName: string, itemId: number): Promise<string | messagingApi.Message> {
+    await this.crud.deleteFoodItem(itemId);
+    return await this.showFoodList(groupId, displayName);
   }
 }

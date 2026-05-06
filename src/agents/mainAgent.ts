@@ -185,10 +185,10 @@ export class MainAgent {
       }
 
       // ── 全域導航指令：無論有無 session，直接處理（清除殘留 session）──────────────
-      const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購物車', '購物車', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
+      const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購物車', '購物車', '美食清單', '我的美食清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
       const normalizedForGlobal = input.replace(/＃/g, '#');
       const isDayItinCmd = /^行程資訊?\s*[Dd]\d+(?:-?[A-Za-z])?$/.test(normalizedForGlobal);
-      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增景點|新增購物車|購物車)\s*[Dd]?\d+(?:-?[A-Za-z])?|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
+      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增景點|新增購物車|購物車)\s*[Dd]?\d+(?:-?[A-Za-z])?|^(上移景點|下移景點|刪除景點|買好了|刪除購買|美食吃了|刪除美食)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
       if (globalCmds.includes(input) || isDayItinCmd || isItineraryActionCmd) {
         if (session) await this.crud.deleteSession(userId);
         session = null;
@@ -237,6 +237,12 @@ export class MainAgent {
         const data = JSON.parse(session.data || '{}');
         await this.crud.deleteSession(userId);
         return await this.itinerary.handleShoppingInput(groupId, input, data.assignee || displayName, data.day || 1);
+      }
+
+      if (session && session.step === 'AWAITING_FOOD_INPUT') {
+        const data = JSON.parse(session.data || '{}');
+        await this.crud.deleteSession(userId);
+        return await this.itinerary.handleFoodInput(groupId, input, data.spotId ?? null, data.spotName || '', data.day || 1, data.assignee || displayName);
       }
 
       if (session && !isModifyDeleteCmd) {
@@ -433,7 +439,17 @@ export class MainAgent {
 
       const delShoppingMatch = normalizedInput.match(/^[刪删]除購買\s*#(\d+)$/);
       if (delShoppingMatch) return await this.itinerary.deleteShoppingItem(groupId, displayName, parseInt(delShoppingMatch[1], 10));
+      if (input === '美食清單' || input === '我的美食清單') return await this.itinerary.showFoodList(groupId, displayName);
+      if (input === '新增美食') return await this.itinerary.startFoodWizard(groupId);
 
+      const foodSpotMatch = normalizedInput.match(/^美食選景點\s*#(\d+)$/);
+      if (foodSpotMatch) return await this.itinerary.promptFoodForSpot(groupId, userId, parseInt(foodSpotMatch[1], 10), displayName);
+
+      const foodEatenMatch = normalizedInput.match(/^美食吃了\s*#(\d+)$/);
+      if (foodEatenMatch) return await this.itinerary.markFoodEaten(groupId, displayName, parseInt(foodEatenMatch[1], 10));
+
+      const delFoodMatch = normalizedInput.match(/^[儸删]除美食\s*#(\d+)$/);
+      if (delFoodMatch) return await this.itinerary.deleteFoodItem(groupId, displayName, parseInt(delFoodMatch[1], 10));
       // 行程 D1 指定天
       const dayItinMatch = normalizedInput.match(/^行程資訊?\s*[Dd](\d+)(?:-?([A-Za-z]))?$/);
       if (dayItinMatch) return await this.itinerary.showDayItinerary(groupId, parseInt(dayItinMatch[1], 10), (dayItinMatch[2] || '').toUpperCase());
