@@ -687,7 +687,10 @@ export class ItineraryAgent {
     departDate: string; departTime: string; arriveTime: string;
     flightNo?: string; departAirport?: string; arriveAirport?: string;
   } | null {
-    const parts = text.trim().split(/\s+/);
+    const parts = text.trim().split(/\s+/).map(p => {
+      // 補齊時間格式：6:40 → 06:40
+      return /^\d{1}:\d{2}$/.test(p) ? '0' + p : p;
+    });
     let i = 0;
     const isTime = (s: string) => /^\d{2}:\d{2}$/.test(s);
     const isDate = (s: string) => /^(\d{4}\/)?\d{1,2}\/\d{1,2}$/.test(s);
