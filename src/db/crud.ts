@@ -654,6 +654,10 @@ export class CRUD {
     await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE trip_id = ? AND day = ?`).bind(tripId, day).run();
   }
 
+  async markDaySpotsPending(tripId: number, day: number): Promise<void> {
+    await this.db.prepare(`UPDATE itinerary_spots SET status = 'pending' WHERE trip_id = ? AND day = ?`).bind(tripId, day).run();
+  }
+
   async getNextPendingSpot(tripId: number): Promise<ItinerarySpot | null> {
     return this.db.prepare(
       `SELECT * FROM itinerary_spots WHERE trip_id = ? AND status = 'pending' ORDER BY day ASC, sort_order ASC LIMIT 1`

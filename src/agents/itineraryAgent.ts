@@ -270,14 +270,16 @@ export class ItineraryAgent {
     });
 
     const bodyContents: any[] = rows.length > 0 ? rows : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: palette.muted }];
+    const isDayDone = daySpots.length > 0 && daySpots.every(s => s.status === 'done');
 
     const footerContents = forCarousel
       ? [
           { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '完成', data: `cmd=完成行程 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '🛍️', data: `cmd=購買清單 D${day}` }, style: 'secondary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: isDayDone ? '復原' : '完成', data: `${isDayDone ? 'cmd=復原行程' : 'cmd=完成行程'} D${day}` }, style: 'secondary', height: 'sm' }
         ]
       : [
-          { type: 'button', action: { type: 'postback', label: '完成本天', data: `cmd=完成行程 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' }
         ];
 
     return {
@@ -313,6 +315,13 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     await this.crud.markDaySpotsDone(trip.id, day);
+    return await this.showDayItinerary(groupId);
+  }
+
+  async restoreDay(groupId: string, day: number): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    await this.crud.markDaySpotsPending(trip.id, day);
     return await this.showDayItinerary(groupId);
   }
 
@@ -423,11 +432,11 @@ export class ItineraryAgent {
     })) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
 
     return {
-      type: 'flex', altText: '我的購買清單', contents: {
+      type: 'flex', altText: '購買清單', contents: {
         type: 'bubble', size: 'kilo',
         header: { type: 'box', layout: 'vertical', backgroundColor: palette.wood, paddingAll: 'md', spacing: 'xs', contents: [
           { type: 'text', text: `DAY ${targetDay}`, size: 'xs', weight: 'bold', color: '#fff6df' },
-          { type: 'text', text: '我的購買清單', size: 'md', weight: 'bold', color: '#ffffff' }
+          { type: 'text', text: '購買清單', size: 'md', weight: 'bold', color: '#ffffff' }
         ] },
         body: { type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md', contents: rows },
         footer: { type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md', contents: [

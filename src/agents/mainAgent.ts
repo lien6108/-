@@ -112,7 +112,7 @@ export class MainAgent {
       const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購買清單', '購買清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
       const normalizedForGlobal = input.replace(/＃/g, '#');
       const isDayItinCmd = /^行程資訊?\s*[Dd]\d+$/.test(normalizedForGlobal);
-      const isItineraryActionCmd = /^(管理行程|完成行程|新增購買清單)\s*[Dd]?\d*|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
+      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|新增購買清單|購買清單)\s*[Dd]?\d*|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
       if (globalCmds.includes(input) || isDayItinCmd || isItineraryActionCmd) {
         if (session) await this.crud.deleteSession(userId);
         session = null;
@@ -225,7 +225,7 @@ export class MainAgent {
       if (input === '說明' || input === 'help' || input === 'HELP') {
         return {
           type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看所有人的班機\n• 班機 去程 / 班機 回程：新增一筆班機（可多筆）\n• 格式：日期 [機場 航廈] 出發時間 → [機場 航廈] 抵達時間 [航班號]\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞\n• 行程資訊：查看景點（完成的天會排到後面）\n• 管理行程 D2：調整第 2 天景點\n• 完成行程 D2：第 2 天排到後面\n• 我的購買清單：查看自己當天要買的東西\n• 新增購買 D2 伴手禮：新增購買項目\n\n👥 成員\n• 加入 / 退出 / 成員',
+          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看所有人的班機\n• 班機 去程 / 班機 回程：新增一筆班機（可多筆）\n• 格式：日期 [機場 航廈] 出發時間 → [機場 航廈] 抵達時間 [航班號]\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞\n• 行程資訊：查看景點（完成的天會排到後面）\n• 管理行程 D2：調整第 2 天景點\n• 完成行程 D2：第 2 天排到後面\n• 復原行程 D2：第 2 天回到原排序\n• 購買清單：查看自己當天要買的東西\n• 購買清單 D2：查看第 2 天購買清單\n• 新增購買 D2 伴手禮：新增購買項目\n\n👥 成員\n• 加入 / 退出 / 成員',
           quickReply: getMainMenuQuickReply()
         };
       }
@@ -338,6 +338,9 @@ export class MainAgent {
       if (input === '確認清空行程') return await this.itinerary.confirmClearAllSpots(groupId);
       if (input === '我的購買清單' || input === '購買清單') return await this.itinerary.showMyShoppingList(groupId, displayName);
 
+      const shoppingDayMatch = normalizedInput.match(/^購買清單\s*[Dd](\d+)$/);
+      if (shoppingDayMatch) return await this.itinerary.showMyShoppingList(groupId, displayName, parseInt(shoppingDayMatch[1], 10));
+
       const addShoppingWizardMatch = normalizedInput.match(/^新增購買清單(?:\s*[Dd](\d+))?$/);
       if (addShoppingWizardMatch) return await this.itinerary.startShoppingWizard(groupId, userId, displayName, addShoppingWizardMatch[1] ? parseInt(addShoppingWizardMatch[1], 10) : undefined);
 
@@ -364,6 +367,10 @@ export class MainAgent {
       // 完成行程 D1：把此天排到 carousel 後面
       const completeDayMatch = normalizedInput.match(/^完成行程\s*[Dd](\d+)$/);
       if (completeDayMatch) return await this.itinerary.completeDay(groupId, parseInt(completeDayMatch[1], 10));
+
+      // 復原行程 D1：把此天恢復成未完成，回到原本天數排序
+      const restoreDayMatch = normalizedInput.match(/^復原行程\s*[Dd](\d+)$/);
+      if (restoreDayMatch) return await this.itinerary.restoreDay(groupId, parseInt(restoreDayMatch[1], 10));
 
       // 新增景點 D1
       const addSpotMatch = normalizedInput.match(/^新增景點\s*[Dd](\d+)$/);
