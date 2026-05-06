@@ -229,6 +229,8 @@ export class ItineraryAgent {
         } else {
           nameEl.color = '#333333';
         }
+        // Debug: 輸出 nameEl 結構
+        console.log(`[buildDayBubble] nameEl for spot ${idx}:`, JSON.stringify(nameEl));
         return {
           type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
           contents: [
@@ -299,6 +301,7 @@ export class ItineraryAgent {
 
   // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
+    console.log('[ItineraryAgent.showDayItinerary] VERSION: 2024-05-06-v2');
     console.log('[ItineraryAgent.showDayItinerary] 開始, groupId:', groupId, 'day:', day);
     const trip = await this.crud.getCurrentTrip(groupId);
     console.log('[ItineraryAgent.showDayItinerary] trip:', trip ? `id=${trip.id}, name=${trip.trip_name}` : 'null');
