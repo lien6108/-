@@ -522,16 +522,24 @@ export class ItineraryAgent {
       cream: '#fff8e8', paper: '#fffdf5', wood: '#b98a55', passport: '#234b68', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8'
     };
 
+    const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(url);
     const buildShoppingBubble = (targetDay: number, items: any[]): any => {
       const rows = items.length > 0 ? items.map(item => {
         const hasUrl = item.url && typeof item.url === 'string' && item.url.startsWith('http');
+        const isImg = hasUrl && isImageUrl(item.url);
         const titleRow: any = {
           type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
             { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true, flex: 1 },
-            ...(hasUrl ? [{ type: 'button', action: { type: 'uri', label: '🔗', uri: item.url }, style: 'link', height: 'sm', flex: 0 }] : [])
+            ...(hasUrl && !isImg ? [{ type: 'button', action: { type: 'uri', label: '🔗', uri: item.url }, style: 'link', height: 'sm', flex: 0 }] : [])
           ]
         };
         const rowContents: any[] = [titleRow];
+        if (isImg) {
+          rowContents.push({
+            type: 'image', url: item.url, size: 'full', aspectMode: 'cover', aspectRatio: '20:13',
+            margin: 'sm', action: { type: 'uri', uri: item.url }
+          });
+        }
         if (!item.is_bought) {
           rowContents.push({
             type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
