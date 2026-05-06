@@ -214,64 +214,99 @@ export class ItineraryAgent {
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
-    // carousel 模式每天最多顯示 5 個景點，避免 payload 過大
-    const MAX_CAROUSEL_SPOTS = 5;
-    const displaySpots = forCarousel ? daySpots.slice(0, MAX_CAROUSEL_SPOTS) : daySpots;
-    const hiddenCount = forCarousel ? daySpots.length - MAX_CAROUSEL_SPOTS : 0;
+    const palette = {
+      sky: '#9ccfe8',
+      skyDark: '#5f8fa8',
+      cream: '#fff8e8',
+      paper: '#fffdf5',
+      wood: '#b98a55',
+      woodDark: '#7a5632',
+      passport: '#234b68',
+      ink: '#3f3328',
+      muted: '#8f7a62',
+      orange: '#f4a261',
+      danger: '#a66b5b',
+      border: '#ead8b8'
+    };
 
-    const rows: any[] = displaySpots.map((s, idx) => {
-      // carousel 模式：純文字（有地圖連結者可點） + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
+    const rows: any[] = daySpots.map((s, idx) => {
       const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       if (forCarousel) {
-        // carousel 模式：text 元素不使用 action，改用 button 提供導航
+        // carousel 模式：純瀏覽，只顯示名稱和地圖連結，不放刪除按鈕
         const contents: any[] = [
-          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, weight: 'bold', color: '#333333' }
+          {
+            type: 'box', layout: 'baseline', flex: 1, spacing: 'sm',
+            contents: [
+              { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: palette.woodDark, flex: 0 },
+              { type: 'text', text: s.name, size: 'sm', wrap: true, weight: 'bold', color: palette.ink, flex: 1 }
+            ]
+          }
         ];
         if (validUrl) {
-          contents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'secondary', height: 'sm', margin: 'xs' });
+          contents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
         }
-        contents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' });
-        return { type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md', contents };
+        return {
+          type: 'box', layout: 'horizontal', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
+          backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+          contents
+        };
       }
-      // single bubble 模式：horizontal，可加導航按鈕
-      const validUrl2 = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
+      // single bubble 管理模式：每個景點有導航 + 刪除
       const rowContents: any[] = [
         { type: 'box', layout: 'vertical', flex: 5, contents: [
-          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
+          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: palette.ink, weight: 'bold' }
         ]}
       ];
-      if (validUrl2) {
-        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: validUrl2 }, style: 'secondary', height: 'sm', flex: 0 });
+      if (validUrl) {
+        rowContents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
       }
       rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
-      return { type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md', contents: rowContents };
+      return {
+        type: 'box', layout: 'horizontal', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
+        backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+        contents: rowContents
+      };
     });
 
-    const bodyContents: any[] = rows.length > 0 ? [...rows] : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: '#aaaaaa' }];
-    if (forCarousel && hiddenCount > 0) {
-      bodyContents.push({ type: 'text', text: `…還有 ${hiddenCount} 個景點`, size: 'xs', color: '#aaaaaa', margin: 'md' });
-    }
+    const bodyContents: any[] = rows.length > 0 ? rows : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: palette.muted }];
+
+    const footerContents = forCarousel
+      ? [
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' }
+        ]
+      : [
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
+        ];
 
     return {
-      type: 'bubble',
+      type: 'bubble', size: 'kilo',
       header: {
-        type: 'box', layout: 'vertical', backgroundColor: '#7a8898', paddingAll: 'lg',
+        type: 'box', layout: 'vertical', backgroundColor: forCarousel ? palette.sky : palette.passport, paddingAll: 'md', spacing: 'xs',
         contents: [
-          { type: 'text', text: `第 ${day} 天　${tripName}`, weight: 'bold', color: '#ffffff', size: 'md' }
+          { type: 'text', text: forCarousel ? `DAY ${day}` : `DAY ${day} 管理`, weight: 'bold', color: forCarousel ? palette.passport : '#ffffff', size: 'xs' },
+          { type: 'text', text: forCarousel ? tripName : '景點調整小木牌', weight: 'bold', color: forCarousel ? palette.ink : '#ffffff', size: 'md', wrap: true }
         ]
       },
       body: {
-        type: 'box', layout: 'vertical', spacing: 'sm',
+        type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
         contents: bodyContents
       },
       footer: {
-        type: 'box', layout: 'vertical', spacing: 'sm',
-        contents: [
-          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '調整順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
-        ]
+        type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+        contents: footerContents
       }
     };
+  }
+
+  // ─── 單天管理 bubble（帶刪除按鈕）────────────────────────────────────────
+  async showSingleDayManage(groupId: string, day: number): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const spots = await this.crud.getSpotsByDay(trip.id, day);
+    const bubble = this.buildDayBubble(trip.trip_name, day, spots, false);
+    return { type: 'flex', altText: `第 ${day} 天管理`, contents: bubble } as any;
   }
 
   async showMoveSpotMenu(groupId: string, day: number): Promise<messagingApi.Message> {
@@ -298,14 +333,10 @@ export class ItineraryAgent {
 
   // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
-    console.log('========== ITINERARY VERSION: 2024-05-06-v3-FIXED ==========');
-    console.log('[ItineraryAgent.showDayItinerary] 開始, groupId:', groupId, 'day:', day);
     const trip = await this.crud.getCurrentTrip(groupId);
-    console.log('[ItineraryAgent.showDayItinerary] trip:', trip ? `id=${trip.id}, name=${trip.trip_name}` : 'null');
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
     const spots = await this.crud.getAllSpots(trip.id);
-    console.log('[ItineraryAgent.showDayItinerary] spots 數量:', spots.length);
     if (spots.length === 0) {
       return '目前沒有行程景點。\n\n輸入「新增旅遊行程」取得 AI 提示詞來匯入行程。';
     }
@@ -322,11 +353,9 @@ export class ItineraryAgent {
     }
 
     if (days.length === 1) {
-      console.log('[ItineraryAgent.showDayItinerary] 只有一天，建立 single bubble');
       const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, false);
       return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubble } as any;
     }
-    console.log('[ItineraryAgent.showDayItinerary] 多天行程，建立 carousel, days:', days);
     const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!, true));
     return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
@@ -524,6 +553,16 @@ export class ItineraryAgent {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
+    const palette = {
+      sky: '#9ccfe8',
+      cream: '#fff8e8',
+      paper: '#fffdf5',
+      passport: '#234b68',
+      ink: '#3f3328',
+      muted: '#8f7a62',
+      border: '#ead8b8'
+    };
+
     const flights = await this.crud.getFlights(trip.id);
     const outbounds = flights.filter(f => f.type === 'outbound');
     const returns = flights.filter(f => f.type === 'return');
@@ -550,7 +589,7 @@ export class ItineraryAgent {
           {
             type: 'text',
             text: [f.flight_no, f.depart_date].filter(Boolean).join('  '),
-            size: 'sm', weight: 'bold', color: '#333333', flex: 1
+            size: 'sm', weight: 'bold', color: palette.ink, flex: 1
           },
           { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除班機 #${f.id}` }, style: 'secondary', height: 'sm', flex: 0 }
         ]
@@ -559,18 +598,18 @@ export class ItineraryAgent {
       // 路線列：出發（左）→ 到達（右）
       const departCol: any = {
         type: 'box', layout: 'vertical', flex: 1, contents: [
-          { type: 'text', text: f.depart_airport || '─', size: 'sm', weight: 'bold', color: '#444444' },
-          { type: 'text', text: f.depart_time, size: 'lg', weight: 'bold', color: '#222222', margin: 'xs' },
+          { type: 'text', text: f.depart_airport || '─', size: 'sm', weight: 'bold', color: palette.passport },
+          { type: 'text', text: f.depart_time, size: 'lg', weight: 'bold', color: palette.ink, margin: 'xs' },
         ]
       };
       const arrowCol: any = {
-        type: 'text', text: '→', size: 'md', color: '#aaaaaa', align: 'center',
+        type: 'text', text: '✈', size: 'md', color: palette.muted, align: 'center',
         gravity: 'center', flex: 0, margin: 'md'
       };
       const arriveCol: any = {
         type: 'box', layout: 'vertical', flex: 1, contents: [
-          { type: 'text', text: f.arrive_airport || '─', size: 'sm', weight: 'bold', color: '#444444', align: 'end' },
-          { type: 'text', text: f.arrive_time, size: 'lg', weight: 'bold', color: '#222222', margin: 'xs', align: 'end' },
+          { type: 'text', text: f.arrive_airport || '─', size: 'sm', weight: 'bold', color: palette.passport, align: 'end' },
+          { type: 'text', text: f.arrive_time, size: 'lg', weight: 'bold', color: palette.ink, margin: 'xs', align: 'end' },
         ]
       };
       const routeRow: any = {
@@ -581,27 +620,26 @@ export class ItineraryAgent {
       // 底列：新增者
       const bottomContents: any[] = [];
       if (f.added_by_name) {
-        bottomContents.push({ type: 'text', text: `由 ${f.added_by_name} 新增`, size: 'xs', color: '#aaaaaa', margin: 'xs' });
+        bottomContents.push({ type: 'text', text: `由 ${f.added_by_name} 新增`, size: 'xs', color: palette.muted, margin: 'xs' });
       }
 
       return {
-        type: 'box', layout: 'vertical', margin: 'md',
+        type: 'box', layout: 'vertical', margin: 'md', paddingAll: 'md', backgroundColor: palette.paper,
+        cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
         contents: [topRow, routeRow, ...bottomContents]
       };
     };
 
     const buildSection = (label: string, list: FlightInfo[], emptyText: string): any[] => {
-      const header = { type: 'text', text: label, size: 'sm', weight: 'bold', color: '#6b7f8c', margin: 'lg' };
-      const sep = { type: 'separator', margin: 'sm' };
+      const header = { type: 'text', text: label, size: 'sm', weight: 'bold', color: palette.passport, margin: 'lg' };
       if (list.length === 0) {
-        return [header, sep, { type: 'text', text: emptyText, size: 'sm', color: '#bbbbbb', margin: 'sm' }];
+        return [header, { type: 'text', text: emptyText, size: 'sm', color: palette.muted, margin: 'sm' }];
       }
       const rows: any[] = [];
       list.forEach((f, idx) => {
-        if (idx > 0) rows.push({ type: 'separator', margin: 'md' });
         rows.push(buildFlightRow(f));
       });
-      return [header, sep, ...rows];
+      return [header, ...rows];
     };
 
     const bodyContents: any[] = [
@@ -612,20 +650,20 @@ export class ItineraryAgent {
     return {
       type: 'flex', altText: '班機資訊',
       contents: {
-        type: 'bubble', size: 'mega',
+        type: 'bubble', size: 'kilo',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          type: 'box', layout: 'vertical', backgroundColor: palette.sky, paddingAll: 'md', spacing: 'xs',
           contents: [
-            { type: 'text', text: `✈️ ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md' },
-            { type: 'text', text: '班機資訊', size: 'xs', color: '#cccccc', margin: 'xs' }
+            { type: 'text', text: 'FLIGHT INFO', weight: 'bold', color: palette.passport, size: 'xs' },
+            { type: 'text', text: `✈️ ${trip.trip_name}`, weight: 'bold', color: palette.ink, size: 'md', wrap: true }
           ]
         },
-        body: { type: 'box', layout: 'vertical', contents: bodyContents },
+        body: { type: 'box', layout: 'vertical', contents: bodyContents, backgroundColor: palette.cream, paddingAll: 'md' },
         footer: {
-          type: 'box', layout: 'horizontal', spacing: 'sm',
+          type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'postback', label: '新增回程', data: 'cmd=班機 回程' }, style: 'primary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '回程', data: 'cmd=班機 回程' }, style: 'secondary', height: 'sm', flex: 1 },
           ]
         }
       }
@@ -641,6 +679,17 @@ export class ItineraryAgent {
   async showAccommodations(groupId: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
+
+    const palette = {
+      cream: '#fff8e8',
+      paper: '#fffdf5',
+      wood: '#b98a55',
+      woodDark: '#7a5632',
+      passport: '#234b68',
+      ink: '#3f3328',
+      muted: '#8f7a62',
+      border: '#ead8b8'
+    };
 
     const list = await this.crud.getAccommodations(trip.id);
 
@@ -674,45 +723,48 @@ export class ItineraryAgent {
         {
           type: 'box', layout: 'horizontal', margin: i === 0 ? 'none' : 'md',
           contents: [
-            { type: 'text', text: a.name, size: 'sm', weight: 'bold', color: '#333333', flex: 1, wrap: true },
+            { type: 'text', text: a.name, size: 'sm', weight: 'bold', color: palette.ink, flex: 1, wrap: true },
             { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除住宿 #${a.id}` }, style: 'secondary', height: 'sm', flex: 0 }
           ]
         },
-        { type: 'text', text: `${dayLabel}  ·  ${whoLabel}`, size: 'xs', color: '#888888', margin: 'xs' },
+        { type: 'text', text: `${dayLabel}  ·  ${whoLabel}`, size: 'xs', color: palette.woodDark, margin: 'xs' },
       ];
       if (timeLabel) {
-        rowContents.push({ type: 'text', text: timeLabel, size: 'xs', color: '#7a9aaa', margin: 'none' });
+        rowContents.push({ type: 'text', text: timeLabel, size: 'xs', color: palette.passport, margin: 'none' });
       }
       if (a.added_by_name) {
-        rowContents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: '#bbbbbb', margin: 'none' });
+        rowContents.push({ type: 'text', text: `由 ${a.added_by_name} 新增`, size: 'xs', color: palette.muted, margin: 'none' });
       }
       if (a.maps_url) {
         rowContents.push({
           type: 'button',
-          action: { type: 'uri', label: '🗺️ 導航', uri: a.maps_url },
+          action: { type: 'uri', label: '地圖', uri: a.maps_url },
           style: 'secondary', height: 'sm', margin: 'xs'
         });
       }
 
-      body.push({ type: 'box', layout: 'vertical', contents: rowContents, margin: 'md' });
+      body.push({
+        type: 'box', layout: 'vertical', contents: rowContents, margin: 'md', paddingAll: 'md',
+        backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px'
+      });
     });
 
     return {
       type: 'flex', altText: '住宿資訊',
       contents: {
-        type: 'bubble', size: 'mega',
+        type: 'bubble', size: 'kilo',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#7a8898',
+          type: 'box', layout: 'vertical', backgroundColor: palette.wood, paddingAll: 'md', spacing: 'xs',
           contents: [
-            { type: 'text', text: `🏨 ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md' },
-            { type: 'text', text: '住宿資訊', size: 'xs', color: '#cccccc', margin: 'xs' }
+            { type: 'text', text: 'STAY INFO', weight: 'bold', color: '#fff6df', size: 'xs' },
+            { type: 'text', text: `🏨 ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md', wrap: true }
           ]
         },
-        body: { type: 'box', layout: 'vertical', contents: body },
+        body: { type: 'box', layout: 'vertical', contents: body, backgroundColor: palette.cream, paddingAll: 'md' },
         footer: {
-          type: 'box', layout: 'vertical',
+          type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm' }
+            { type: 'button', action: { type: 'postback', label: '新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm' }
           ]
         }
       }

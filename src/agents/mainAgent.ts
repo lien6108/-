@@ -317,11 +317,8 @@ export class MainAgent {
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程資訊' || input === '行程') {
-        console.log('[MainAgent] 收到行程資訊指令, groupId:', groupId);
         try {
-          const result = await this.itinerary.showDayItinerary(groupId);
-          console.log('[MainAgent] 行程資訊結果類型:', typeof result, '內容:', JSON.stringify(result).substring(0, 200));
-          return result;
+          return await this.itinerary.showDayItinerary(groupId);
         } catch (e) {
           console.error('[MainAgent] 行程資訊執行錯誤:', e);
           return `⚠️ 取得行程資訊時發生錯誤：${e instanceof Error ? e.message : String(e)}`;
@@ -336,6 +333,10 @@ export class MainAgent {
       // 行程 D1 指定天
       const dayItinMatch = normalizedInput.match(/^行程資訊?\s*[Dd](\d+)$/);
       if (dayItinMatch) return await this.itinerary.showDayItinerary(groupId, parseInt(dayItinMatch[1], 10));
+
+      // 管理行程 D1（管理模式 single bubble，帶刪除按鈕）
+      const manageDayMatch = normalizedInput.match(/^管理行程\s*[Dd](\d+)$/);
+      if (manageDayMatch) return await this.itinerary.showSingleDayManage(groupId, parseInt(manageDayMatch[1], 10));
 
       // 新增景點 D1
       const addSpotMatch = normalizedInput.match(/^新增景點\s*[Dd](\d+)$/);
