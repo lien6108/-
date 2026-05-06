@@ -254,24 +254,31 @@ app.get('/liff', (c) => {
 });
 
 app.post('/webhook', async (c) => {
+  console.log('[Webhook] 收到請求');
   const signature = c.req.header('x-line-signature');
   if (!signature) {
+    console.log('[Webhook] 缺少簽章');
     return c.text('Missing Signature', 400);
   }
 
   const body = await c.req.text();
+  console.log('[Webhook] body 長度:', body.length);
   
   // Validate signature
   const isValid = validateSignature(body, c.env.LINE_CHANNEL_SECRET, signature);
   if (!isValid) {
+    console.log('[Webhook] 簽章驗證失敗');
     return c.text('Invalid Signature', 403);
   }
+  console.log('[Webhook] 簽章驗證成功');
 
   let events;
   try {
     const data = JSON.parse(body);
     events = data.events;
+    console.log('[Webhook] 解析到', events?.length || 0, '個事件');
   } catch (e) {
+    console.log('[Webhook] JSON 解析失敗');
     return c.text('Invalid JSON', 400);
   }
 

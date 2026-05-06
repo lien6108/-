@@ -33,6 +33,7 @@ export class LineEventHandler {
   }
 
   private async dispatch(event: webhook.Event) {
+    console.log('[LineHandler.dispatch] 收到事件類型:', event.type);
     try {
       if (event.type === 'message' && event.message.type === 'text') {
         await this.handleText(event as webhook.MessageEvent);
@@ -65,10 +66,12 @@ export class LineEventHandler {
     const userId = source?.userId || 'unknown';
     const textMessage = event.message as webhook.TextMessageContent;
     let text = textMessage.text.trim();
+    console.log('[LineHandler.handleText] 收到訊息:', text.substring(0, 50));
 
     let groupId = 'unknown';
     if (source?.type === 'group') groupId = source.groupId;
     if (source?.type === 'room') groupId = source.roomId;
+    console.log('[LineHandler.handleText] groupId:', groupId, 'userId:', userId);
 
     // Private DM: handle admin commands and view requests
     if (groupId === 'unknown') {
