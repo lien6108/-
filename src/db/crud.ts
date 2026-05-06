@@ -189,21 +189,50 @@ export class CRUD {
   }
 
   /** 回傳系統概況統計 */
-  async getSystemStats(): Promise<{ groups: number; trips: number; expenses: number; members: number; sessions: number }> {
-    const [groups, trips, expenses, members, sessions] = await Promise.all([
+  async getSystemStats(): Promise<{ groups: number; activeTrips: number; closedTrips: number; expenses: number; members: number; sessions: number }> {
+    const [groups, activeTrips, closedTrips, expenses, members, sessions] = await Promise.all([
       this.db.prepare(`SELECT COUNT(*) AS c FROM groups`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM trips`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM trips WHERE status = 'active'`).first<{ c: number }>(),
+      this.db.prepare(`SELECT COUNT(*) AS c FROM trips WHERE status = 'closed'`).first<{ c: number }>(),
       this.db.prepare(`SELECT COUNT(*) AS c FROM expenses`).first<{ c: number }>(),
       this.db.prepare(`SELECT COUNT(*) AS c FROM group_members`).first<{ c: number }>(),
       this.db.prepare(`SELECT COUNT(*) AS c FROM sessions`).first<{ c: number }>(),
     ]);
     return {
       groups: groups?.c ?? 0,
-      trips: trips?.c ?? 0,
+      activeTrips: activeTrips?.c ?? 0,
+      closedTrips: closedTrips?.c ?? 0,
       expenses: expenses?.c ?? 0,
       members: members?.c ?? 0,
       sessions: sessions?.c ?? 0,
     };
+  }
+
+  /** 清除所有記帳資料（保留旅程與成員）*/
+  async clearExpenses(): Promise<void> {
+    await this.db.batch([
+      this.db.prepare(`DELETE FROM expense_splits`),
+      this.db.prepare(`DELETE FROM expenses`),
+    ]);
+  }
+
+  /** 清除所有已結束的歷史旅程（含記帳、行程），回傳刪除筆數 */
+  async clearClosedTrips(): Promise<number> {
+    const closed = await this.db.prepare(`SELECT id FROM trips WHERE status = 'closed'`).all<{ id: number }>();
+    if (closed.results.length === 0) return 0;
+    for (const { id } of closed.results) {
+      await this.db.prepare(`DELETE FROM expense_splits WHERE expense_id IN (SELECT id FROM expenses WHERE trip_id = ?)`).bind(id).run();
+      await this.db.prepare(`DELETE FROM expenses WHERE trip_id = ?`).bind(id).run();
+      await this.db.prepare(`DELETE FROM itinerary_spots WHERE trip_id = ?`).bind(id).run();
+      await this.db.prepare(`DELETE FROM trips WHERE id = ?`).bind(id).run();
+    }
+    return closed.results.length;
+  }
+
+  /** 清除所有 session，回傳刪除筆數 */
+  async clearSessions(): Promise<number> {
+    const result = await this.db.prepare(`DELETE FROM sessions`).run();
+    return result.meta?.changes ?? 0;
   }
 
   /** 回傳所有有活躍旅程的群組 ID（用於推播公告）*/
