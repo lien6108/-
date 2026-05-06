@@ -620,7 +620,7 @@ export class ItineraryAgent {
     return await this.showMyShoppingList(groupId, displayName, item?.day);
   }
 
-  // ─── 新增單筆景點：啟動 wizard ─────────────────────────────────────────────
+  // ─── 新增景點：啟動 wizard（支援多行）────────────────────────────────────────
   async startAddSpotWizard(groupId: string, userId: string, day: number, branch = ''): Promise<messagingApi.Message> {
     const normalizedBranch = normalizeBranch(branch);
     const ref = formatDayRef(day, normalizedBranch);
@@ -632,15 +632,31 @@ export class ItineraryAgent {
     };
   }
 
-  // ─── 新增單筆景點：解析並儲存 ─────────────────────────────────────────────
+  // ─── 新增景點：解析並儲存（支援多行）────────────────────────────────────────
   async handleAddSpotInput(groupId: string, text: string, day: number, branch = ''): Promise<string | messagingApi.Message | messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    const [name, mapsUrl] = text.split('|').map(s => s.trim());
-    if (!name) return null as any;
     const normalizedBranch = normalizeBranch(branch);
-    await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined, normalizedBranch);
-    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增景點：${name}（${formatDayRef(day, normalizedBranch)}）` };
+    const ref = formatDayRef(day, normalizedBranch);
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return null as any;
+
+    let count = 0;
+    for (const line of lines) {
+      const [name, mapsUrl] = line.split('|').map(s => s.trim());
+      if (!name) continue;
+      await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined, normalizedBranch);
+      count++;
+    }
+    if (count === 0) return null as any;
+
+    const successMsg: messagingApi.Message = {
+      type: 'text',
+      text: count === 1
+        ? `✅ 已新增景點：${lines[0].split('|')[0].trim()}（${ref}）`
+        : `✅ 已新增 ${count} 個景點（${ref}）`
+    };
     const manage = await this.showSingleDayManage(groupId, day, normalizedBranch);
     return [successMsg, manage as messagingApi.Message];
   }
