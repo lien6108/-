@@ -529,13 +529,12 @@ export class ItineraryAgent {
         let itemName = item.item;
         let itemUrl = item.url;
         if (!itemUrl && typeof item.item === 'string') {
-          const slashIdx = item.item.lastIndexOf('/');
-          if (slashIdx > 0) {
-            const possibleUrl = item.item.slice(slashIdx + 1).trim();
-            if (possibleUrl.startsWith('http')) {
-              itemName = item.item.slice(0, slashIdx).trim();
-              itemUrl = possibleUrl;
-            }
+          // 找最後一個 / 且後面緊跟 http 的位置
+          const matches = [...item.item.matchAll(/\/\s*(https?:\/\/[^\s]+)/gi)];
+          if (matches.length > 0) {
+            const lastMatch = matches[matches.length - 1];
+            itemName = item.item.slice(0, lastMatch.index).trim();
+            itemUrl = lastMatch[1].trim();
           }
         }
         const hasUrl = itemUrl && typeof itemUrl === 'string' && itemUrl.startsWith('http');
