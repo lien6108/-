@@ -282,14 +282,28 @@ export class ItineraryAgent {
           { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' }
         ];
 
+    const headerContents: any[] = forCarousel
+      ? [{
+          type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+            {
+              type: 'box', layout: 'vertical', flex: 1, spacing: 'xs', contents: [
+                { type: 'text', text: `DAY ${day}`, weight: 'bold', color: palette.passport, size: 'xs' },
+                { type: 'text', text: tripName, weight: 'bold', color: palette.ink, size: 'md', wrap: true }
+              ]
+            },
+            { type: 'button', action: { type: 'postback', label: '分組', data: `cmd=分組行程 D${day}` }, style: 'link', height: 'sm', flex: 0 }
+          ]
+        }]
+      : [
+          { type: 'text', text: `DAY ${day} 管理`, weight: 'bold', color: '#ffffff', size: 'xs' },
+          { type: 'text', text: '景點調整小木牌', weight: 'bold', color: '#ffffff', size: 'md', wrap: true }
+        ];
+
     return {
       type: 'bubble', size: 'kilo',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: forCarousel ? palette.sky : palette.passport, paddingAll: 'md', spacing: 'xs',
-        contents: [
-          { type: 'text', text: forCarousel ? `DAY ${day}` : `DAY ${day} 管理`, weight: 'bold', color: forCarousel ? palette.passport : '#ffffff', size: 'xs' },
-          { type: 'text', text: forCarousel ? tripName : '景點調整小木牌', weight: 'bold', color: forCarousel ? palette.ink : '#ffffff', size: 'md', wrap: true }
-        ]
+        contents: headerContents
       },
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
@@ -323,6 +337,56 @@ export class ItineraryAgent {
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     await this.crud.markDaySpotsPending(trip.id, day);
     return await this.showDayItinerary(groupId);
+  }
+
+  async showDayBranches(groupId: string, day: number): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const spots = await this.crud.getSpotsByDay(trip.id, day);
+    if (spots.length === 0) return `D${day} 目前沒有景點可以分組。`;
+
+    const palette = {
+      cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8',
+      branches: [
+        { key: 'A', bg: '#9ccfe8', title: '#234b68', accent: '#5f8fa8' },
+        { key: 'B', bg: '#f0b98a', title: '#7a5632', accent: '#b98a55' }
+      ]
+    };
+
+    const buildBranch = (branch: typeof palette.branches[number], branchSpots: ItinerarySpot[]) => ({
+      type: 'bubble', size: 'kilo',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: branch.bg, paddingAll: 'md', spacing: 'xs',
+        contents: [
+          { type: 'text', text: `D${day}-${branch.key}`, weight: 'bold', color: branch.title, size: 'lg' },
+          { type: 'text', text: `${trip.trip_name}・分組路線`, size: 'xs', color: branch.title, wrap: true }
+        ]
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+        contents: branchSpots.length > 0 ? branchSpots.map((s, idx) => ({
+          type: 'box', layout: 'horizontal', spacing: 'xs', paddingAll: 'sm', cornerRadius: 'md', backgroundColor: palette.paper, borderColor: palette.border, borderWidth: '1px',
+          contents: [
+            { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: branch.accent, flex: 0 },
+            { type: 'text', text: s.name, size: 'sm', weight: 'bold', color: palette.ink, wrap: true, flex: 1 }
+          ]
+        })) : [{ type: 'text', text: '（可作為自由活動路線）', size: 'sm', color: palette.muted }]
+      },
+      footer: {
+        type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+        contents: [
+          { type: 'button', action: { type: 'postback', label: '返回 D' + day, data: `cmd=行程資訊 D${day}` }, style: 'secondary', height: 'sm' }
+        ]
+      }
+    });
+
+    const branchA = spots.filter((_, idx) => idx % 2 === 0);
+    const branchB = spots.filter((_, idx) => idx % 2 === 1);
+    return {
+      type: 'flex',
+      altText: `D${day} 分組行程`,
+      contents: { type: 'carousel', contents: [buildBranch(palette.branches[0], branchA), buildBranch(palette.branches[1], branchB)] }
+    } as any;
   }
 
   async showMoveSpotMenu(groupId: string, day: number): Promise<messagingApi.Message> {

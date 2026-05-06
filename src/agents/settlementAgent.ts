@@ -1,6 +1,19 @@
 import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
 
+const FLEX_PALETTE = {
+  sky: '#9ccfe8',
+  cream: '#fff8e8',
+  paper: '#fffdf5',
+  wood: '#b98a55',
+  woodDark: '#7a5632',
+  passport: '#234b68',
+  ink: '#3f3328',
+  muted: '#8f7a62',
+  danger: '#a66b5b',
+  border: '#ead8b8'
+};
+
 export class SettlementAgent {
   private crud: CRUD;
 
@@ -23,36 +36,36 @@ export class SettlementAgent {
       .map(b => ({
         type: 'box', layout: 'horizontal', margin: 'sm',
         contents: [
-          { type: 'text', text: b.name, size: 'sm', flex: 3 },
+          { type: 'text', text: b.name, size: 'sm', flex: 3, color: FLEX_PALETTE.ink, weight: 'bold' },
           {
             type: 'text',
             text: `${b.net > 0 ? '+' : ''}${Math.round(b.net * 100) / 100}`,
             size: 'sm', flex: 2, align: 'end', weight: 'bold',
-            color: b.net > 0 ? '#8fa8b8' : '#b87070'
+            color: b.net > 0 ? FLEX_PALETTE.passport : FLEX_PALETTE.danger
           }
         ]
       }));
 
     // 建議轉帳列
     const txRows: any[] = transactions.length === 0
-      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: '#8fa8b8', margin: 'sm' }]
+      ? [{ type: 'text', text: '✅ 已經平衡，不需要轉帳', size: 'sm', color: FLEX_PALETTE.passport, margin: 'sm' }]
       : transactions.map(t => ({
-          type: 'box', layout: 'vertical', margin: 'sm',
+          type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: FLEX_PALETTE.paper, cornerRadius: 'md', borderColor: FLEX_PALETTE.border, borderWidth: '1px',
           contents: [
             {
               type: 'box', layout: 'horizontal',
               contents: [
-                { type: 'text', text: `${t.from_name} → ${t.to_name}`, size: 'sm', flex: 3, wrap: true, weight: 'bold' },
-                { type: 'text', text: `TWD ${Math.round(t.amount * 100) / 100}`, size: 'sm', flex: 2, align: 'end', color: '#b87070', weight: 'bold' }
+                { type: 'text', text: `${t.from_name} → ${t.to_name}`, size: 'sm', flex: 3, wrap: true, weight: 'bold', color: FLEX_PALETTE.ink },
+                { type: 'text', text: `TWD ${Math.round(t.amount * 100) / 100}`, size: 'sm', flex: 2, align: 'end', color: FLEX_PALETTE.danger, weight: 'bold' }
               ]
             }
           ]
         }));
 
     const section = (title: string): any => ({
-      type: 'text', text: title, weight: 'bold', size: 'sm', color: '#555555', margin: 'lg'
+      type: 'text', text: title, weight: 'bold', size: 'sm', color: FLEX_PALETTE.woodDark, margin: 'lg'
     });
-    const separator: any = { type: 'separator', margin: 'md', color: '#eeeeee' };
+    const separator: any = { type: 'separator', margin: 'md', color: FLEX_PALETTE.border };
 
     const bodyContents: any[] = [
       section('📊 各成員淨額（+ 應收 / − 應付）'),
@@ -60,8 +73,8 @@ export class SettlementAgent {
       separator,
       section('💸 建議轉帳'),
       ...txRows,
-      { type: 'separator', margin: 'lg', color: '#eeeeee' },
-      { type: 'text', text: '確認結算後會封存本單，並重置參與成員。', size: 'xs', color: '#aaaaaa', wrap: true, margin: 'md' }
+      { type: 'separator', margin: 'lg', color: FLEX_PALETTE.border },
+      { type: 'text', text: '確認結算後會封存本單，並重置參與成員。', size: 'xs', color: FLEX_PALETTE.muted, wrap: true, margin: 'md' }
     ];
 
     return {
@@ -71,17 +84,17 @@ export class SettlementAgent {
         type: 'bubble',
         size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#7a8f88',
+          type: 'box', layout: 'vertical', backgroundColor: FLEX_PALETTE.sky, paddingAll: 'md',
           contents: [
-            { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: '#ffffff' }
+            { type: 'text', text: '🧾 結算預覽', weight: 'bold', size: 'lg', color: FLEX_PALETTE.passport }
           ]
         },
-        body: { type: 'box', layout: 'vertical', contents: bodyContents },
+        body: { type: 'box', layout: 'vertical', contents: bodyContents, backgroundColor: FLEX_PALETTE.cream, paddingAll: 'md' },
         footer: {
-          type: 'box', layout: 'horizontal', spacing: 'sm',
+          type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: FLEX_PALETTE.cream, paddingAll: 'md',
           contents: [
             { type: 'button', action: { type: 'postback', label: '取消', data: 'cmd=取消' }, style: 'secondary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', flex: 2 }
+            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'secondary', height: 'sm', flex: 2 }
           ]
         }
       }
@@ -107,22 +120,22 @@ export class SettlementAgent {
 
     const rows: any[] = trips.map(t => {
       const statusText = t.status === 'active' ? '進行中' : '已結算';
-      const statusColor = t.status === 'active' ? '#7a9aaa' : '#aaaaaa';
+      const statusColor = t.status === 'active' ? FLEX_PALETTE.passport : FLEX_PALETTE.muted;
       const dateStr = t.closed_at
         ? new Date(t.closed_at).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
         : new Date(t.created_at!).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
       return {
-        type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm',
+        type: 'box', layout: 'horizontal', margin: 'md', spacing: 'sm', paddingAll: 'sm', backgroundColor: FLEX_PALETTE.paper, cornerRadius: 'md', borderColor: FLEX_PALETTE.border, borderWidth: '1px',
         contents: [
           {
             type: 'box', layout: 'vertical', flex: 5,
             contents: [
-              { type: 'text', text: t.trip_name || `旅程 #${t.id}`, size: 'sm', weight: 'bold', wrap: true },
+              { type: 'text', text: t.trip_name || `旅程 #${t.id}`, size: 'sm', weight: 'bold', wrap: true, color: FLEX_PALETTE.ink },
               {
                 type: 'box', layout: 'horizontal', margin: 'xs',
                 contents: [
                   { type: 'text', text: statusText, size: 'xs', color: statusColor, flex: 0 },
-                  { type: 'text', text: `  ${dateStr}`, size: 'xs', color: '#aaaaaa', flex: 1 }
+                  { type: 'text', text: `  ${dateStr}`, size: 'xs', color: FLEX_PALETTE.muted, flex: 1 }
                 ]
               }
             ]
@@ -142,10 +155,10 @@ export class SettlementAgent {
       contents: {
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#7c8a78',
-          contents: [{ type: 'text', text: '📜 歷史分帳', weight: 'bold', size: 'lg', color: '#ffffff' }]
+          type: 'box', layout: 'vertical', backgroundColor: FLEX_PALETTE.sky, paddingAll: 'md',
+          contents: [{ type: 'text', text: '📜 歷史分帳', weight: 'bold', size: 'lg', color: FLEX_PALETTE.passport }]
         },
-        body: { type: 'box', layout: 'vertical', contents: rows }
+        body: { type: 'box', layout: 'vertical', contents: rows, backgroundColor: FLEX_PALETTE.cream, paddingAll: 'md' }
       }
     } as any;
   }
@@ -165,18 +178,18 @@ export class SettlementAgent {
         ? `${exp.currency} ${exp.original_amount}`
         : `TWD ${exp.amount}`;
       return {
-        type: 'box', layout: 'vertical', margin: 'md',
+        type: 'box', layout: 'vertical', margin: 'md', paddingAll: 'sm', backgroundColor: FLEX_PALETTE.paper, cornerRadius: 'md', borderColor: FLEX_PALETTE.border, borderWidth: '1px',
         contents: [
           {
             type: 'box', layout: 'horizontal',
             contents: [
-              { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#888888', flex: 1 },
-              { type: 'text', text: exp.description, size: 'sm', flex: 3, weight: 'bold', wrap: true },
-              { type: 'text', text: amountText, size: 'sm', flex: 3, align: 'end' },
-              { type: 'text', text: exp.payer_name, size: 'xs', flex: 2, align: 'end', color: '#555555' }
+              { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: FLEX_PALETTE.woodDark, flex: 1, weight: 'bold' },
+              { type: 'text', text: exp.description, size: 'sm', flex: 3, weight: 'bold', wrap: true, color: FLEX_PALETTE.ink },
+              { type: 'text', text: amountText, size: 'sm', flex: 3, align: 'end', color: FLEX_PALETTE.passport, weight: 'bold' },
+              { type: 'text', text: exp.payer_name, size: 'xs', flex: 2, align: 'end', color: FLEX_PALETTE.muted }
             ]
           },
-          { type: 'separator', margin: 'md', color: '#eeeeee' }
+          { type: 'separator', margin: 'md', color: FLEX_PALETTE.border }
         ]
       };
     });
@@ -187,30 +200,32 @@ export class SettlementAgent {
       contents: {
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#7c8a78',
+          type: 'box', layout: 'vertical', backgroundColor: FLEX_PALETTE.sky, paddingAll: 'md',
           contents: [
-            { type: 'text', text: trip.trip_name || `旅程 #${tripId}`, weight: 'bold', size: 'lg', color: '#ffffff' },
-            { type: 'text', text: `共 ${expenses.length} 筆，合計 TWD ${Math.round(total * 100) / 100}`, size: 'xs', color: '#cccccc', margin: 'xs' }
+            { type: 'text', text: trip.trip_name || `旅程 #${tripId}`, weight: 'bold', size: 'lg', color: FLEX_PALETTE.passport },
+            { type: 'text', text: `共 ${expenses.length} 筆，合計 TWD ${Math.round(total * 100) / 100}`, size: 'xs', color: FLEX_PALETTE.woodDark, margin: 'xs' }
           ]
         },
         body: {
           type: 'box', layout: 'vertical',
+          backgroundColor: FLEX_PALETTE.cream,
+          paddingAll: 'md',
           contents: [
             {
               type: 'box', layout: 'horizontal',
               contents: [
-                { type: 'text', text: '編號', size: 'xs', color: '#aaaaaa', flex: 1 },
-                { type: 'text', text: '項目', size: 'xs', color: '#aaaaaa', flex: 3 },
-                { type: 'text', text: '金額', size: 'xs', color: '#aaaaaa', flex: 3, align: 'end' },
-                { type: 'text', text: '付款人', size: 'xs', color: '#aaaaaa', flex: 2, align: 'end' }
+                { type: 'text', text: '編號', size: 'xs', color: FLEX_PALETTE.muted, flex: 1 },
+                { type: 'text', text: '項目', size: 'xs', color: FLEX_PALETTE.muted, flex: 3 },
+                { type: 'text', text: '金額', size: 'xs', color: FLEX_PALETTE.muted, flex: 3, align: 'end' },
+                { type: 'text', text: '付款人', size: 'xs', color: FLEX_PALETTE.muted, flex: 2, align: 'end' }
               ]
             },
-            { type: 'separator', margin: 'sm' },
+            { type: 'separator', margin: 'sm', color: FLEX_PALETTE.border },
             ...rows
           ]
         },
         footer: {
-          type: 'box', layout: 'horizontal',
+          type: 'box', layout: 'horizontal', backgroundColor: FLEX_PALETTE.cream, paddingAll: 'md',
           contents: [
             { type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=歷史' }, style: 'secondary', height: 'sm' }
           ]

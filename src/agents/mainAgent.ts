@@ -112,7 +112,7 @@ export class MainAgent {
       const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購買清單', '購買清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
       const normalizedForGlobal = input.replace(/＃/g, '#');
       const isDayItinCmd = /^行程資訊?\s*[Dd]\d+$/.test(normalizedForGlobal);
-      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|新增購買清單|購買清單)\s*[Dd]?\d*|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
+      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增購買清單|購買清單)\s*[Dd]?\d*|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
       if (globalCmds.includes(input) || isDayItinCmd || isItineraryActionCmd) {
         if (session) await this.crud.deleteSession(userId);
         session = null;
@@ -371,6 +371,10 @@ export class MainAgent {
       // 復原行程 D1：把此天恢復成未完成，回到原本天數排序
       const restoreDayMatch = normalizedInput.match(/^復原行程\s*[Dd](\d+)$/);
       if (restoreDayMatch) return await this.itinerary.restoreDay(groupId, parseInt(restoreDayMatch[1], 10));
+
+      // 分組行程 D1：產生 D1-A / D1-B 雙路線瀏覽卡
+      const branchDayMatch = normalizedInput.match(/^分組行程\s*[Dd](\d+)$/);
+      if (branchDayMatch) return await this.itinerary.showDayBranches(groupId, parseInt(branchDayMatch[1], 10));
 
       // 新增景點 D1
       const addSpotMatch = normalizedInput.match(/^新增景點\s*[Dd](\d+)$/);

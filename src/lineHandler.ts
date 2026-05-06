@@ -7,6 +7,18 @@ import { getJoinQuickReply, getFollowQuickReply } from './utils/ui';
 
 const { MessagingApiClient } = messagingApi;
 
+const DM_PALETTE = {
+  sky: '#9ccfe8',
+  cream: '#fff8e8',
+  paper: '#fffdf5',
+  wood: '#b98a55',
+  woodDark: '#7a5632',
+  passport: '#234b68',
+  ink: '#3f3328',
+  muted: '#8f7a62',
+  border: '#ead8b8'
+};
+
 export class LineEventHandler {
   private client: messagingApi.MessagingApiClient;
   private mainAgent: MainAgent;
@@ -92,13 +104,13 @@ export class LineEventHandler {
         return;
       }
 
-      if (t === '查看目前分帳') {
+      if (t === '查看目前分帳' || t === '現有旅程') {
         const msg = await this.buildCurrentFlex(userId);
         if (event.replyToken) await this.reply(event.replyToken, msg);
         return;
       }
 
-      if (t === '查看歷史分帳') {
+      if (t === '查看歷史分帳' || t === '歷史旅程' || t === '歷史') {
         const msg = await this.buildHistoryFlex(userId);
         if (event.replyToken) await this.reply(event.replyToken, msg);
         return;
@@ -107,6 +119,13 @@ export class LineEventHandler {
       const dmHistoryMatch = t.match(/^歷史\s*#(\d+)$/);
       if (dmHistoryMatch) {
         const msg = await this.buildTripDetailFlex(userId, parseInt(dmHistoryMatch[1], 10));
+        if (event.replyToken) await this.reply(event.replyToken, msg);
+        return;
+      }
+
+      const dmItineraryMatch = t.match(/^私訊行程\s*#(\d+)$/);
+      if (dmItineraryMatch) {
+        const msg = await this.buildTripItineraryFlex(userId, parseInt(dmItineraryMatch[1], 10));
         if (event.replyToken) await this.reply(event.replyToken, msg);
         return;
       }
@@ -210,82 +229,58 @@ export class LineEventHandler {
   private async buildCurrentFlex(userId: string): Promise<messagingApi.Message> {
     const groupIds = await this.crud.getGroupsByUserId(userId);
     if (groupIds.length === 0) {
-      return { type: 'text', text: '你目前未加入任何分帳群組。' };
+      return { type: 'text', text: '你目前沒有進行中的旅程。' };
     }
 
     const bubbles: any[] = [];
     for (const gid of groupIds) {
       const trip = await this.crud.getCurrentTrip(gid);
-      const expenses = await this.crud.getUnsettledExpenses(gid);
-      const tripName = trip?.trip_name || '（未命名旅程）';
-      let total = 0;
-
-      const rows = expenses.length === 0
-        ? [{ type: 'text', text: '目前無記帳資料', size: 'sm', color: '#aaaaaa', margin: 'md' }]
-        : expenses.map(exp => {
-            const amt = exp.currency && exp.currency !== 'TWD' && exp.original_amount
-              ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
-            total += exp.amount;
-            return {
-              type: 'box', layout: 'horizontal', margin: 'sm',
-              contents: [
-                { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#aaaaaa', flex: 1 },
-                { type: 'text', text: exp.description, size: 'sm', flex: 4, weight: 'bold', wrap: true },
-                { type: 'box', layout: 'vertical', flex: 3, contents: [
-                  { type: 'text', text: amt, size: 'xs', align: 'end' },
-                  { type: 'text', text: exp.payer_name, size: 'xs', color: '#888888', align: 'end' }
-                ]}
-              ]
-            };
-          });
-
-      const totalRow = expenses.length > 0 ? {
-        type: 'box', layout: 'horizontal', margin: 'md',
-        contents: [
-          { type: 'text', text: '總計 (TWD)', weight: 'bold', size: 'sm', flex: 1 },
-          { type: 'text', text: `${Math.round(total * 100) / 100}`, weight: 'bold', size: 'sm', align: 'end', flex: 1 }
-        ]
-      } : null;
+      if (!trip) continue;
+      const meta = await this.getTripMeta(trip);
 
       bubbles.push({
-        type: 'bubble', size: 'mega',
+        type: 'bubble', size: 'kilo',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.sky, paddingAll: 'md', spacing: 'xs',
           contents: [
-            { type: 'text', text: '📋 目前分帳清單', weight: 'bold', color: '#ffffff', size: 'md' },
-            { type: 'text', text: `✈️ ${tripName}`, color: '#cccccc', size: 'xs' }
+            { type: 'text', text: '🧳 現有旅程', weight: 'bold', color: DM_PALETTE.passport, size: 'xs' },
+            { type: 'text', text: trip.trip_name || '（未命名旅程）', weight: 'bold', color: DM_PALETTE.ink, size: 'md', wrap: true }
           ]
         },
         body: {
-          type: 'box', layout: 'vertical',
+          type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.cream, paddingAll: 'md', spacing: 'sm',
           contents: [
-            ...rows,
-            ...(totalRow ? [{ type: 'separator', margin: 'md' }, totalRow] : [])
+            this.metaRow('✈️ 出發日期', meta.departDate),
+            this.metaRow('🗓️ 天數', `${meta.days} 天`),
+            this.metaRow('📍 狀態', '進行中')
           ]
         }
       });
     }
 
+    if (bubbles.length === 0) return { type: 'text', text: '你目前沒有進行中的旅程。' };
+
     if (bubbles.length === 1) {
-      return { type: 'flex', altText: '目前分帳清單', contents: bubbles[0] } as any;
+      return { type: 'flex', altText: '現有旅程清單', contents: bubbles[0] } as any;
     }
-    return { type: 'flex', altText: '目前分帳清單', contents: { type: 'carousel', contents: bubbles } } as any;
+    return { type: 'flex', altText: '現有旅程清單', contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
   private async buildHistoryFlex(userId: string): Promise<messagingApi.Message> {
-    const groupIds = await this.crud.getAllGroupsByUserId(userId);
+    const groupIds = [...new Set([...(await this.crud.getAllGroupsByUserId(userId)), ...(await this.crud.getGroupsByUserId(userId))])];
     if (groupIds.length === 0) {
       return { type: 'text', text: '你目前未加入任何分帳群組。' };
     }
 
-    const allTrips: any[] = [];
+    const tripMap = new Map<number, any>();
     for (const gid of groupIds) {
       const trips = await this.crud.getTripHistory(gid);
-      allTrips.push(...trips);
+      for (const trip of trips) tripMap.set(trip.id, trip);
     }
+    const allTrips = [...tripMap.values()];
 
     if (allTrips.length === 0) {
-      return { type: 'text', text: '目前無歷史分帳紀錄。' };
+      return { type: 'text', text: '目前無歷史旅程紀錄。' };
     }
 
     allTrips.sort((a, b) => {
@@ -294,46 +289,50 @@ export class LineEventHandler {
       return 0;
     });
 
-    const rows = allTrips.map(t => {
-      const date = t.created_at ? new Date(t.created_at).toLocaleDateString('zh-TW') : '';
+    const rows: any[] = [];
+    for (const t of allTrips) {
+      const meta = await this.getTripMeta(t);
       const isActive = t.status === 'active';
-      const statusText = isActive ? '● 進行中' : '● 已結算';
-      const statusColor = isActive ? '#5a9a6a' : '#aaaaaa';
+      const statusText = isActive ? '● 進行中' : '● 已完成';
+      const statusColor = isActive ? DM_PALETTE.passport : DM_PALETTE.muted;
 
       const rightCol: any = isActive
-        ? { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', flex: 2, gravity: 'center' }
+        ? { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', flex: 2, gravity: 'center', weight: 'bold' }
         : {
-            type: 'box', layout: 'vertical', flex: 2, contents: [
-              { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end' },
+            type: 'box', layout: 'vertical', flex: 3, contents: [
+              { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', weight: 'bold' },
               {
-                type: 'button',
-                action: { type: 'postback', label: '查看', data: `cmd=歷史 #${t.id}` },
-                style: 'secondary', height: 'sm', margin: 'xs'
+                type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: [
+                  { type: 'button', action: { type: 'postback', label: '查看行程資訊', data: `cmd=私訊行程 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+                  { type: 'button', action: { type: 'postback', label: '查看清單', data: `cmd=私訊清單 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+                ]
               }
             ]
           };
 
-      return {
-        type: 'box', layout: 'horizontal', margin: 'md',
+      rows.push({
+        type: 'box', layout: 'vertical', margin: 'md', paddingAll: 'sm', backgroundColor: DM_PALETTE.paper, cornerRadius: 'md', borderColor: DM_PALETTE.border, borderWidth: '1px',
         contents: [
-          { type: 'box', layout: 'vertical', flex: 4, contents: [
-            { type: 'text', text: `✈️ ${t.trip_name}`, size: 'sm', weight: 'bold', wrap: true },
-            { type: 'text', text: date, size: 'xs', color: '#aaaaaa' }
-          ]},
-          rightCol
+          { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+            { type: 'box', layout: 'vertical', flex: 4, contents: [
+              { type: 'text', text: `✈️ ${t.trip_name}`, size: 'sm', weight: 'bold', wrap: true, color: DM_PALETTE.ink },
+              { type: 'text', text: `${meta.departDate}・${meta.days} 天`, size: 'xs', color: DM_PALETTE.muted, wrap: true }
+            ]},
+            rightCol
+          ]}
         ]
-      };
-    });
+      });
+    }
 
     return {
-      type: 'flex', altText: '歷史分帳',
+      type: 'flex', altText: '歷史旅程',
       contents: {
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
-          contents: [{ type: 'text', text: '🗂 歷史分帳', weight: 'bold', color: '#ffffff', size: 'md' }]
+          type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.sky, paddingAll: 'md',
+          contents: [{ type: 'text', text: '🗂 歷史旅程', weight: 'bold', color: DM_PALETTE.passport, size: 'md' }]
         },
-        body: { type: 'box', layout: 'vertical', contents: rows }
+        body: { type: 'box', layout: 'vertical', contents: rows, backgroundColor: DM_PALETTE.cream, paddingAll: 'md' }
       }
     } as any;
   }
@@ -346,7 +345,7 @@ export class LineEventHandler {
       trip = trips.find((t: any) => t.id === tripId);
       if (trip) break;
     }
-    if (!trip) return { type: 'text', text: '找不到指定的分帳記錄。' };
+    if (!trip) return { type: 'text', text: '找不到指定的旅程記錄。' };
 
     const expenses = await this.crud.getExpensesByTripId(tripId);
     if (expenses.length === 0) return { type: 'text', text: `「${trip.trip_name}」沒有任何記帳。` };
@@ -357,14 +356,14 @@ export class LineEventHandler {
       const amt = exp.currency && exp.currency !== 'TWD' && exp.original_amount
         ? `${exp.currency} ${exp.original_amount}` : `TWD ${exp.amount}`;
       return {
-        type: 'box', layout: 'horizontal', margin: 'sm',
+        type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: DM_PALETTE.paper, cornerRadius: 'md', borderColor: DM_PALETTE.border, borderWidth: '1px',
         contents: [
-          { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#aaaaaa', flex: 1 },
-          { type: 'text', text: exp.description, size: 'sm', flex: 4, weight: 'bold', wrap: true },
-          { type: 'box', layout: 'vertical', flex: 3, contents: [
-            { type: 'text', text: amt, size: 'xs', align: 'end' },
-            { type: 'text', text: exp.payer_name, size: 'xs', color: '#888888', align: 'end' }
-          ]}
+          { type: 'box', layout: 'horizontal', contents: [
+            { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: DM_PALETTE.woodDark, flex: 1, weight: 'bold' },
+            { type: 'text', text: exp.description, size: 'sm', flex: 4, weight: 'bold', wrap: true, color: DM_PALETTE.ink },
+            { type: 'text', text: amt, size: 'sm', flex: 3, align: 'end', color: DM_PALETTE.passport, weight: 'bold' }
+          ]},
+          { type: 'text', text: `付款人：${exp.payer_name}`, size: 'xs', color: DM_PALETTE.muted, align: 'end', margin: 'xs' }
         ]
       };
     });
@@ -374,19 +373,93 @@ export class LineEventHandler {
       contents: {
         type: 'bubble', size: 'mega',
         header: {
-          type: 'box', layout: 'vertical', backgroundColor: '#6b7f8c',
+          type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.sky, paddingAll: 'md',
           contents: [
-            { type: 'text', text: `✈️ ${trip.trip_name}`, weight: 'bold', color: '#ffffff', size: 'md' },
-            { type: 'text', text: `共 ${expenses.length} 筆，合計 TWD ${Math.round(total * 100) / 100}`, size: 'xs', color: '#cccccc', margin: 'xs' }
+            { type: 'text', text: `✈️ ${trip.trip_name}`, weight: 'bold', color: DM_PALETTE.passport, size: 'md', wrap: true },
+            { type: 'text', text: `共 ${expenses.length} 筆，合計 TWD ${Math.round(total * 100) / 100}`, size: 'xs', color: DM_PALETTE.woodDark, margin: 'xs' }
           ]
         },
-        body: { type: 'box', layout: 'vertical', contents: rows },
+        body: { type: 'box', layout: 'vertical', contents: rows, backgroundColor: DM_PALETTE.cream, paddingAll: 'md' },
         footer: {
-          type: 'box', layout: 'horizontal',
+          type: 'box', layout: 'horizontal', backgroundColor: DM_PALETTE.cream, paddingAll: 'md',
           contents: [{ type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=查看歷史分帳' }, style: 'secondary', height: 'sm' }]
         }
       }
     } as any;
+  }
+
+  private metaRow(label: string, value: string): any {
+    return {
+      type: 'box', layout: 'horizontal', paddingAll: 'sm', backgroundColor: DM_PALETTE.paper, cornerRadius: 'md', borderColor: DM_PALETTE.border, borderWidth: '1px',
+      contents: [
+        { type: 'text', text: label, size: 'sm', color: DM_PALETTE.muted, flex: 3 },
+        { type: 'text', text: value, size: 'sm', color: DM_PALETTE.ink, weight: 'bold', align: 'end', flex: 4, wrap: true }
+      ]
+    };
+  }
+
+  private async getTripMeta(trip: any): Promise<{ departDate: string; days: number }> {
+    const flights = await this.crud.getFlights(trip.id);
+    const outbounds = flights
+      .filter(f => f.type === 'outbound')
+      .sort((a, b) => a.depart_date.localeCompare(b.depart_date) || a.depart_time.localeCompare(b.depart_time));
+    const departDate = outbounds[0]?.depart_date || '未填班機';
+
+    const spots = await this.crud.getAllSpots(trip.id);
+    const accoms = await this.crud.getAccommodations(trip.id);
+    const maxSpotDay = spots.length > 0 ? Math.max(...spots.map(s => s.day)) : 1;
+    const maxAccomDay = accoms.length > 0 ? Math.max(...accoms.map(a => a.day_to + 1)) : 1;
+    return { departDate, days: Math.max(1, maxSpotDay, maxAccomDay) };
+  }
+
+  private async findUserTrip(userId: string, tripId: number): Promise<any | null> {
+    const groupIds = [...new Set([...(await this.crud.getAllGroupsByUserId(userId)), ...(await this.crud.getGroupsByUserId(userId))])];
+    for (const gid of groupIds) {
+      const trips = await this.crud.getTripHistory(gid);
+      const trip = trips.find((t: any) => t.id === tripId);
+      if (trip) return trip;
+    }
+    return null;
+  }
+
+  private async buildTripItineraryFlex(userId: string, tripId: number): Promise<messagingApi.Message> {
+    const trip = await this.findUserTrip(userId, tripId);
+    if (!trip) return { type: 'text', text: '找不到指定的旅程記錄。' };
+
+    const spots = await this.crud.getAllSpots(tripId);
+    if (spots.length === 0) return { type: 'text', text: `「${trip.trip_name}」沒有行程資訊。` };
+
+    const byDay = new Map<number, any[]>();
+    for (const spot of spots) {
+      if (!byDay.has(spot.day)) byDay.set(spot.day, []);
+      byDay.get(spot.day)!.push(spot);
+    }
+
+    const bubbles = [...byDay.keys()].sort((a, b) => a - b).map(day => ({
+      type: 'bubble', size: 'kilo',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.sky, paddingAll: 'md', spacing: 'xs',
+        contents: [
+          { type: 'text', text: `DAY ${day}`, size: 'xs', color: DM_PALETTE.passport, weight: 'bold' },
+          { type: 'text', text: trip.trip_name, size: 'md', color: DM_PALETTE.ink, weight: 'bold', wrap: true }
+        ]
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: DM_PALETTE.cream, paddingAll: 'md',
+        contents: byDay.get(day)!.map((s, idx) => {
+          const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
+          const contents: any[] = [
+            { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: DM_PALETTE.woodDark, flex: 0 },
+            { type: 'text', text: s.name, size: 'sm', weight: 'bold', color: DM_PALETTE.ink, wrap: true, flex: 1 }
+          ];
+          if (validUrl) contents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
+          return { type: 'box', layout: 'horizontal', spacing: 'xs', paddingAll: 'sm', backgroundColor: DM_PALETTE.paper, cornerRadius: 'md', borderColor: DM_PALETTE.border, borderWidth: '1px', contents };
+        })
+      }
+    }));
+
+    if (bubbles.length === 1) return { type: 'flex', altText: `${trip.trip_name} 行程資訊`, contents: bubbles[0] } as any;
+    return { type: 'flex', altText: `${trip.trip_name} 行程資訊`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
   private async getDisplayName(groupId: string, userId: string): Promise<string> {
@@ -417,6 +490,21 @@ export class LineEventHandler {
 
     const displayName = await this.getDisplayName(groupId, userId);
     try {
+      if (groupId === 'unknown') {
+        const cmd = data.startsWith('cmd=') ? decodeURIComponent(data.substring(4)) : data;
+        let dmReply: messagingApi.Message | null = null;
+        if (cmd === '查看歷史分帳' || cmd === '歷史旅程' || cmd === '歷史') dmReply = await this.buildHistoryFlex(userId);
+        const dmListMatch = cmd.match(/^私訊清單\s*#(\d+)$/);
+        if (dmListMatch) dmReply = await this.buildTripDetailFlex(userId, parseInt(dmListMatch[1], 10));
+        const dmItineraryMatch = cmd.match(/^私訊行程\s*#(\d+)$/);
+        if (dmItineraryMatch) dmReply = await this.buildTripItineraryFlex(userId, parseInt(dmItineraryMatch[1], 10));
+        const dmOldHistoryMatch = cmd.match(/^歷史\s*#(\d+)$/);
+        if (dmOldHistoryMatch) dmReply = await this.buildTripDetailFlex(userId, parseInt(dmOldHistoryMatch[1], 10));
+        if (dmReply && event.replyToken) {
+          await this.reply(event.replyToken, dmReply);
+          return;
+        }
+      }
       const replyText = await this.mainAgent.processPostback(groupId, userId, displayName, data);
       console.log('[LineHandler.handlePostback] replyText 類型:', typeof replyText, replyText ? '有內容' : '沒有內容');
       if (replyText && event.replyToken) {

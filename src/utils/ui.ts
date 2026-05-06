@@ -1,5 +1,18 @@
 import { messagingApi } from '@line/bot-sdk';
 
+const ACCOUNT_PALETTE = {
+  sky: '#9ccfe8',
+  cream: '#fff8e8',
+  paper: '#fffdf5',
+  wood: '#b98a55',
+  woodDark: '#7a5632',
+  passport: '#234b68',
+  ink: '#3f3328',
+  muted: '#8f7a62',
+  danger: '#a66b5b',
+  border: '#ead8b8'
+};
+
 // ─── 記帳成功確認 Flex ────────────────────────────────────────────────────────
 
 export function createExpenseSuccessFlex(
@@ -21,9 +34,10 @@ export function createExpenseSuccessFlex(
     { label: '👥 分攤人', value: sharerText },
   ].map(item => ({
     type: 'box', layout: 'horizontal', margin: 'md',
+    paddingAll: 'sm', backgroundColor: ACCOUNT_PALETTE.paper, cornerRadius: 'md', borderColor: ACCOUNT_PALETTE.border, borderWidth: '1px',
     contents: [
-      { type: 'text', text: item.label, size: 'sm', color: '#888888', flex: 3 },
-      { type: 'text', text: item.value, size: 'sm', color: '#333333', flex: 5, wrap: true, weight: 'bold' }
+      { type: 'text', text: item.label, size: 'sm', color: ACCOUNT_PALETTE.muted, flex: 3 },
+      { type: 'text', text: item.value, size: 'sm', color: ACCOUNT_PALETTE.ink, flex: 5, wrap: true, weight: 'bold' }
     ]
   }));
 
@@ -34,19 +48,19 @@ export function createExpenseSuccessFlex(
       type: 'bubble',
       size: 'kilo',
       header: {
-        type: 'box', layout: 'horizontal', backgroundColor: '#7b93b9',
+        type: 'box', layout: 'horizontal', backgroundColor: ACCOUNT_PALETTE.sky, paddingAll: 'md',
         contents: [
-          { type: 'text', text: '✅ 記帳成功', weight: 'bold', color: '#ffffff', size: 'md', flex: 1 },
-          { type: 'text', text: `#${exp.group_seq}`, color: '#ccd4db', size: 'sm', align: 'end', flex: 0 }
+          { type: 'text', text: '✅ 記帳成功', weight: 'bold', color: ACCOUNT_PALETTE.passport, size: 'md', flex: 1 },
+          { type: 'text', text: `#${exp.group_seq}`, color: ACCOUNT_PALETTE.woodDark, size: 'sm', align: 'end', flex: 0, weight: 'bold' }
         ]
       },
-      body: { type: 'box', layout: 'vertical', contents: rows },
+      body: { type: 'box', layout: 'vertical', contents: rows, backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md' },
       footer: {
-        type: 'box', layout: 'horizontal', spacing: 'sm',
+        type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md',
         contents: [
           { type: 'button', action: { type: 'postback', label: '修改', data: `cmd=修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
           { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'postback', label: '清單', data: 'cmd=清單' }, style: 'primary', height: 'sm', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '清單', data: 'cmd=清單' }, style: 'secondary', height: 'sm', flex: 1 }
         ]
       }
     }
@@ -237,18 +251,23 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
     return {
       type: 'box',
       layout: 'vertical',
+      paddingAll: 'sm',
+      cornerRadius: 'md',
+      backgroundColor: ACCOUNT_PALETTE.paper,
+      borderColor: ACCOUNT_PALETTE.border,
+      borderWidth: '1px',
       contents: [
         {
           type: 'box',
           layout: 'horizontal',
           contents: [
-            { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: '#888888', flex: 1 },
-            { type: 'text', text: exp.description, size: 'sm', flex: 3, weight: 'bold', wrap: true },
-            { type: 'text', text: amountText, size: 'sm', flex: 3, align: 'end' },
-            { type: 'text', text: exp.payer_name, size: 'xs', flex: 2, align: 'end', color: '#555555' }
+            { type: 'text', text: `#${exp.group_seq}`, size: 'xs', color: ACCOUNT_PALETTE.woodDark, flex: 1, weight: 'bold' },
+            { type: 'text', text: exp.description, size: 'sm', flex: 3, weight: 'bold', wrap: true, color: ACCOUNT_PALETTE.ink },
+            { type: 'text', text: amountText, size: 'sm', flex: 3, align: 'end', color: ACCOUNT_PALETTE.passport, weight: 'bold' },
+            { type: 'text', text: exp.payer_name, size: 'xs', flex: 2, align: 'end', color: ACCOUNT_PALETTE.muted }
           ]
         },
-        { type: 'separator', margin: 'md', color: '#eeeeee' }
+        { type: 'separator', margin: 'md', color: ACCOUNT_PALETTE.border }
       ],
       margin: 'md'
     };
@@ -259,25 +278,25 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
       type: 'box',
       layout: 'horizontal',
       contents: [
-        { type: 'text', text: '編號', size: 'xs', color: '#aaaaaa', flex: 1 },
-        { type: 'text', text: '項目', size: 'xs', color: '#aaaaaa', flex: 3 },
-        { type: 'text', text: '金額', size: 'xs', color: '#aaaaaa', flex: 3, align: 'end' },
-        { type: 'text', text: '付款人', size: 'xs', color: '#aaaaaa', flex: 2, align: 'end' }
+        { type: 'text', text: '編號', size: 'xs', color: ACCOUNT_PALETTE.muted, flex: 1 },
+        { type: 'text', text: '項目', size: 'xs', color: ACCOUNT_PALETTE.muted, flex: 3 },
+        { type: 'text', text: '金額', size: 'xs', color: ACCOUNT_PALETTE.muted, flex: 3, align: 'end' },
+        { type: 'text', text: '付款人', size: 'xs', color: ACCOUNT_PALETTE.muted, flex: 2, align: 'end' }
       ]
     },
-    { type: 'separator', margin: 'sm' },
+    { type: 'separator', margin: 'sm', color: ACCOUNT_PALETTE.border },
     ...rows,
     {
       type: 'box',
       layout: 'vertical',
       contents: [
-        { type: 'separator', margin: 'lg' },
+        { type: 'separator', margin: 'lg', color: ACCOUNT_PALETTE.border },
         {
           type: 'box',
           layout: 'horizontal',
           contents: [
-            { type: 'text', text: '總計 (TWD)', weight: 'bold', size: 'md', flex: 1 },
-            { type: 'text', text: `${Math.round(totalTwd * 100) / 100}`, weight: 'bold', size: 'md', align: 'end' }
+            { type: 'text', text: '總計 (TWD)', weight: 'bold', size: 'md', flex: 1, color: ACCOUNT_PALETTE.ink },
+            { type: 'text', text: `${Math.round(totalTwd * 100) / 100}`, weight: 'bold', size: 'md', align: 'end', color: ACCOUNT_PALETTE.passport }
           ],
           margin: 'md'
         }
@@ -295,22 +314,27 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '📝 未結算記帳清單', weight: 'bold', size: 'lg', color: '#ffffff' }
+          { type: 'text', text: '🧾 未結算記帳清單', weight: 'bold', size: 'lg', color: ACCOUNT_PALETTE.passport }
         ],
-        backgroundColor: '#6b7a8d'
+        backgroundColor: ACCOUNT_PALETTE.sky,
+        paddingAll: 'md'
       },
       body: {
         type: 'box',
         layout: 'vertical',
-        contents: bodyContents
+        contents: bodyContents,
+        backgroundColor: ACCOUNT_PALETTE.cream,
+        paddingAll: 'md'
       },
       footer: {
         type: 'box',
         layout: 'horizontal',
         spacing: 'sm',
+        backgroundColor: ACCOUNT_PALETTE.cream,
+        paddingAll: 'md',
         contents: [
           { type: 'button', action: { type: 'postback', label: '只看我的帳', data: 'cmd=只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
-          { type: 'button', action: { type: 'postback', label: '結算', data: 'cmd=結算' }, style: 'primary', height: 'sm', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '結算', data: 'cmd=結算' }, style: 'secondary', height: 'sm', flex: 1 }
         ]
       }
     }
@@ -324,25 +348,25 @@ export function createMyAccountFlex(
   splitItems: { seq: number; description: string; payer_name: string; myShare: number }[]
 ): messagingApi.FlexMessage {
   const section = (title: string): any => ({
-    type: 'text', text: title, weight: 'bold', size: 'sm', color: '#555555', margin: 'lg'
+    type: 'text', text: title, weight: 'bold', size: 'sm', color: ACCOUNT_PALETTE.woodDark, margin: 'lg'
   });
 
-  const separator: any = { type: 'separator', margin: 'md', color: '#eeeeee' };
+  const separator: any = { type: 'separator', margin: 'md', color: ACCOUNT_PALETTE.border };
 
   // 需要轉帳
   const paymentRows: any[] = payments.length === 0
-    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: '#7a9aaa', margin: 'sm' }]
+    ? [{ type: 'text', text: '✅ 不需要轉帳給任何人', size: 'sm', color: ACCOUNT_PALETTE.passport, margin: 'sm' }]
     : payments.map(p => ({
         type: 'box', layout: 'horizontal', margin: 'sm',
         contents: [
-          { type: 'text', text: `付給 ${p.to_name}`, size: 'sm', color: '#333333', flex: 3 },
-          { type: 'text', text: `TWD ${Math.round(p.amount * 100) / 100}`, size: 'sm', color: '#b07878', align: 'end', flex: 2, weight: 'bold' }
+          { type: 'text', text: `付給 ${p.to_name}`, size: 'sm', color: ACCOUNT_PALETTE.ink, flex: 3 },
+          { type: 'text', text: `TWD ${Math.round(p.amount * 100) / 100}`, size: 'sm', color: ACCOUNT_PALETTE.danger, align: 'end', flex: 2, weight: 'bold' }
         ]
       }));
 
   // 代墊明細
   const paidRows: any[] = paidItems.length === 0
-    ? [{ type: 'text', text: '（無）', size: 'sm', color: '#aaaaaa', margin: 'sm' }]
+    ? [{ type: 'text', text: '（無）', size: 'sm', color: ACCOUNT_PALETTE.muted, margin: 'sm' }]
     : paidItems.map(item => {
         const amtText = item.currency && item.currency !== 'TWD' && item.original_amount
           ? `${item.currency} ${item.original_amount}`
@@ -354,29 +378,29 @@ export function createMyAccountFlex(
             {
               type: 'box', layout: 'horizontal',
               contents: [
-                { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true },
-                { type: 'text', text: amtText, size: 'sm', flex: 2, align: 'end', color: '#555555' }
+                { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true, color: ACCOUNT_PALETTE.ink },
+                { type: 'text', text: amtText, size: 'sm', flex: 2, align: 'end', color: ACCOUNT_PALETTE.passport, weight: 'bold' }
               ]
             },
-            { type: 'text', text: `分攤：${othersText}（各 ${item.others[0]?.share_amount ?? '-'}）`, size: 'xs', color: '#888888', wrap: true }
+            { type: 'text', text: `分攤：${othersText}（各 ${item.others[0]?.share_amount ?? '-'}）`, size: 'xs', color: ACCOUNT_PALETTE.muted, wrap: true }
           ]
         };
       });
 
   // 分攤明細
   const splitRows: any[] = splitItems.length === 0
-    ? [{ type: 'text', text: '（無）', size: 'sm', color: '#aaaaaa', margin: 'sm' }]
+    ? [{ type: 'text', text: '（無）', size: 'sm', color: ACCOUNT_PALETTE.muted, margin: 'sm' }]
     : splitItems.map(item => ({
         type: 'box', layout: 'vertical', margin: 'sm',
         contents: [
           {
             type: 'box', layout: 'horizontal',
             contents: [
-              { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true },
-              { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: '#b07878', weight: 'bold' }
+              { type: 'text', text: `#${item.seq} ${item.description}`, size: 'sm', flex: 4, weight: 'bold', wrap: true, color: ACCOUNT_PALETTE.ink },
+              { type: 'text', text: `我付 ${item.myShare}`, size: 'sm', flex: 2, align: 'end', color: ACCOUNT_PALETTE.danger, weight: 'bold' }
             ]
           },
-          { type: 'text', text: `付款人：${item.payer_name}`, size: 'xs', color: '#888888', wrap: true }
+          { type: 'text', text: `付款人：${item.payer_name}`, size: 'xs', color: ACCOUNT_PALETTE.muted, wrap: true }
         ]
       }));
 
@@ -398,14 +422,14 @@ export function createMyAccountFlex(
       type: 'bubble',
       size: 'mega',
       header: {
-        type: 'box', layout: 'vertical', backgroundColor: '#8a7f9e',
+        type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.sky, paddingAll: 'md',
         contents: [
-          { type: 'text', text: `👤 ${userName} 的帳目`, weight: 'bold', size: 'lg', color: '#ffffff' }
+          { type: 'text', text: `👤 ${userName} 的帳目`, weight: 'bold', size: 'lg', color: ACCOUNT_PALETTE.passport }
         ]
       },
-      body: { type: 'box', layout: 'vertical', contents: bodyContents },
+      body: { type: 'box', layout: 'vertical', contents: bodyContents, backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md' },
       footer: {
-        type: 'box', layout: 'horizontal', spacing: 'sm',
+        type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md',
         contents: [
           { type: 'button', action: { type: 'postback', label: '完整清單', data: 'cmd=清單' }, style: 'secondary', height: 'sm', flex: 1 }
         ]
@@ -430,7 +454,7 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
     layout: 'horizontal',
     contents: [
       { type: 'text', text: item.label, size: 'sm', color: '#aaaaaa', flex: 2 },
-      { type: 'text', text: item.value, size: 'sm', color: '#333333', flex: 4, weight: 'bold', wrap: true }
+      { type: 'text', text: item.value, size: 'sm', color: ACCOUNT_PALETTE.ink, flex: 4, weight: 'bold', wrap: true }
     ],
     margin: 'md'
   }));
@@ -444,22 +468,27 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: '📝 記帳草稿', weight: 'bold', size: 'lg', color: '#ffffff' },
-          { type: 'text', text: `👤 編輯者：${draft.editorName || '本人'}`, size: 'xs', color: '#cccccc' }
+          { type: 'text', text: '📝 記帳草稿', weight: 'bold', size: 'lg', color: ACCOUNT_PALETTE.passport },
+          { type: 'text', text: `👤 編輯者：${draft.editorName || '本人'}`, size: 'xs', color: ACCOUNT_PALETTE.woodDark }
         ],
-        backgroundColor: '#7c8a78'
+        backgroundColor: ACCOUNT_PALETTE.sky,
+        paddingAll: 'md'
       },
       body: {
         type: 'box',
         layout: 'vertical',
-        contents: rows
+        contents: rows,
+        backgroundColor: ACCOUNT_PALETTE.cream,
+        paddingAll: 'md'
       },
       footer: {
         type: 'box',
         layout: 'vertical',
         spacing: 'sm',
+        backgroundColor: ACCOUNT_PALETTE.cream,
+        paddingAll: 'md',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm' }
         ]
@@ -487,16 +516,19 @@ export function createSelectionFlex(title: string, subtitle: string, items: { la
         type: 'box',
         layout: 'vertical',
         contents: [
-          { type: 'text', text: title, weight: 'bold', size: 'lg', color: '#ffffff' },
-          { type: 'text', text: subtitle, size: 'xs', color: '#cccccc' }
+          { type: 'text', text: title, weight: 'bold', size: 'lg', color: ACCOUNT_PALETTE.passport },
+          { type: 'text', text: subtitle, size: 'xs', color: ACCOUNT_PALETTE.woodDark }
         ],
-        backgroundColor: '#8a8878'
+        backgroundColor: ACCOUNT_PALETTE.sky,
+        paddingAll: 'md'
       },
       body: {
         type: 'box',
         layout: 'vertical',
         spacing: 'sm',
-        contents: buttons
+        contents: buttons,
+        backgroundColor: ACCOUNT_PALETTE.cream,
+        paddingAll: 'md'
       }
     }
   } as any;
@@ -538,7 +570,7 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
   const commonFooter = {
     type: 'box', layout: 'vertical', spacing: 'sm', margin: 'lg', contents: [
       { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm' },
-      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm' },
+      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'secondary', height: 'sm' },
       { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm' }
     ]
   };
@@ -551,24 +583,24 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
       contents: [
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#7a8898', contents: [{ type: 'text', text: '1️⃣ 輸入金額', weight: 'bold', color: '#ffffff' }] },
-          body: { type: 'box', layout: 'vertical', contents: [...calcGrid, commonFooter] }
+          header: { type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.sky, paddingAll: 'md', contents: [{ type: 'text', text: '1️⃣ 輸入金額', weight: 'bold', color: ACCOUNT_PALETTE.passport }] },
+          body: { type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md', contents: [...calcGrid, commonFooter] }
         },
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#7c8a78', contents: [{ type: 'text', text: '2️⃣ 選擇項目', weight: 'bold', color: '#ffffff' }] },
-          body: { type: 'box', layout: 'vertical', contents: [...catButtons, commonFooter] }
+          header: { type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.wood, paddingAll: 'md', contents: [{ type: 'text', text: '2️⃣ 選擇項目', weight: 'bold', color: '#ffffff' }] },
+          body: { type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md', contents: [...catButtons, commonFooter] }
         },
         {
           type: 'bubble', size: 'mega',
-          header: { type: 'box', layout: 'vertical', backgroundColor: '#8a8878', contents: [{ type: 'text', text: '3️⃣ 幣別與付款', weight: 'bold', color: '#ffffff' }] },
+          header: { type: 'box', layout: 'vertical', backgroundColor: ACCOUNT_PALETTE.passport, paddingAll: 'md', contents: [{ type: 'text', text: '3️⃣ 幣別與付款', weight: 'bold', color: '#ffffff' }] },
           body: { type: 'box', layout: 'vertical', contents: [
-            { type: 'text', text: '幣別', size: 'xs', color: '#aaaaaa', margin: 'md' },
+            { type: 'text', text: '幣別', size: 'xs', color: ACCOUNT_PALETTE.muted, margin: 'md' },
             { type: 'box', layout: 'horizontal', contents: currButtons },
-            { type: 'text', text: '付款人', size: 'xs', color: '#aaaaaa', margin: 'md' },
+            { type: 'text', text: '付款人', size: 'xs', color: ACCOUNT_PALETTE.muted, margin: 'md' },
             ...payerButtons,
             commonFooter
-          ] }
+          ], backgroundColor: ACCOUNT_PALETTE.cream, paddingAll: 'md' }
         }
       ]
     }
