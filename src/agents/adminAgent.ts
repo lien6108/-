@@ -2,6 +2,133 @@ import { messagingApi } from '@line/bot-sdk';
 import { CRUD } from '../db/crud';
 import { Env } from '../env';
 
+const ADMIN_PALETTE = {
+  sky: '#9ccfe8',
+  cream: '#fff8e8',
+  paper: '#fffdf5',
+  wood: '#b98a55',
+  woodDark: '#7a5632',
+  passport: '#234b68',
+  ink: '#3f3328',
+  muted: '#8f7a62',
+  danger: '#a66b5b',
+  border: '#ead8b8',
+  green: '#5a8a6a',
+};
+
+function adminCmdBtn(label: string, cmd: string, style: 'primary' | 'secondary' | 'danger' = 'secondary'): any {
+  const colorMap = {
+    primary: { bg: ADMIN_PALETTE.passport, text: '#ffffff' },
+    secondary: { bg: ADMIN_PALETTE.cream, text: ADMIN_PALETTE.ink },
+    danger: { bg: ADMIN_PALETTE.danger, text: '#ffffff' },
+  };
+  const c = colorMap[style];
+  return {
+    type: 'box', layout: 'horizontal', paddingAll: 'sm',
+    backgroundColor: c.bg, cornerRadius: 'md',
+    action: { type: 'message', label, text: cmd },
+    contents: [
+      { type: 'text', text: label, size: 'sm', color: c.text, weight: 'bold', align: 'center', flex: 1 }
+    ]
+  };
+}
+
+function adminSection(title: string, icon: string, buttons: any[]): any {
+  return {
+    type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md',
+    contents: [
+      {
+        type: 'box', layout: 'horizontal', spacing: 'sm',
+        contents: [
+          { type: 'text', text: icon, size: 'sm' },
+          { type: 'text', text: title, size: 'sm', weight: 'bold', color: ADMIN_PALETTE.muted }
+        ]
+      },
+      { type: 'separator', color: ADMIN_PALETTE.border },
+      ...buttons
+    ]
+  };
+}
+
+function createAdminFlex(): messagingApi.FlexMessage {
+  const bubble1: any = {
+    type: 'bubble', size: 'mega',
+    header: {
+      type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.passport, paddingAll: 'md', spacing: 'xs',
+      contents: [
+        { type: 'text', text: 'ADMIN', size: 'xs', weight: 'bold', color: '#aec8db' },
+        { type: 'text', text: '🔧 系統監控', size: 'lg', weight: 'bold', color: '#ffffff' },
+        { type: 'text', text: '查看狀態與資源使用', size: 'xs', color: '#b0c8d8', wrap: true },
+      ]
+    },
+    body: {
+      type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'none',
+      contents: [
+        adminSection('維修模式', '🚧', [
+          adminCmdBtn('🟢 開啟維修', '維修開啟', 'danger'),
+          adminCmdBtn('✅ 關閉維修', '維修關閉', 'primary'),
+          adminCmdBtn('❓ 查看狀態', '維修狀態', 'secondary'),
+        ]),
+        adminSection('資源監控', '📊', [
+          adminCmdBtn('📦 查看DB容量', '查看DB容量', 'secondary'),
+          adminCmdBtn('📊 系統統計', '系統統計', 'secondary'),
+        ]),
+      ]
+    }
+  };
+
+  const bubble2: any = {
+    type: 'bubble', size: 'mega',
+    header: {
+      type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.wood, paddingAll: 'md', spacing: 'xs',
+      contents: [
+        { type: 'text', text: 'ADMIN', size: 'xs', weight: 'bold', color: '#e8d5b8' },
+        { type: 'text', text: '🗂️ 資料管理', size: 'lg', weight: 'bold', color: '#ffffff' },
+        { type: 'text', text: '清理資料與向群組推播', size: 'xs', color: '#e0ccaa', wrap: true },
+      ]
+    },
+    body: {
+      type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'none',
+      contents: [
+        adminSection('Session 管理', '🧹', [
+          adminCmdBtn('🧹 清除逾期 Session', '清除session', 'secondary'),
+        ]),
+        adminSection('推播公告', '📢', [
+          {
+            type: 'box', layout: 'vertical', paddingAll: 'sm',
+            backgroundColor: ADMIN_PALETTE.cream, cornerRadius: 'md',
+            contents: [
+              { type: 'text', text: '📋 複製指令格式後編輯發送', size: 'xs', color: ADMIN_PALETTE.muted, wrap: true },
+              {
+                type: 'box', layout: 'horizontal', margin: 'sm',
+                contents: [
+                  {
+                    type: 'box', layout: 'vertical', flex: 1, paddingAll: 'xs',
+                    backgroundColor: ADMIN_PALETTE.passport, cornerRadius: 'md',
+                    action: { type: 'clipboard', label: '複製', clipboardText: '推播 ' },
+                    contents: [
+                      { type: 'text', text: '📋 複製「推播 」', size: 'xs', color: '#ffffff', align: 'center', weight: 'bold' }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]),
+        adminSection('危險操作', '🗑️', [
+          adminCmdBtn('🗑️ 清除所有資料', '清除資料', 'danger'),
+        ]),
+      ]
+    }
+  };
+
+  return {
+    type: 'flex',
+    altText: '🔧 管理員指令面板',
+    contents: { type: 'carousel', contents: [bubble1, bubble2] }
+  };
+}
+
 export class AdminAgent {
   private crud: CRUD;
   private env: Env;
@@ -19,8 +146,8 @@ export class AdminAgent {
     return !!this.env.ADMIN_LINE_USER_ID && userId === this.env.ADMIN_LINE_USER_ID;
   }
 
-  // Handle a private DM from the admin user. Returns a reply string or null (unhandled).
-  async handleAdminDM(text: string): Promise<string | null> {
+  // Handle a private DM from the admin user. Returns a reply string/Flex or null (unhandled).
+  async handleAdminDM(text: string): Promise<string | messagingApi.FlexMessage | null> {
     const t = text.trim().toLowerCase();
 
     if (['維修開啟', 'maintenance on', '維修 on'].includes(t)) {
@@ -81,15 +208,7 @@ export class AdminAgent {
     }
 
     if (['說明', 'help', '指令'].includes(t)) {
-      return '🔧 管理員指令清單：\n\n' +
-        '• 維修開啟 — 開啟維修模式（封鎖一般使用者）\n' +
-        '• 維修關閉 — 關閉維修模式\n' +
-        '• 維修狀態 — 查看目前維修模式\n' +
-        '• 清除資料 — 刪除所有記帳、旅程、session 資料\n' +
-        '• 查看DB容量 — 查看資料庫大小與使用率\n' +
-        '• 系統統計 — 群組數、旅程數、記帳筆數統計\n' +
-        '• 推播 <內容> — 向所有活躍群組發送公告\n' +
-        '• 清除session — 清除超過 24 小時的殭屍 session';
+      return createAdminFlex();
     }
 
     return null;
