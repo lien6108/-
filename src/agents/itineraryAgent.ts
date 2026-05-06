@@ -417,19 +417,24 @@ export class ItineraryAgent {
       cream: '#fff8e8', paper: '#fffdf5', wood: '#b98a55', passport: '#234b68', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8'
     };
 
-    const rows = items.length > 0 ? items.map(item => ({
-      type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
-      cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
-      contents: [
-        { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true },
-        {
+    const rows = items.length > 0 ? items.map(item => {
+      const contents: any[] = [
+        { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true }
+      ];
+      if (!item.is_bought) {
+        contents.push({
           type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
             { type: 'button', action: { type: 'postback', label: '買好了', data: `cmd=買好了 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 },
             { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除購買 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 }
           ]
-        }
-      ]
-    })) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
+        });
+      }
+      return {
+        type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
+        cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+        contents
+      };
+    }) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
 
     return {
       type: 'flex', altText: '購買清單', contents: {
