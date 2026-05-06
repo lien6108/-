@@ -529,8 +529,8 @@ export class ItineraryAgent {
         ];
         if (item.url && typeof item.url === 'string' && item.url.startsWith('http')) {
           contents.push({
-            type: 'button', action: { type: 'uri', label: '🔗 連結', uri: item.url },
-            style: 'link', height: 'sm', margin: 'none'
+            type: 'button', action: { type: 'uri', label: '🔗', uri: item.url },
+            style: 'link', height: 'sm', margin: 'none', flex: 0
           });
         }
         if (!item.is_bought) {
