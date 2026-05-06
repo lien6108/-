@@ -398,6 +398,11 @@ export class MainAgent {
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程資訊' || input === '行程') {
         try {
+          const trip = await this.crud.getCurrentTrip(groupId);
+          if (trip) {
+            const spots = await this.crud.getAllSpots(trip.id);
+            if (spots.length === 0) return await this.itinerary.showAIPrompt(groupId, userId);
+          }
           return await this.itinerary.showDayItinerary(groupId);
         } catch (e) {
           console.error('[MainAgent] 行程資訊執行錯誤:', e);
