@@ -525,19 +525,32 @@ export class ItineraryAgent {
     const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(url);
     const buildShoppingBubble = (targetDay: number, items: any[]): any => {
       const rows = items.length > 0 ? items.map(item => {
-        const hasUrl = item.url && typeof item.url === 'string' && item.url.startsWith('http');
-        const isImg = hasUrl && isImageUrl(item.url);
+        // 向後相容：若 url 欄位為空，但 item 中包含 " / http"，則 parse 出來
+        let itemName = item.item;
+        let itemUrl = item.url;
+        if (!itemUrl && typeof item.item === 'string' && item.item.includes(' / http')) {
+          const slashIdx = item.item.lastIndexOf(' / ');
+          if (slashIdx > 0) {
+            const possibleUrl = item.item.slice(slashIdx + 3).trim();
+            if (possibleUrl.startsWith('http')) {
+              itemName = item.item.slice(0, slashIdx).trim();
+              itemUrl = possibleUrl;
+            }
+          }
+        }
+        const hasUrl = itemUrl && typeof itemUrl === 'string' && itemUrl.startsWith('http');
+        const isImg = hasUrl && isImageUrl(itemUrl);
         const titleRow: any = {
           type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
-            { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true, flex: 1 },
-            ...(hasUrl && !isImg ? [{ type: 'button', action: { type: 'uri', label: '🔗', uri: item.url }, style: 'link', height: 'sm', flex: 0 }] : [])
+            { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${itemName}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true, flex: 1 },
+            ...(hasUrl && !isImg ? [{ type: 'button', action: { type: 'uri', label: '🔗', uri: itemUrl }, style: 'link', height: 'sm', flex: 0 }] : [])
           ]
         };
         const rowContents: any[] = [titleRow];
         if (isImg) {
           rowContents.push({
-            type: 'image', url: item.url, size: 'full', aspectMode: 'cover', aspectRatio: '20:13',
-            margin: 'sm', action: { type: 'uri', uri: item.url }
+            type: 'image', url: itemUrl, size: 'full', aspectMode: 'cover', aspectRatio: '20:13',
+            margin: 'sm', action: { type: 'uri', uri: itemUrl }
           });
         }
         if (!item.is_bought) {
