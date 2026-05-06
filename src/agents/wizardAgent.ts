@@ -221,7 +221,7 @@ export class WizardAgent {
         return {
           type: 'text',
           text: `✅ 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始規劃啦汪！`,
-          quickReply: { items: [this.qr('開始記帳', '開始記帳'), this.qr('成員', '成員'), this.qr(CANCEL, CANCEL)] }
+          quickReply: { items: [this.qr('開始記帳', '開始記帳'), this.qr('填入班機資訊', '班機資訊'), this.qr('填入住宿資訊', '住宿資訊'), this.qr('成員', '成員'), this.qr(CANCEL, CANCEL)] }
         };
       }
       case WizardStep.AWAITING_EXPENSE_DRAFT_MENU:
