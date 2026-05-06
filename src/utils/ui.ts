@@ -46,7 +46,7 @@ export function createExpenseSuccessFlex(
         contents: [
           { type: 'button', action: { type: 'postback', label: '修改', data: `cmd=修改 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
           { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除 #${exp.group_seq}` }, style: 'secondary', height: 'sm', flex: 1 },
-          { type: 'button', action: { type: 'postback', label: '清單', data: 'cmd=清單' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '清單', data: 'cmd=清單' }, style: 'primary', height: 'sm', flex: 1 }
         ]
       }
     }
@@ -307,7 +307,7 @@ export function createExpenseListFlex(expenses: any[], totalTwd: number): messag
         spacing: 'sm',
         contents: [
           { type: 'button', action: { type: 'postback', label: '只看我的帳', data: 'cmd=只看我的帳' }, style: 'secondary', height: 'sm', flex: 2 },
-          { type: 'button', action: { type: 'postback', label: '結算', data: 'cmd=結算' }, style: 'primary', height: 'sm', color: '#7a9aaa', flex: 1 }
+          { type: 'button', action: { type: 'postback', label: '結算', data: 'cmd=結算' }, style: 'primary', height: 'sm', flex: 1 }
         ]
       }
     }
@@ -534,8 +534,8 @@ export function createUnifiedDraftCarousel(ownerId: string, members: any[]): mes
 
   const commonFooter = {
     type: 'box', layout: 'vertical', spacing: 'sm', margin: 'lg', contents: [
-      { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm', color: '#7c8a78' },
-      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm', color: '#7a8898' },
+      { type: 'button', action: { type: 'uri', label: '⚡ 快速記帳 (LIFF)', uri: 'https://liff.line.me/LIFF_ID_PLACEHOLDER' }, style: 'secondary', height: 'sm' },
+      { type: 'button', action: { type: 'postback', label: '🔍 預覽草稿', data: `action=show_draft${os}` }, style: 'primary', height: 'sm' },
       { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm' }
     ]
   };

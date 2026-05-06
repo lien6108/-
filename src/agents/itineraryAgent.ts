@@ -264,7 +264,7 @@ export class ItineraryAgent {
       footer: {
         type: 'box', layout: 'vertical', spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm', color: '#7a9aaa' },
+          { type: 'button', action: { type: 'postback', label: '新增景點', data: `cmd=新增景點 D${day}` }, style: 'primary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '調整順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
         ]
       }
@@ -620,8 +620,8 @@ export class ItineraryAgent {
         footer: {
           type: 'box', layout: 'horizontal', spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1, color: '#7a9aaa' },
-            { type: 'button', action: { type: 'postback', label: '新增回程', data: 'cmd=班機 回程' }, style: 'primary', height: 'sm', flex: 1, color: '#7a9aaa' },
+            { type: 'button', action: { type: 'postback', label: '新增去程', data: 'cmd=班機 去程' }, style: 'primary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '新增回程', data: 'cmd=班機 回程' }, style: 'primary', height: 'sm', flex: 1 },
           ]
         }
       }
@@ -708,7 +708,7 @@ export class ItineraryAgent {
         footer: {
           type: 'box', layout: 'vertical',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm', color: '#7a9aaa' }
+            { type: 'button', action: { type: 'postback', label: '＋ 新增住宿', data: 'cmd=新增住宿' }, style: 'primary', height: 'sm' }
           ]
         }
       }

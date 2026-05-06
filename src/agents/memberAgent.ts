@@ -107,7 +107,7 @@ export class MemberAgent {
           layout: 'horizontal',
           spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'postback', label: '加入', data: 'cmd=加入' }, style: 'primary', height: 'sm', color: '#dac04f', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '加入', data: 'cmd=加入' }, style: 'primary', height: 'sm', flex: 1 },
             { type: 'button', action: { type: 'postback', label: '退出', data: 'cmd=退出' }, style: 'secondary', height: 'sm', flex: 1 }
           ]
         }

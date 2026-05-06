@@ -81,7 +81,7 @@ export class SettlementAgent {
           type: 'box', layout: 'horizontal', spacing: 'sm',
           contents: [
             { type: 'button', action: { type: 'postback', label: '取消', data: 'cmd=取消' }, style: 'secondary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', color: '#b87070', flex: 2 }
+            { type: 'button', action: { type: 'message', label: '確認結算', text: '確認結算' }, style: 'primary', height: 'sm', flex: 2 }
           ]
         }
       }
