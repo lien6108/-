@@ -221,10 +221,14 @@ export class ItineraryAgent {
         const nameEl: any = {
           type: 'text',
           text: validUrl ? `${idx + 1}. ${s.name} »` : `${idx + 1}. ${s.name}`,
-          size: 'sm', wrap: true, weight: 'bold',
-          color: validUrl ? '#1a6aaa' : '#333333'
+          size: 'sm', wrap: true, weight: 'bold'
         };
-        if (validUrl) nameEl.action = { type: 'uri', uri: validUrl };
+        // 有 action 的 text 元素不能有 color 屬性
+        if (validUrl) {
+          nameEl.action = { type: 'uri', uri: validUrl };
+        } else {
+          nameEl.color = '#333333';
+        }
         return {
           type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
           contents: [
