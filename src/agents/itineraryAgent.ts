@@ -295,10 +295,13 @@ export class ItineraryAgent {
 
   // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
+    console.log('[ItineraryAgent.showDayItinerary] 開始, groupId:', groupId, 'day:', day);
     const trip = await this.crud.getCurrentTrip(groupId);
+    console.log('[ItineraryAgent.showDayItinerary] trip:', trip ? `id=${trip.id}, name=${trip.trip_name}` : 'null');
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
     const spots = await this.crud.getAllSpots(trip.id);
+    console.log('[ItineraryAgent.showDayItinerary] spots 數量:', spots.length);
     if (spots.length === 0) {
       return '目前沒有行程景點。\n\n輸入「新增旅遊行程」取得 AI 提示詞來匯入行程。';
     }
@@ -315,9 +318,11 @@ export class ItineraryAgent {
     }
 
     if (days.length === 1) {
+      console.log('[ItineraryAgent.showDayItinerary] 只有一天，建立 single bubble');
       const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, false);
       return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubble } as any;
     }
+    console.log('[ItineraryAgent.showDayItinerary] 多天行程，建立 carousel, days:', days);
     const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!, true));
     return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }

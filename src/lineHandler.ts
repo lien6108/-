@@ -406,6 +406,7 @@ export class LineEventHandler {
     const source = event.source as any;
     const userId = source?.userId || 'unknown';
     const data = event.postback.data;
+    console.log('[LineHandler.handlePostback] data:', data);
 
     let groupId = 'unknown';
     if (source?.type === 'group') groupId = source.groupId;
@@ -414,6 +415,7 @@ export class LineEventHandler {
     const displayName = await this.getDisplayName(groupId, userId);
     try {
       const replyText = await this.mainAgent.processPostback(groupId, userId, displayName, data);
+      console.log('[LineHandler.handlePostback] replyText 類型:', typeof replyText, replyText ? '有內容' : '沒有內容');
       if (replyText && event.replyToken) {
         await this.reply(event.replyToken, replyText);
       }

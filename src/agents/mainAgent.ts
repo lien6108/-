@@ -317,7 +317,15 @@ export class MainAgent {
 
       // ─── 行程指令 ────────────────────────────────────────────────────────────────
       if (input === '行程資訊' || input === '行程') {
-        return await this.itinerary.showDayItinerary(groupId);
+        console.log('[MainAgent] 收到行程資訊指令, groupId:', groupId);
+        try {
+          const result = await this.itinerary.showDayItinerary(groupId);
+          console.log('[MainAgent] 行程資訊結果類型:', typeof result, '內容:', JSON.stringify(result).substring(0, 200));
+          return result;
+        } catch (e) {
+          console.error('[MainAgent] 行程資訊執行錯誤:', e);
+          return `⚠️ 取得行程資訊時發生錯誤：${e instanceof Error ? e.message : String(e)}`;
+        }
       }
       if (input === '新增旅遊行程') return await this.itinerary.showAIPrompt(groupId, userId);
       if (input === '行程 AI規劃') return await this.itinerary.showAIPlanPrompt(groupId, userId);
