@@ -342,7 +342,7 @@ export class WizardAgent {
             {
               type: 'button',
               action: { type: 'postback', label: '選擇', data: 'cmd=' + text },
-              style: 'primary', height: 'sm', flex: 2, color: '#7a8898'
+              style: 'primary', height: 'sm', flex: 2
             }
           ]
         };

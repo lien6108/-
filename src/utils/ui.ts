@@ -456,9 +456,9 @@ export function createDraftFlex(draft: any, isPrivate = false, ownerId: string):
         layout: 'vertical',
         spacing: 'sm',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm', color: '#7c8a78' },
+          { type: 'button', action: { type: 'postback', label: '✅ 確認送出', data: `action=submit_draft${ownerSuffix}` }, style: 'primary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '➕ 繼續修改', data: `action=back_to_carousel${ownerSuffix}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm', color: '#c07878' }
+          { type: 'button', action: { type: 'postback', label: '❌ 取消', data: 'cmd=取消' }, style: 'link', height: 'sm' }
         ]
       }
     }
