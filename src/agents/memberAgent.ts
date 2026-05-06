@@ -22,7 +22,6 @@ export class MemberAgent {
     return {
       type: 'text',
       text: `🐾 ${displayName} 歡迎加入！@我就可以開始使用啦汪🐕 \n目前成員 (${members.length})\n${names || '- 無'}`,
-      quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }
 
