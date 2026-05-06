@@ -442,17 +442,42 @@ export class LineEventHandler {
     } else {
       messages = [message];
     }
-    console.log('[LineHandler.reply] 準備發送訊息，數量:', messages.length, '第一則類型:', messages[0]?.type);
-    if (messages[0]?.type === 'flex') {
-      console.log('[LineHandler.reply] Flex Message altText:', (messages[0] as any).altText);
-      console.log('[LineHandler.reply] Flex contents type:', (messages[0] as any).contents?.type);
-      console.log('[LineHandler.reply] Flex JSON (前500字):', JSON.stringify(messages[0]).substring(0, 500));
-    }
+    
     try {
+      console.log('[LineHandler.reply] 準備發送訊息，數量:', messages.length, '第一則類型:', messages[0]?.type);
+      
+      // 詳細檢查 Flex Message
+      if (messages[0]?.type === 'flex') {
+        const flexMsg = messages[0] as any;
+        console.log('[LineHandler.reply] Flex altText:', flexMsg.altText);
+        console.log('[LineHandler.reply] Flex contents type:', flexMsg.contents?.type);
+        
+        // 分段輸出 JSON 避免被截斷
+        const fullJson = JSON.stringify(flexMsg.contents, null, 2);
+        console.log('[LineHandler.reply] Flex JSON 長度:', fullJson.length);
+        console.log('[LineHandler.reply] Flex JSON (0-800):', fullJson.substring(0, 800));
+        if (fullJson.length > 800) {
+          console.log('[LineHandler.reply] Flex JSON (800-1600):', fullJson.substring(800, 1600));
+        }
+        if (fullJson.length > 1600) {
+          console.log('[LineHandler.reply] Flex JSON (1600-2400):', fullJson.substring(1600, 2400));
+        }
+      }
+      
       await this.client.replyMessage({ replyToken, messages });
       console.log('[LineHandler.reply] 發送成功');
     } catch (e: any) {
+      // 錯誤時也輸出完整訊息內容
       console.error('[LineHandler.reply] 發送失敗:', e.message);
+      console.error('[LineHandler.reply] 錯誤的 message 類型:', messages[0]?.type);
+      if (messages[0]?.type === 'flex') {
+        try {
+          const json = JSON.stringify(messages[0], null, 2);
+          console.error('[LineHandler.reply] 錯誤的 Flex JSON 前 1000 字:', json.substring(0, 1000));
+        } catch (jsonErr) {
+          console.error('[LineHandler.reply] 無法序列化錯誤的 Flex Message');
+        }
+      }
       throw e;
     }
   }
