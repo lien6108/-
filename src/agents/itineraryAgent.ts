@@ -641,8 +641,8 @@ export class ItineraryAgent {
     const normalizedBranch = normalizeBranch(branch);
     await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined, normalizedBranch);
     const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增景點：${name}（${formatDayRef(day, normalizedBranch)}）` };
-    const carousel = await this.showDayItinerary(groupId, day, normalizedBranch);
-    return [successMsg, carousel as messagingApi.Message];
+    const manage = await this.showSingleDayManage(groupId, day, normalizedBranch);
+    return [successMsg, manage as messagingApi.Message];
   }
 
   // ─── 清空行程：確認提示 ────────────────────────────────────────────────────
