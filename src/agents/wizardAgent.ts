@@ -150,7 +150,7 @@ export class WizardAgent {
     switch (step) {
       case WizardStep.AWAITING_EXPENSE_TO_DELETE: {
         if (input === '確認') {
-          const seq = data.groupSeq;
+          const seq = data.groupSeq!;
           await this.crud.deleteSession(session.user_id);
           return await this.expenseAgent.deleteExpense(session.group_id, seq, displayName);
         }
@@ -160,13 +160,13 @@ export class WizardAgent {
         const amount = parseFloat(input.replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) return { type: 'text', text: '請輸入有效金額（大於 0 的數字）：', quickReply: { items: [this.qr(CANCEL, CANCEL)] } };
         await this.crud.deleteSession(session.user_id);
-        return await this.expenseAgent.updateExpense(session.group_id, data.groupSeq, amount, displayName);
+        return await this.expenseAgent.updateExpense(session.group_id, data.groupSeq!, amount, displayName);
       }
       case WizardStep.AWAITING_MODIFY_CURRENCY: {
         const currency = resolveCurrency(input);
         if (!currency) return { type: 'text', text: `「${input}」辨識不出來耶，請輸入如 TWD、JPY、美金 等：`, quickReply: { items: [this.qr('TWD', 'TWD'), this.qr('JPY', 'JPY'), this.qr('USD', 'USD'), this.qr(CANCEL, CANCEL)] } };
         await this.crud.deleteSession(session.user_id);
-        return await this.expenseAgent.updateExpenseCurrency(session.group_id, data.groupSeq, currency, displayName);
+        return await this.expenseAgent.updateExpenseCurrency(session.group_id, data.groupSeq!, currency, displayName);
       }
       case WizardStep.AWAITING_MODIFY_PAYER: {
         const cleanName = input.replace(/^@/, '').trim();
@@ -177,14 +177,14 @@ export class WizardAgent {
           items.push(this.qr(CANCEL, CANCEL));
           return { type: 'text', text: `旺？找不到「${cleanName}」，請重新輸入成員名稱：`, quickReply: { items } };
         }
-        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
+        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq!);
         if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
         await this.crud.updateExpensePayer(expense.id, member.user_id, member.display_name);
         await this.crud.deleteSession(session.user_id);
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getExpenseEditQuickReply(data.groupSeq) };
+        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getExpenseEditQuickReply(data.groupSeq!) };
       }
       case WizardStep.AWAITING_MODIFY_SHARERS: {
-        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq);
+        const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq!);
         if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
         let debtors: { userId: string; name: string }[];
         if (/^(所有人|全部|all|全員)$/i.test(input.trim())) {
@@ -205,7 +205,7 @@ export class WizardAgent {
         await this.crud.replaceExpenseSplits(expense.id, debtors);
         await this.crud.deleteSession(session.user_id);
         const sharerNames = debtors.map(d => d.name).join('、');
-        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 分攞人為：${sharerNames}！`, quickReply: getExpenseEditQuickReply(data.groupSeq) };
+        return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 分攞人為：${sharerNames}！`, quickReply: getExpenseEditQuickReply(data.groupSeq!) };
       }
       case WizardStep.AWAITING_TRIP_NAME: {
         const tripName = input.trim();

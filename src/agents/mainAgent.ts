@@ -85,7 +85,7 @@ export class MainAgent {
     this.itinerary = new ItineraryAgent(crud);
   }
 
-  async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Map<string, string>): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
+  async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Record<string, string>): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
       // 只有在被 @mention 時才回應維修中訊息，其他訊息靜默
@@ -484,7 +484,7 @@ export class MainAgent {
           groupId, payerUserId, payerName,
           tmpl.description, amt,
           sharers, currency, originalAmount,
-          (mentionMap as unknown as Record<string, string>) ?? {}
+          mentionMap ?? {}
         );
       }
 
@@ -495,7 +495,7 @@ export class MainAgent {
         const description = expenseMatch[1].trim();
         const amount = parseFloat(expenseMatch[2].replace(/,/g, ''));
         if (isNaN(amount) || amount <= 0) return '金額格式錯誤。';
-        return await this.expense.addExpense(groupId, userId, displayName, description, amount, mentionMap);
+        return await this.expense.addExpense(groupId, userId, displayName, description, amount, undefined, 'TWD', undefined, mentionMap ?? {});
       }
     } catch (e) {
       console.error('[MainAgent] processMessage error:', e);
