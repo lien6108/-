@@ -98,7 +98,7 @@ export class MainAgent {
       const member = await this.crud.getMember(groupId, userId);
       const isParticipating = member?.is_participating === 1;
 
-      const session = await this.crud.getSession(userId);
+      let session = await this.crud.getSession(userId);
       // 若輸入是 修改/刪除 #N 系列指令，優先處理（清除殘留 session 避免誤路由）
       const isModifyDeleteCmd = /^[\s]*(?:修改|刪除|修改金額|修改幣別|修改支付人|修改分攤人)\s*[#＃]\d+/.test(input);
 
@@ -106,6 +106,15 @@ export class MainAgent {
       if (input === '取消') {
         if (session) await this.crud.deleteSession(userId);
         return { type: 'text', text: '已取消當前操作。' };
+      }
+
+      // ── 全域導航指令：無論有無 session，直接處理（清除殘留 session）──────────────
+      const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
+      const normalizedForGlobal = input.replace(/＃/g, '#');
+      const isDayItinCmd = /^行程資訊?\s*[Dd]\d+$/.test(normalizedForGlobal);
+      if (globalCmds.includes(input) || isDayItinCmd) {
+        if (session) await this.crud.deleteSession(userId);
+        session = null;
       }
 
       if (session && session.step === 'AWAITING_FLIGHT_INPUT') {
