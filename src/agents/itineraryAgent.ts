@@ -189,7 +189,7 @@ export class ItineraryAgent {
   // ─── 解析 AI 貼回的文字，批次匯入景點 ────────────────────────────────────
   async importSpots(groupId: string, text: string): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const trip = await this.crud.getCurrentTrip(groupId);
-    if (!trip) return '目前沒有進行中的旅程，請先輸入「開始記帳」建立旅程 🗺️';
+    if (!trip) return '目前沒有進行中的旅程，請先輸入「加入」建立旅程 🗺️';
 
     const lines = text.split('\n');
     const valid: { day: number; branch: string; name: string; mapsUrl?: string }[] = [];
