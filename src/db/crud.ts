@@ -235,6 +235,32 @@ export class CRUD {
     return result.meta?.changes ?? 0;
   }
 
+  /** 取得所有旅程（含記帳筆數），供管理者查看 */
+  async getAllTripsForAdmin(): Promise<{ id: number; trip_name: string; status: string; group_id: string; created_at: string; expense_count: number }[]> {
+    const rows = await this.db.prepare(
+      `SELECT t.id, t.trip_name, t.status, t.group_id, t.created_at,
+              COUNT(e.id) AS expense_count
+       FROM trips t
+       LEFT JOIN expenses e ON e.trip_id = t.id
+       GROUP BY t.id
+       ORDER BY t.status DESC, t.created_at DESC
+       LIMIT 50`
+    ).all<{ id: number; trip_name: string; status: string; group_id: string; created_at: string; expense_count: number }>();
+    return rows.results;
+  }
+
+  /** 刪除指定旅程（含記帳、行程），回傳旅程名稱 */
+  async clearTripById(id: number): Promise<string> {
+    const trip = await this.db.prepare(`SELECT trip_name, group_id FROM trips WHERE id = ?`).bind(id).first<{ trip_name: string; group_id: string }>();
+    if (!trip) throw new Error(`找不到旅程 #${id}`);
+    await this.db.prepare(`DELETE FROM expense_splits WHERE expense_id IN (SELECT id FROM expenses WHERE trip_id = ?)`).bind(id).run();
+    await this.db.prepare(`DELETE FROM expenses WHERE trip_id = ?`).bind(id).run();
+    await this.db.prepare(`DELETE FROM itinerary_spots WHERE trip_id = ?`).bind(id).run();
+    await this.db.prepare(`UPDATE groups SET current_trip_id = NULL WHERE current_trip_id = ?`).bind(id).run();
+    await this.db.prepare(`DELETE FROM trips WHERE id = ?`).bind(id).run();
+    return trip.trip_name;
+  }
+
   /** 回傳所有有活躍旅程的群組 ID（用於推播公告）*/
   async getActiveGroupIds(): Promise<string[]> {
     const rows = await this.db.prepare(

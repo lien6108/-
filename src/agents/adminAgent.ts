@@ -220,20 +220,8 @@ export class AdminAgent {
     }
 
     if (['db', '查看db容量', 'db size', 'db容量'].includes(t)) {
-      const bytes = await this.crud.getDbSize();
-      const MAX = 5 * 1024 * 1024 * 1024;
-      let usedText: string;
-      let pctText = '';
-      let statusText = '';
-      if (bytes < 0) {
-        usedText = '無法取得（D1 不支援此查詢）';
-      } else {
-        const mb = (bytes / 1024 / 1024).toFixed(2);
-        const pct = ((bytes / MAX) * 100).toFixed(2);
-        usedText = `${mb} MB`;
-        pctText = `${pct}%`;
-        statusText = Number(pct) >= 80 ? '⚠️ 已達 80%' : '✅ 正常';
-      }
+      const s = await this.crud.getSystemStats();
+      const rows = s.activeTrips + s.closedTrips + s.expenses + s.members + s.sessions;
       const flex: messagingApi.FlexMessage = {
         type: 'flex',
         altText: '📦 資料庫容量',
@@ -249,10 +237,15 @@ export class AdminAgent {
           body: {
             type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'sm',
             contents: [
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '目前使用', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: usedText, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '總容量', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: '5 GB', size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
-              ...(pctText ? [{ type: 'box' as const, layout: 'horizontal' as const, contents: [{ type: 'text', text: '使用率', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: pctText, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' as const }] }] : []),
-              ...(statusText ? [{ type: 'text' as const, text: statusText, size: 'sm' as const, color: statusText.startsWith('⚠') ? ADMIN_PALETTE.danger : ADMIN_PALETTE.green, margin: 'sm' as const, align: 'center' as const }] : []),
+              { type: 'text', text: '目前使用 / 總容量', size: 'xs', color: ADMIN_PALETTE.muted },
+              { type: 'text', text: `${rows.toLocaleString()} 筆  /  5 GB`, size: 'xl', color: ADMIN_PALETTE.passport, weight: 'bold' },
+              { type: 'text', text: '（D1 不開放實際 Byte 查詢，以資料列數估算）', size: 'xxs', color: ADMIN_PALETTE.muted, wrap: true, margin: 'xs' },
+              { type: 'separator', color: ADMIN_PALETTE.border, margin: 'md' },
+              { type: 'box', layout: 'horizontal', margin: 'md', contents: [{ type: 'text', text: '旅程（執行中）', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.activeTrips}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '旅程（歷史）', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.closedTrips}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '記帳筆數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.expenses}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '成員數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.members}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '活躍 Session', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.sessions}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
             ]
           }
         } as any
@@ -277,14 +270,14 @@ export class AdminAgent {
           body: {
             type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'sm',
             contents: [
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '群組數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.groups}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
-              { type: 'separator', color: ADMIN_PALETTE.border, margin: 'xs' },
-              { type: 'box', layout: 'horizontal', margin: 'xs', contents: [{ type: 'text', text: '旅程（執行中）', size: 'sm', color: ADMIN_PALETTE.green, flex: 1 }, { type: 'text', text: `${s.activeTrips}`, size: 'sm', color: ADMIN_PALETTE.green, weight: 'bold', align: 'end' }] },
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '旅程（歷史）', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.closedTrips}`, size: 'sm', color: ADMIN_PALETTE.muted, weight: 'bold', align: 'end' }] },
-              { type: 'separator', color: ADMIN_PALETTE.border, margin: 'xs' },
-              { type: 'box', layout: 'horizontal', margin: 'xs', contents: [{ type: 'text', text: '記帳筆數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.expenses}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '成員總數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.members}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
-              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '活躍 Session', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: `${s.sessions}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '群組數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(s.groups), size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'separator', color: ADMIN_PALETTE.border },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '旅程（執行中）', size: 'sm', color: ADMIN_PALETTE.green, flex: 1 }, { type: 'text', text: String(s.activeTrips), size: 'sm', color: ADMIN_PALETTE.green, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '旅程（歷史）', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(s.closedTrips), size: 'sm', color: ADMIN_PALETTE.muted, weight: 'bold', align: 'end' }] },
+              { type: 'separator', color: ADMIN_PALETTE.border },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '記帳筆數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(s.expenses), size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '成員總數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(s.members), size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '活躍 Session', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(s.sessions), size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
             ]
           }
         } as any
@@ -308,6 +301,15 @@ export class AdminAgent {
           body: {
             type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'md',
             contents: [
+              {
+                type: 'box', layout: 'vertical', spacing: 'xs',
+                contents: [
+                  { type: 'text', text: '�️ 指定旅程', size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold' },
+                  { type: 'text', text: '列出所有旅程，選擇要刪除哪一個', size: 'xs', color: ADMIN_PALETTE.muted, wrap: true },
+                  adminCmdBtn('🗺️ 查看旅程清單', '查看旅程清單', 'primary'),
+                ]
+              },
+              { type: 'separator', color: ADMIN_PALETTE.border },
               {
                 type: 'box', layout: 'vertical', spacing: 'xs',
                 contents: [
@@ -343,6 +345,95 @@ export class AdminAgent {
         } as any
       };
       return selectFlex;
+    }
+
+    if (t === '查看旅程清單') {
+      const trips = await this.crud.getAllTripsForAdmin();
+      if (trips.length === 0) return '📭 目前沒有任何旅程。';
+      // Build carousel (up to 10 bubbles, each showing up to 5 trips)
+      const CHUNK = 5;
+      const bubbles: any[] = [];
+      for (let i = 0; i < trips.length; i += CHUNK) {
+        const chunk = trips.slice(i, i + CHUNK);
+        const rows = chunk.map(tr => ({
+          type: 'box', layout: 'vertical', spacing: 'xs',
+          backgroundColor: tr.status === 'active' ? '#f0f9f4' : ADMIN_PALETTE.cream,
+          cornerRadius: 'md', paddingAll: 'sm',
+          contents: [
+            {
+              type: 'box', layout: 'horizontal',
+              contents: [
+                { type: 'text', text: tr.status === 'active' ? '🟢' : '⬜', size: 'xs', flex: 0, margin: 'none' },
+                { type: 'text', text: `#${tr.id} ${tr.trip_name}`, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', flex: 1, wrap: true, margin: 'sm' },
+              ]
+            },
+            { type: 'text', text: `${tr.expense_count} 筆記帳・${tr.created_at.slice(0, 10)}`, size: 'xs', color: ADMIN_PALETTE.muted },
+            adminCmdBtn(`🗑️ 刪除此旅程`, `刪除旅程 ${tr.id}`, tr.status === 'active' ? 'danger' : 'secondary'),
+          ]
+        }));
+        bubbles.push({
+          type: 'bubble', size: 'kilo',
+          header: {
+            type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.passport, paddingAll: 'md',
+            contents: [
+              { type: 'text', text: `🗺️ 旅程清單（${i + 1}–${Math.min(i + CHUNK, trips.length)} / ${trips.length}）`, size: 'sm', weight: 'bold', color: '#ffffff' },
+            ]
+          },
+          body: { type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'md', spacing: 'sm', contents: rows }
+        });
+      }
+      return {
+        type: 'flex',
+        altText: '🗺️ 旅程清單',
+        contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles }
+      } as messagingApi.FlexMessage;
+    }
+
+    const deleteMatch = text.trim().match(/^刪除旅程\s+(\d+)$/);
+    if (deleteMatch) {
+      const id = parseInt(deleteMatch[1], 10);
+      const trips = await this.crud.getAllTripsForAdmin();
+      const trip = trips.find(tr => tr.id === id);
+      if (!trip) return `❌ 找不到旅程 #${id}。`;
+      const confirmFlex: messagingApi.FlexMessage = {
+        type: 'flex',
+        altText: `⚠️ 確認刪除旅程 #${id}？`,
+        contents: {
+          type: 'bubble', size: 'kilo',
+          header: {
+            type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.danger, paddingAll: 'md',
+            contents: [
+              { type: 'text', text: '⚠️ 確認刪除旅程？', size: 'lg', weight: 'bold', color: '#ffffff', wrap: true },
+            ]
+          },
+          body: {
+            type: 'box', layout: 'vertical', backgroundColor: ADMIN_PALETTE.paper, paddingAll: 'lg', spacing: 'sm',
+            contents: [
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '旅程', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: trip.trip_name, size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end', wrap: true, flex: 2 }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '狀態', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: trip.status === 'active' ? '🟢 執行中' : '⬜ 已結束', size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'box', layout: 'horizontal', contents: [{ type: 'text', text: '記帳筆數', size: 'sm', color: ADMIN_PALETTE.muted, flex: 1 }, { type: 'text', text: String(trip.expense_count), size: 'sm', color: ADMIN_PALETTE.ink, weight: 'bold', align: 'end' }] },
+              { type: 'text', text: '此操作將永久刪除旅程、記帳、行程，無法復原。', size: 'xs', color: ADMIN_PALETTE.danger, wrap: true, margin: 'md' },
+            ]
+          },
+          footer: {
+            type: 'box', layout: 'horizontal', spacing: 'sm', paddingAll: 'md',
+            contents: [
+              { type: 'box', layout: 'vertical', flex: 1, paddingAll: 'sm', backgroundColor: ADMIN_PALETTE.muted, cornerRadius: 'md', action: { type: 'message', label: '取消', text: '查看旅程清單' }, contents: [{ type: 'text', text: '✖ 取消', size: 'sm', color: '#ffffff', align: 'center', weight: 'bold' }] },
+              { type: 'box', layout: 'vertical', flex: 1, paddingAll: 'sm', backgroundColor: ADMIN_PALETTE.danger, cornerRadius: 'md', action: { type: 'message', label: '確認刪除', text: `確認刪除旅程 ${id}` }, contents: [{ type: 'text', text: '🗑️ 確認刪除', size: 'sm', color: '#ffffff', align: 'center', weight: 'bold' }] },
+            ]
+          }
+        } as any
+      };
+      return confirmFlex;
+    }
+
+    const confirmDeleteMatch = text.trim().match(/^確認刪除旅程\s+(\d+)$/);
+    if (confirmDeleteMatch) {
+      const id = parseInt(confirmDeleteMatch[1], 10);
+      try {
+        const name = await this.crud.clearTripById(id);
+        return `🗑️ 已刪除旅程「${name}」（#${id}）的所有資料。`;
+      } catch (e: any) { return `❌ 刪除失敗：${e?.message || e}`; }
     }
 
     if (t === '確認清除記帳') {
