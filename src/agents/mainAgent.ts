@@ -85,6 +85,82 @@ export class MainAgent {
     this.itinerary = new ItineraryAgent(crud);
   }
 
+  private createHelpFlex(): messagingApi.Message {
+    const palette = {
+      sky: '#9ccfe8',
+      cream: '#fff8e8',
+      paper: '#fffdf5',
+      wood: '#b98a55',
+      woodDark: '#7a5632',
+      passport: '#234b68',
+      ink: '#3f3328',
+      muted: '#8f7a62',
+      border: '#ead8b8'
+    };
+
+    const commandRow = (cmd: string, desc: string): any => ({
+      type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', cornerRadius: 'md', backgroundColor: palette.paper, borderColor: palette.border, borderWidth: '1px',
+      contents: [
+        { type: 'text', text: cmd, size: 'sm', weight: 'bold', color: palette.passport, wrap: true },
+        { type: 'text', text: desc, size: 'xs', color: palette.muted, wrap: true, margin: 'xs' }
+      ]
+    });
+
+    const bubble = (tag: string, title: string, subtitle: string, rows: any[], headerColor = palette.sky): any => ({
+      type: 'bubble', size: 'mega',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: headerColor, paddingAll: 'md', spacing: 'xs',
+        contents: [
+          { type: 'text', text: tag, size: 'xs', weight: 'bold', color: headerColor === palette.passport ? '#ffffff' : palette.passport },
+          { type: 'text', text: title, size: 'lg', weight: 'bold', color: headerColor === palette.passport ? '#ffffff' : palette.ink, wrap: true },
+          { type: 'text', text: subtitle, size: 'xs', color: headerColor === palette.passport ? '#d9ecf5' : palette.woodDark, wrap: true }
+        ]
+      },
+      body: { type: 'box', layout: 'vertical', spacing: 'xs', backgroundColor: palette.cream, paddingAll: 'md', contents: rows }
+    });
+
+    return {
+      type: 'flex',
+      altText: '分帳神器完整說明',
+      contents: {
+        type: 'carousel',
+        contents: [
+          bubble('START HERE', '🐶 分帳神器怎麼用', '先加入旅程，再選擇記帳或行程功能。', [
+            commandRow('@我', '叫出主選單：記帳功能、行程功能、成員、說明。'),
+            commandRow('加入 / 退出 / 成員', '加入或離開本次旅程名單，查看目前參與夥伴。'),
+            commandRow('修改旅程名稱', '重新命名目前進行中的旅程。'),
+            commandRow('取消', '中止目前正在輸入的流程。')
+          ]),
+          bubble('ACCOUNTING', '💰 記帳與分帳', '支援台幣與外幣、指定付款人與分攤人。', [
+            commandRow('開始記帳', '顯示記帳格式、模板與快捷按鈕。'),
+            commandRow('記帳 晚餐 500', '快速新增台幣支出，預設本人付款、所有人分攤。'),
+            commandRow('名稱：拉麵　金額：800　幣別：JPY　支付者：Alice　分攤人：@Bob', '完整格式，可指定幣別、付款人與分攤人。'),
+            commandRow('清單 / 只看我的帳', '查看未結算清單，或只看自己的應收應付。'),
+            commandRow('修改 #5 / 刪除 #5', '修改或刪除指定編號的帳單。'),
+            commandRow('結算 → 確認結算', '預覽轉帳建議，確認後封存旅程帳務。')
+          ], palette.wood),
+          bubble('TRAVEL', '🗺️ 行程、班機、住宿', '把旅遊資訊和分帳放在同一個旅程裡。', [
+            commandRow('班機資訊 / 班機 去程 / 班機 回程', '查看或新增去回程班機，支援多人與多段航班。'),
+            commandRow('住宿資訊 / 新增住宿', '查看住宿卡片，或新增入住天數、時間、地圖連結。'),
+            commandRow('新增旅遊行程', '取得 AI 規劃或格式轉換提示詞，貼回後自動匯入。'),
+            commandRow('行程資訊', '以每日卡片查看景點；完成的天會排到後面。'),
+            commandRow('管理行程 D2 / 新增景點 D2', '調整景點順序、刪除或新增景點。'),
+            commandRow('分組行程 D1 / 新增景點 D1-A', '建立 D1-A、D1-B 分支路線，兵分兩路也能管理。')
+          ]),
+          bubble('SHOPPING', '🛍️ 購買清單與私訊', '每日購買項目與旅程回顧。', [
+            commandRow('購買清單', '查看每天的購買清單，可左右滑動。'),
+            commandRow('購買清單 D2', '查看第 2 天購買清單。'),
+            commandRow('新增購買 D2 伴手禮', '新增指定天數的購買項目。'),
+            commandRow('買好了 #3 / 刪除購買 #3', '標記已購買後會鎖定不可再編輯。'),
+            commandRow('私訊：查看現有旅程', '在一對一聊天室查看目前進行中的旅程。'),
+            commandRow('私訊：查看歷史旅程', '查看已完成旅程，可唯讀瀏覽行程與清單。')
+          ], palette.passport)
+        ]
+      },
+      quickReply: getMainMenuQuickReply()
+    } as any;
+  }
+
   async processMessage(groupId: string, userId: string, displayName: string, input: string, mentionMap?: Record<string, string>): Promise<string | messagingApi.Message | messagingApi.Message[] | null> {
     const maintenance = await this.crud.isMaintenanceMode();
     if (maintenance && userId !== this.env.ADMIN_LINE_USER_ID) {
@@ -224,18 +300,14 @@ export class MainAgent {
       }
 
       if (input === '說明' || input === 'help' || input === 'HELP') {
-        return {
-          type: 'text',
-          text: '【分帳神器 指令說明】\n\n📌 記帳方式\n• 簡易：記帳 晚餐 500\n• 完整：名稱：晚餐　金額：500　幣別：JPY　支付者：Alice　分攤人：@Bob\n• 開始記帳：顯示格式說明與快捷按鈕\n\n📋 查詢與管理\n• 清單：未結算記帳\n• 結算：查看各人應付金額\n• 確認結算：正式結帳並清空\n• 歷史：過去結算記錄\n• 刪除 #5：刪除第 5 筆\n• 修改金額 #5 100：改金額\n• 修改幣別 #5 JPY：改幣別\n\n✈️ 班機資訊\n• 班機資訊：查看所有人的班機\n• 班機 去程 / 班機 回程：新增一筆班機（可多筆）\n• 格式：日期 [機場 航廈] 出發時間 → [機場 航廈] 抵達時間 [航班號]\n\n🗺️ 旅遊行程\n• 新增旅遊行程：取得 AI 提示詞\n• 行程資訊：查看景點（完成的天會排到後面）\n• 管理行程 D2：調整第 2 天景點\n• 完成行程 D2：第 2 天排到後面\n• 復原行程 D2：第 2 天回到原排序\n• 購買清單：查看自己當天要買的東西\n• 購買清單 D2：查看第 2 天購買清單\n• 新增購買 D2 伴手禮：新增購買項目\n\n👥 成員\n• 加入 / 退出 / 成員',
-          quickReply: getMainMenuQuickReply()
-        };
+        return this.createHelpFlex();
       }
 
       if (input === 'GREETING') {
         if (!isParticipating) {
           return {
             type: 'text',
-            text: '你還沒加入分帳名單，加入後就能和大家一起記帳啦！🐶',
+            text: '你還沒加入此次旅程名單，加入後就能和大家一起規劃啦！🐶',
             quickReply: {
               items: [
                 { type: 'action', action: { type: 'postback', label: '加入', data: 'cmd=加入' } },

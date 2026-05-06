@@ -78,7 +78,7 @@ export class ExpenseAgent {
     let specificUserIds = providedSpecificUserIds || [];
     if (!providedSpecificUserIds && specificParticipants && specificParticipants.length > 0) {
       const { userIds, missing } = await this.resolveParticipants(groupId, specificParticipants, mentionMap);
-      if (missing.length > 0) return `旺？找不到這些夥伴：${missing.join('、')}，確認名稱對不對呦！`;
+      if (missing.length > 0) return `唔？找不到這些夥伴：${missing.join('、')}，確認名稱對不對呦！`;
       specificUserIds = userIds;
     }
 
@@ -106,7 +106,7 @@ export class ExpenseAgent {
       let userIds: string[] | undefined;
       if (item.participants && item.participants.length > 0) {
         const resolved = await this.resolveParticipants(groupId, item.participants, mentionMap);
-        if (resolved.missing.length > 0) return `旺？找不到這些夥伴：${resolved.missing.join('、')}，確認名稱對不對呦！`;
+        if (resolved.missing.length > 0) return `唔？找不到這些夥伴：${resolved.missing.join('、')}，確認名稱對不對呦！`;
         userIds = resolved.userIds;
       }
       const exp = await this.crud.createExpense(
@@ -133,7 +133,7 @@ export class ExpenseAgent {
 
   async deleteExpense(groupId: string, groupSeq: number, requestName: string): Promise<string | messagingApi.Message> {
     const expense = await this.crud.getExpenseByGroupSeq(groupId, groupSeq);
-    if (!expense) return `旺？找不到 #${groupSeq} 喔！`;
+    if (!expense) return `唔？找不到 #${groupSeq} 耶！`;
 
     await this.crud.deleteExpense(expense.id);
     return {
@@ -145,7 +145,7 @@ export class ExpenseAgent {
 
   async listExpenses(groupId: string): Promise<string | messagingApi.Message> {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
-    if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳唷！旺～';
+    if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳唷汪～';
 
     let total = 0;
     for (const exp of expenses) {
@@ -158,7 +158,7 @@ export class ExpenseAgent {
 
   async showMyAccount(groupId: string, userId: string, userName: string): Promise<string | messagingApi.Message> {
     const expenses = await this.crud.getUnsettledExpenses(groupId);
-    if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳唷！旺～';
+    if (expenses.length === 0) return '目前都很輕鬆，沒有未結算的帳唷汪～';
 
     const { transactions } = await this.crud.calculateSettlement(groupId);
 
@@ -206,7 +206,7 @@ export class ExpenseAgent {
     if (newAmount <= 0) return '金額必須大於 0 喔～';
 
     const expense = await this.crud.getExpenseByGroupSeq(groupId, groupSeq);
-    if (!expense) return `旺？找不到 #${groupSeq} 喔！`;
+    if (!expense) return `唔？找不到 #${groupSeq} 耶！`;
 
     let twd = newAmount;
     let original: number | null = null;
@@ -237,12 +237,12 @@ export class ExpenseAgent {
 
   async updateExpenseCurrency(groupId: string, groupSeq: number, newCurrency: string, requestName: string): Promise<string | messagingApi.Message> {
     const expense = await this.crud.getExpenseByGroupSeq(groupId, groupSeq);
-    if (!expense) return `旺？找不到 #${groupSeq} 喔！`;
+    if (!expense) return `唔？找不到 #${groupSeq} 喔！`;
 
     let rate: number | null = null;
     if (newCurrency !== 'TWD') {
       rate = await this.crud.getExchangeRate(newCurrency);
-      if (!rate) return `旺？目前沒有 ${newCurrency} 的匯率，請稍後再試！`;
+      if (!rate) return `唔？目前沒有 ${newCurrency} 的匯率，請稍後再試！`;
     }
 
     const exp = await this.crud.updateExpenseCurrency(expense.id, newCurrency, rate);
@@ -281,7 +281,7 @@ export class ExpenseAgent {
     const mapped = mentionMap[payerDisplayName] || mentionMap[`@${payerDisplayName}`];
     if (mapped) payer = await this.crud.getMember(groupId, mapped);
     if (!payer) payer = await this.crud.getMemberByDisplayName(groupId, payerDisplayName);
-    if (!payer) return `旺？找不到付款人「${payerDisplayName}」，確認名稱對不對呦！`;
+    if (!payer) return `唔？找不到付款人「${payerDisplayName}」，確認名稱對不對呦！`;
     if (payer.is_participating !== 1) return `${payer.display_name} 還沒加入分帳喔！`;
 
     let specificIds = providedSpecificUserIds || [];

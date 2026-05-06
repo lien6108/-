@@ -21,7 +21,7 @@ export class MemberAgent {
     const names = members.map(m => `- ${m.display_name}`).join('\n');
     return {
       type: 'text',
-      text: `🐾 ${displayName} 已加入分帳！\n目前成員 (${members.length})\n${names || '- 無'}`,
+      text: `🐾 ${displayName} 歡迎加入！@我就可以開始使用啦汪🐕 \n目前成員 (${members.length})\n${names || '- 無'}`,
       quickReply: getStandardQuickReply({ showDelete: false, showModify: false })
     };
   }

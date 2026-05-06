@@ -210,7 +210,7 @@ export class LineEventHandler {
     if (!event.replyToken) return;
     const joinMsg: messagingApi.Message = {
       type: 'text',
-      text: '大家好！我是分帳小幫手 🐾\n\n我可以幫你們在這個群組輕鬆記帳、自動換算匯率並結算分帳金額！\n\n✨ 只要@我，然後選擇你要的功能，就可以使用了汪～',
+      text: '大家好！我是旅遊小幫手 🐾\n\n我可以幫你們在這個群組輕鬆記帳以及行程記錄喔！\n\n✨ 只要@我，然後選擇你要的功能，就可以使用了汪～',
       quickReply: getJoinQuickReply()
     };
     await this.reply(event.replyToken, joinMsg);
@@ -220,7 +220,7 @@ export class LineEventHandler {
     if (!event.replyToken) return;
     const tutorialMsg: messagingApi.Message = {
       type: 'text',
-      text: '感謝加入「分帳小幫手」！🐾\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率並結算的工具。\n\n🐕 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. 輸入「開始記帳」即可開始！\n\n🦴 提示：輸入「說明」可查看完整指令清單。',
+      text: '感謝加入「旅遊小幫手」！🐾\n我是一個可以幫你在群組中輕鬆記帳、自動換算匯率以及行程記錄的工具。\n\n🐕 快速開始：\n1. 把我拉進旅遊/聚餐群組\n2. 在群組輸入「加入」\n3. @我 即可開始！\n\n🦴 提示：輸入「說明」可查看完整指令清單。',
       quickReply: getFollowQuickReply()
     };
     await this.reply(event.replyToken, tutorialMsg);

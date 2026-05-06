@@ -175,17 +175,17 @@ export class WizardAgent {
           const members = await this.crud.getParticipatingMembers(session.group_id);
           const items: messagingApi.QuickReplyItem[] = members.slice(0, 12).map(m => this.qr(m.display_name, m.display_name));
           items.push(this.qr(CANCEL, CANCEL));
-          return { type: 'text', text: `旺？找不到「${cleanName}」，請重新輸入成員名稱：`, quickReply: { items } };
+          return { type: 'text', text: `唔？找不到「${cleanName}」，請重新輸入成員名稱：`, quickReply: { items } };
         }
         const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq!);
-        if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
+        if (!expense) { await this.crud.deleteSession(session.user_id); return `唔？找不到 #${data.groupSeq} 耶！`; }
         await this.crud.updateExpensePayer(expense.id, member.user_id, member.display_name);
         await this.crud.deleteSession(session.user_id);
         return { type: 'text', text: `✅ 已修改 #${data.groupSeq} 支付人為「${member.display_name}」！`, quickReply: getExpenseEditQuickReply(data.groupSeq!) };
       }
       case WizardStep.AWAITING_MODIFY_SHARERS: {
         const expense = await this.crud.getExpenseByGroupSeq(session.group_id, data.groupSeq!);
-        if (!expense) { await this.crud.deleteSession(session.user_id); return `旺？找不到 #${data.groupSeq} 喔！`; }
+        if (!expense) { await this.crud.deleteSession(session.user_id); return `唔？找不到 #${data.groupSeq} 耶！`; }
         let debtors: { userId: string; name: string }[];
         if (/^(所有人|全部|all|全員)$/i.test(input.trim())) {
           const all = await this.crud.getParticipatingMembers(session.group_id);
@@ -200,7 +200,7 @@ export class WizardAgent {
             if (m) debtors.push({ userId: m.user_id, name: m.display_name });
             else missing.push(n);
           }
-          if (missing.length > 0) return { type: 'text', text: `旺？找不到這些夥伴：${missing.join('、')}，請重新輸入：`, quickReply: { items: [this.qr('所有人', '所有人'), this.qr(CANCEL, CANCEL)] } };
+          if (missing.length > 0) return { type: 'text', text: `唔？找不到這些夥伴：${missing.join('、')}，請重新輸入：`, quickReply: { items: [this.qr('所有人', '所有人'), this.qr(CANCEL, CANCEL)] } };
         }
         await this.crud.replaceExpenseSplits(expense.id, debtors);
         await this.crud.deleteSession(session.user_id);
@@ -220,7 +220,7 @@ export class WizardAgent {
         await this.crud.deleteSession(session.user_id);
         return {
           type: 'text',
-          text: `✅ 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始記帳啊！`,
+          text: `✅ 旅程名稱已設定為「${trip?.trip_name || tripName}」，可以開始規劃啦汪！`,
           quickReply: { items: [this.qr('開始記帳', '開始記帳'), this.qr('成員', '成員'), this.qr(CANCEL, CANCEL)] }
         };
       }
