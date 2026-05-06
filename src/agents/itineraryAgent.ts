@@ -411,33 +411,31 @@ export class ItineraryAgent {
   async showMyShoppingList(groupId: string, displayName: string, day?: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    const targetDay = day ?? await this.getCurrentShoppingDay(trip.id);
-    const items = await this.crud.getShoppingItems(trip.id, targetDay, displayName);
     const palette = {
       cream: '#fff8e8', paper: '#fffdf5', wood: '#b98a55', passport: '#234b68', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8'
     };
 
-    const rows = items.length > 0 ? items.map(item => {
-      const contents: any[] = [
-        { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true }
-      ];
-      if (!item.is_bought) {
-        contents.push({
-          type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
-            { type: 'button', action: { type: 'postback', label: '買好了', data: `cmd=買好了 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 },
-            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除購買 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 }
-          ]
-        });
-      }
-      return {
-        type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
-        cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
-        contents
-      };
-    }) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
+    const buildShoppingBubble = (targetDay: number, items: any[]): any => {
+      const rows = items.length > 0 ? items.map(item => {
+        const contents: any[] = [
+          { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true }
+        ];
+        if (!item.is_bought) {
+          contents.push({
+            type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
+              { type: 'button', action: { type: 'postback', label: '買好了', data: `cmd=買好了 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+              { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除購買 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+            ]
+          });
+        }
+        return {
+          type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
+          cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+          contents
+        };
+      }) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
 
-    return {
-      type: 'flex', altText: '購買清單', contents: {
+      return {
         type: 'bubble', size: 'kilo',
         header: { type: 'box', layout: 'vertical', backgroundColor: palette.wood, paddingAll: 'md', spacing: 'xs', contents: [
           { type: 'text', text: `DAY ${targetDay}`, size: 'xs', weight: 'bold', color: '#fff6df' },
@@ -447,7 +445,25 @@ export class ItineraryAgent {
         footer: { type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md', contents: [
           { type: 'button', action: { type: 'postback', label: '新增項目', data: `cmd=新增購買清單 D${targetDay}` }, style: 'secondary', height: 'sm' }
         ] }
-      }
+      };
+    };
+
+    if (day !== undefined) {
+      const items = await this.crud.getShoppingItems(trip.id, day, displayName);
+      return { type: 'flex', altText: '購買清單', contents: buildShoppingBubble(day, items) } as any;
+    }
+
+    const spots = await this.crud.getAllSpots(trip.id);
+    const allItems = await this.crud.getShoppingItems(trip.id, undefined, displayName);
+    const days = [...new Set([...spots.map(s => s.day), ...allItems.map(item => item.day)])].sort((a, b) => a - b);
+    const targetDays = days.length > 0 ? days : [await this.getCurrentShoppingDay(trip.id)];
+    const bubbles = targetDays.slice(0, 10).map(targetDay => buildShoppingBubble(
+      targetDay,
+      allItems.filter(item => item.day === targetDay)
+    ));
+    return {
+      type: 'flex', altText: '購買清單',
+      contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles }
     } as any;
   }
 
