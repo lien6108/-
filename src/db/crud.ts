@@ -100,6 +100,7 @@ export interface FoodItem {
   day: number;
   assignee: string;
   item: string;
+  maps_url?: string | null;
   is_eaten: number;
   created_at: string;
 }
@@ -740,6 +741,7 @@ export class CRUD {
     try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN day INTEGER NOT NULL DEFAULT 1`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN url TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE itinerary_spots ADD COLUMN branch TEXT NOT NULL DEFAULT ''`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE food_items ADD COLUMN maps_url TEXT`).run(); } catch {}
     // 新欄位 migration
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
@@ -862,10 +864,10 @@ export class CRUD {
 
   // ─── Food Items ────────────────────────────────────────────────────────────────────────────
 
-  async addFoodItem(tripId: number, spotId: number | null, spotName: string, day: number, assignee: string, item: string): Promise<void> {
+  async addFoodItem(tripId: number, spotId: number | null, spotName: string, day: number, assignee: string, item: string, mapsUrl?: string): Promise<void> {
     await this.db.prepare(
-      `INSERT INTO food_items (trip_id, spot_id, spot_name, day, assignee, item) VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(tripId, spotId ?? null, spotName, day, assignee, item).run();
+      `INSERT INTO food_items (trip_id, spot_id, spot_name, day, assignee, item, maps_url) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(tripId, spotId ?? null, spotName, day, assignee, item, mapsUrl ?? null).run();
   }
 
   async getFoodItems(tripId: number, assignee?: string): Promise<FoodItem[]> {

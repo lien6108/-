@@ -524,17 +524,16 @@ export class ItineraryAgent {
 
     const buildShoppingBubble = (targetDay: number, items: any[]): any => {
       const rows = items.length > 0 ? items.map(item => {
-        const contents: any[] = [
-          { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true }
-        ];
-        if (item.url && typeof item.url === 'string' && item.url.startsWith('http')) {
-          contents.push({
-            type: 'button', action: { type: 'uri', label: '🔗', uri: item.url },
-            style: 'link', height: 'sm', margin: 'none', flex: 0
-          });
-        }
+        const hasUrl = item.url && typeof item.url === 'string' && item.url.startsWith('http');
+        const titleRow: any = {
+          type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
+            { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true, flex: 1 },
+            ...(hasUrl ? [{ type: 'button', action: { type: 'uri', label: '🔗', uri: item.url }, style: 'link', height: 'sm', flex: 0 }] : [])
+          ]
+        };
+        const rowContents: any[] = [titleRow];
         if (!item.is_bought) {
-          contents.push({
+          rowContents.push({
             type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
               { type: 'button', action: { type: 'postback', label: '買好了', data: `cmd=買好了 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 },
               { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除購買 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 }
@@ -544,7 +543,7 @@ export class ItineraryAgent {
         return {
           type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
           cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
-          contents
+          contents: rowContents
         };
       }) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
 
@@ -1139,11 +1138,16 @@ export class ItineraryAgent {
     }
 
     const rows = items.map(fi => {
-      const contents: any[] = [
-        { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true }
-      ];
+      const hasMaps = fi.maps_url && typeof fi.maps_url === 'string' && fi.maps_url.startsWith('http');
+      const titleRow: any = {
+        type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
+          { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
+          ...(hasMaps ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: fi.maps_url }, style: 'link', height: 'sm', flex: 0 }] : [])
+        ]
+      };
+      const rowContents: any[] = [titleRow];
       if (!fi.is_eaten) {
-        contents.push({
+        rowContents.push({
           type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
             { type: 'button', action: { type: 'postback', label: '吃了', data: `cmd=美食吃了 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 },
             { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除美食 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 }
@@ -1153,7 +1157,7 @@ export class ItineraryAgent {
       return {
         type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm',
         backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
-        contents
+        contents: rowContents
       };
     });
 
@@ -1217,11 +1221,16 @@ export class ItineraryAgent {
       const spotId = spotItems[0].spot_id;
 
       const rows = spotItems.map(fi => {
-        const contents: any[] = [
-          { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true }
-        ];
+        const hasMaps = fi.maps_url && typeof fi.maps_url === 'string' && fi.maps_url.startsWith('http');
+        const titleRow: any = {
+          type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
+            { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
+            ...(hasMaps ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: fi.maps_url }, style: 'link', height: 'sm', flex: 0 }] : [])
+          ]
+        };
+        const rowContents: any[] = [titleRow];
         if (!fi.is_eaten) {
-          contents.push({
+          rowContents.push({
             type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
               { type: 'button', action: { type: 'postback', label: '吃了', data: `cmd=美食吃了 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 },
               { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除美食 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 }
@@ -1231,7 +1240,7 @@ export class ItineraryAgent {
         return {
           type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm',
           backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
-          contents
+          contents: rowContents
         };
       });
 
@@ -1293,7 +1302,7 @@ export class ItineraryAgent {
     }));
     return {
       type: 'text',
-      text: `請輸入在「${spot.name}」想吃的東西，可一次多行：\n\n例：\n一蘭拉麵\n元祖牛舌`,
+      text: `請輸入在「${spot.name}」想吃的東西，可一次多行；附導航連結請在店名後加 / https://...：\n\n例：\n一蘭拉麵\n元祖牛舌 / https://maps.google.com/...`,
       quickReply: getCancelQuickReply()
     };
   }
@@ -1305,7 +1314,17 @@ export class ItineraryAgent {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) return '請輸入要記錄的美食。';
     for (const line of lines) {
-      await this.crud.addFoodItem(trip.id, spotId, spotName, day, assignee, line);
+      let itemName = line;
+      let mapsUrl: string | undefined;
+      const slashIdx = line.lastIndexOf('/');
+      if (slashIdx > 0) {
+        const possibleUrl = line.slice(slashIdx + 1).trim();
+        if (possibleUrl.startsWith('http')) {
+          itemName = line.slice(0, slashIdx).trim();
+          mapsUrl = possibleUrl;
+        }
+      }
+      await this.crud.addFoodItem(trip.id, spotId, spotName, day, assignee, itemName, mapsUrl);
     }
     const msg: messagingApi.Message = { type: 'text', text: `✅ 已新增 ${lines.length} 個美食項目。` };
     const list = await this.showFoodList(groupId, assignee);
