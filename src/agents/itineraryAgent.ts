@@ -301,7 +301,7 @@ export class ItineraryAgent {
 
   // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
   async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
-    console.log('[ItineraryAgent.showDayItinerary] VERSION: 2024-05-06-v2');
+    console.log('========== ITINERARY VERSION: 2024-05-06-v3-FIXED ==========');
     console.log('[ItineraryAgent.showDayItinerary] 開始, groupId:', groupId, 'day:', day);
     const trip = await this.crud.getCurrentTrip(groupId);
     console.log('[ItineraryAgent.showDayItinerary] trip:', trip ? `id=${trip.id}, name=${trip.trip_name}` : 'null');
