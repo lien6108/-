@@ -214,52 +214,43 @@ export class ItineraryAgent {
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
   private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
-    const rows: any[] = daySpots.map((s, idx) => {
+    // carousel 模式每天最多顯示 5 個景點，避免 payload 過大
+    const MAX_CAROUSEL_SPOTS = 5;
+    const displaySpots = forCarousel ? daySpots.slice(0, MAX_CAROUSEL_SPOTS) : daySpots;
+    const hiddenCount = forCarousel ? daySpots.length - MAX_CAROUSEL_SPOTS : 0;
+
+    const rows: any[] = displaySpots.map((s, idx) => {
       // carousel 模式：純文字（有地圖連結者可點） + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
       const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       if (forCarousel) {
         // carousel 模式：text 元素不使用 action，改用 button 提供導航
-        const nameEl: any = {
-          type: 'text',
-          text: `${idx + 1}. ${s.name}`,
-          size: 'sm',
-          wrap: true,
-          weight: 'bold',
-          color: '#333333'
-        };
-        const contents: any[] = [nameEl];
+        const contents: any[] = [
+          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, weight: 'bold', color: '#333333' }
+        ];
         if (validUrl) {
-          contents.push({
-            type: 'button',
-            action: { type: 'uri', label: '地圖', uri: validUrl },
-            style: 'link', height: 'sm', margin: 'xs'
-          });
+          contents.push({ type: 'button', action: { type: 'uri', label: '地圖', uri: validUrl }, style: 'secondary', height: 'sm', margin: 'xs' });
         }
-        contents.push({
-          type: 'button',
-          action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` },
-          style: 'secondary', height: 'sm', margin: 'xs'
-        });
-        return {
-          type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
-          contents: contents
-        };
+        contents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' });
+        return { type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md', contents };
       }
       // single bubble 模式：horizontal，可加導航按鈕
+      const validUrl2 = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       const rowContents: any[] = [
         { type: 'box', layout: 'vertical', flex: 5, contents: [
           { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: '#333333', weight: 'bold' }
         ]}
       ];
-      if (validUrl) {
-        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
+      if (validUrl2) {
+        rowContents.push({ type: 'button', action: { type: 'uri', label: '導航', uri: validUrl2 }, style: 'secondary', height: 'sm', flex: 0 });
       }
       rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
-      return {
-        type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md',
-        contents: rowContents
-      };
+      return { type: 'box', layout: 'horizontal', spacing: 'sm', margin: idx === 0 ? 'none' : 'md', contents: rowContents };
     });
+
+    const bodyContents: any[] = rows.length > 0 ? [...rows] : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: '#aaaaaa' }];
+    if (forCarousel && hiddenCount > 0) {
+      bodyContents.push({ type: 'text', text: `…還有 ${hiddenCount} 個景點`, size: 'xs', color: '#aaaaaa', margin: 'md' });
+    }
 
     return {
       type: 'bubble',
@@ -271,7 +262,7 @@ export class ItineraryAgent {
       },
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm',
-        contents: rows.length > 0 ? rows : [{ type: 'text', text: '（尚未新增景點）', size: 'sm', color: '#aaaaaa' }]
+        contents: bodyContents
       },
       footer: {
         type: 'box', layout: 'vertical', spacing: 'sm',
