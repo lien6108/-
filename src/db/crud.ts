@@ -177,10 +177,15 @@ export class CRUD {
 
   /** 回傳 D1 資料庫目前估算大小（bytes）*/
   async getDbSize(): Promise<number> {
-    const row = await this.db.prepare(
-      `SELECT (SELECT * FROM pragma_page_count()) * (SELECT * FROM pragma_page_size()) AS size_bytes`
-    ).first<{ size_bytes: number }>();
-    return row?.size_bytes ?? 0;
+    try {
+      const row = await this.db.prepare(
+        `SELECT (SELECT * FROM pragma_page_count()) * (SELECT * FROM pragma_page_size()) AS size_bytes`
+      ).first<{ size_bytes: number }>();
+      return row?.size_bytes ?? 0;
+    } catch {
+      // D1 may not support pragma table functions; fallback to -1
+      return -1;
+    }
   }
 
   /** 回傳系統概況統計 */
