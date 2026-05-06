@@ -82,6 +82,7 @@ export interface ItinerarySpot {
 export interface ShoppingItem {
   id: number;
   trip_id: number;
+  day: number;
   assignee: string;
   item: string;
   spot_id?: number | null;
@@ -586,6 +587,7 @@ export class CRUD {
     await this.db.prepare(`CREATE TABLE IF NOT EXISTS shopping_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trip_id INTEGER NOT NULL,
+      day INTEGER NOT NULL DEFAULT 1,
       assignee TEXT NOT NULL,
       item TEXT NOT NULL,
       spot_id INTEGER,
@@ -609,6 +611,7 @@ export class CRUD {
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN day INTEGER NOT NULL DEFAULT 1`).run(); } catch {}
     // 新欄位 migration
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
@@ -632,6 +635,10 @@ export class CRUD {
     return res.results || [];
   }
 
+  async getSpotById(spotId: number): Promise<ItinerarySpot | null> {
+    return this.db.prepare(`SELECT * FROM itinerary_spots WHERE id = ?`).bind(spotId).first<ItinerarySpot>();
+  }
+
   async getAllSpots(tripId: number): Promise<ItinerarySpot[]> {
     const res = await this.db.prepare(
       `SELECT * FROM itinerary_spots WHERE trip_id = ? ORDER BY day ASC, sort_order ASC`
@@ -641,6 +648,10 @@ export class CRUD {
 
   async markSpotDone(spotId: number): Promise<void> {
     await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE id = ?`).bind(spotId).run();
+  }
+
+  async markDaySpotsDone(tripId: number, day: number): Promise<void> {
+    await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE trip_id = ? AND day = ?`).bind(tripId, day).run();
   }
 
   async getNextPendingSpot(tripId: number): Promise<ItinerarySpot | null> {
@@ -673,17 +684,30 @@ export class CRUD {
 
   // ─── Shopping ────────────────────────────────────────────────────────────────
 
-  async addShoppingItem(tripId: number, assignee: string, item: string): Promise<void> {
+  async addShoppingItem(tripId: number, assignee: string, item: string, day = 1): Promise<void> {
     await this.db.prepare(
-      `INSERT INTO shopping_items (trip_id, assignee, item) VALUES (?, ?, ?)`
-    ).bind(tripId, assignee, item).run();
+      `INSERT INTO shopping_items (trip_id, day, assignee, item) VALUES (?, ?, ?, ?)`
+    ).bind(tripId, day, assignee, item).run();
   }
 
-  async getShoppingItems(tripId: number): Promise<ShoppingItem[]> {
-    const res = await this.db.prepare(
-      `SELECT * FROM shopping_items WHERE trip_id = ? ORDER BY is_bought ASC, created_at ASC`
-    ).bind(tripId).all<ShoppingItem>();
+  async getShoppingItems(tripId: number, day?: number, assignee?: string): Promise<ShoppingItem[]> {
+    let sql = `SELECT * FROM shopping_items WHERE trip_id = ?`;
+    const params: any[] = [tripId];
+    if (day !== undefined) {
+      sql += ` AND day = ?`;
+      params.push(day);
+    }
+    if (assignee) {
+      sql += ` AND assignee = ?`;
+      params.push(assignee);
+    }
+    sql += ` ORDER BY is_bought ASC, created_at ASC`;
+    const res = await this.db.prepare(sql).bind(...params).all<ShoppingItem>();
     return res.results || [];
+  }
+
+  async getShoppingItemById(itemId: number): Promise<ShoppingItem | null> {
+    return this.db.prepare(`SELECT * FROM shopping_items WHERE id = ?`).bind(itemId).first<ShoppingItem>();
   }
 
   async markItemBought(itemId: number): Promise<void> {

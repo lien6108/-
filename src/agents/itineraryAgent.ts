@@ -251,18 +251,19 @@ export class ItineraryAgent {
           contents
         };
       }
-      // single bubble 管理模式：每個景點有導航 + 刪除
+      // single bubble 管理模式：地點旁直接上下移動，刪除放在下方，不顯示地圖
       const rowContents: any[] = [
-        { type: 'box', layout: 'vertical', flex: 5, contents: [
-          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: palette.ink, weight: 'bold' }
-        ]}
+        {
+          type: 'box', layout: 'horizontal', spacing: 'xs', contents: [
+            { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: palette.ink, weight: 'bold', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '↑', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 },
+            { type: 'button', action: { type: 'postback', label: '↓', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
+          ]
+        },
+        { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' }
       ];
-      if (validUrl) {
-        rowContents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'secondary', height: 'sm', flex: 0 });
-      }
-      rowContents.push({ type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 });
       return {
-        type: 'box', layout: 'horizontal', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
+        type: 'box', layout: 'vertical', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
         backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
         contents: rowContents
       };
@@ -272,12 +273,11 @@ export class ItineraryAgent {
 
     const footerContents = forCarousel
       ? [
-          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '完成', data: `cmd=完成行程 D${day}` }, style: 'secondary', height: 'sm' }
         ]
       : [
-          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '順序', data: `cmd=調整景點順序 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '完成本天', data: `cmd=完成行程 D${day}` }, style: 'secondary', height: 'sm' }
         ];
 
     return {
@@ -307,6 +307,13 @@ export class ItineraryAgent {
     const spots = await this.crud.getSpotsByDay(trip.id, day);
     const bubble = this.buildDayBubble(trip.trip_name, day, spots, false);
     return { type: 'flex', altText: `第 ${day} 天管理`, contents: bubble } as any;
+  }
+
+  async completeDay(groupId: string, day: number): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    await this.crud.markDaySpotsDone(trip.id, day);
+    return await this.showDayItinerary(groupId);
   }
 
   async showMoveSpotMenu(groupId: string, day: number): Promise<messagingApi.Message> {
@@ -347,13 +354,18 @@ export class ItineraryAgent {
       byDay.get(s.day)!.push(s);
     }
 
-    let days = [...byDay.keys()].sort((a, b) => a - b);
+    let days = [...byDay.keys()].sort((a, b) => {
+      const aDone = byDay.get(a)!.every(s => s.status === 'done');
+      const bDone = byDay.get(b)!.every(s => s.status === 'done');
+      if (aDone !== bDone) return aDone ? 1 : -1;
+      return a - b;
+    });
     if (day && byDay.has(day)) {
       days = [day, ...days.filter(d => d !== day)];
     }
 
     if (days.length === 1) {
-      const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, false);
+      const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, true);
       return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubble } as any;
     }
     const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!, true));
@@ -367,15 +379,109 @@ export class ItineraryAgent {
 
   // ─── 刪除景點 ─────────────────────────────────────────────────────────────
   async moveSpot(groupId: string, spotId: number, direction: 'up' | 'down'): Promise<messagingApi.Message | messagingApi.Message[] | string> {
+    const spot = await this.crud.getSpotById(spotId);
     await this.crud.moveSpot(spotId, direction);
-    return await this.showDayItinerary(groupId);
+    return spot ? await this.showSingleDayManage(groupId, spot.day) : await this.showDayItinerary(groupId);
   }
 
   async deleteSpot(groupId: string, spotId: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const spot = await this.crud.getSpotById(spotId);
     await this.crud.deleteSpot(spotId);
-    return await this.showDayItinerary(groupId);
+    return spot ? await this.showSingleDayManage(groupId, spot.day) : await this.showDayItinerary(groupId);
+  }
+
+  private async getCurrentShoppingDay(tripId: number): Promise<number> {
+    const spots = await this.crud.getAllSpots(tripId);
+    if (spots.length === 0) return 1;
+    const pending = spots.find(s => s.status !== 'done');
+    return pending?.day ?? spots[0].day;
+  }
+
+  async showMyShoppingList(groupId: string, displayName: string, day?: number): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const targetDay = day ?? await this.getCurrentShoppingDay(trip.id);
+    const items = await this.crud.getShoppingItems(trip.id, targetDay, displayName);
+    const palette = {
+      cream: '#fff8e8', paper: '#fffdf5', wood: '#b98a55', passport: '#234b68', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8'
+    };
+
+    const rows = items.length > 0 ? items.map(item => ({
+      type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm', backgroundColor: palette.paper,
+      cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+      contents: [
+        { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true },
+        {
+          type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
+            { type: 'button', action: { type: 'postback', label: '買好了', data: `cmd=買好了 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除購買 #${item.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+          ]
+        }
+      ]
+    })) : [{ type: 'text', text: `第 ${targetDay} 天還沒有你的購買項目。`, size: 'sm', color: palette.muted, wrap: true }];
+
+    return {
+      type: 'flex', altText: '我的購買清單', contents: {
+        type: 'bubble', size: 'kilo',
+        header: { type: 'box', layout: 'vertical', backgroundColor: palette.wood, paddingAll: 'md', spacing: 'xs', contents: [
+          { type: 'text', text: `DAY ${targetDay}`, size: 'xs', weight: 'bold', color: '#fff6df' },
+          { type: 'text', text: '我的購買清單', size: 'md', weight: 'bold', color: '#ffffff' }
+        ] },
+        body: { type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md', contents: rows },
+        footer: { type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md', contents: [
+          { type: 'button', action: { type: 'postback', label: '新增項目', data: `cmd=新增購買清單 D${targetDay}` }, style: 'secondary', height: 'sm' }
+        ] }
+      }
+    } as any;
+  }
+
+  async startShoppingWizard(groupId: string, userId: string, displayName: string, day?: number): Promise<messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return { type: 'text', text: '目前沒有進行中的旅程 🗺️' };
+    const targetDay = day ?? await this.getCurrentShoppingDay(trip.id);
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_SHOPPING_INPUT', JSON.stringify({ day: targetDay, assignee: displayName }));
+    return {
+      type: 'text',
+      text: `請輸入第 ${targetDay} 天要買的東西，可一次多行：\n\n例：\n防曬乳\n伴手禮\nD2 明信片`,
+      quickReply: getCancelQuickReply()
+    };
+  }
+
+  async handleShoppingInput(groupId: string, text: string, assignee: string, defaultDay?: number): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const fallbackDay = defaultDay ?? await this.getCurrentShoppingDay(trip.id);
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return '請輸入要購買的項目。';
+
+    let lastDay = fallbackDay;
+    let count = 0;
+    for (const line of lines) {
+      const match = line.match(/^[Dd](\d+)\s+(.+)$/);
+      const day = match ? parseInt(match[1], 10) : fallbackDay;
+      const item = (match ? match[2] : line).trim();
+      if (!item) continue;
+      await this.crud.addShoppingItem(trip.id, assignee, item, day);
+      lastDay = day;
+      count++;
+    }
+    const msg: messagingApi.Message = { type: 'text', text: `✅ 已新增 ${count} 個購買項目。` };
+    const list = await this.showMyShoppingList(groupId, assignee, lastDay);
+    return [msg, list as messagingApi.Message];
+  }
+
+  async markShoppingBought(groupId: string, displayName: string, itemId: number): Promise<string | messagingApi.Message> {
+    const item = await this.crud.getShoppingItemById(itemId);
+    await this.crud.markItemBought(itemId);
+    return await this.showMyShoppingList(groupId, displayName, item?.day);
+  }
+
+  async deleteShoppingItem(groupId: string, displayName: string, itemId: number): Promise<string | messagingApi.Message> {
+    const item = await this.crud.getShoppingItemById(itemId);
+    await this.crud.deleteShoppingItem(itemId);
+    return await this.showMyShoppingList(groupId, displayName, item?.day);
   }
 
   // ─── 新增單筆景點：啟動 wizard ─────────────────────────────────────────────
