@@ -2,14 +2,42 @@ import { messagingApi } from '@line/bot-sdk';
 import { CRUD, ItinerarySpot, FlightInfo, Accommodation } from '../db/crud';
 import { getCancelQuickReply } from '../utils/ui';
 
-// 解析一行 AI 輸出：D1 景點名稱 [| maps_url]
-function parseLine(line: string): { day: number; name: string; mapsUrl?: string } | null {
-  const m = line.trim().match(/^[Dd](\d+)\s+([^|]+?)(?:\s*\|\s*(https?:\/\/\S+))?$/);
+type DayRef = { day: number; branch: string };
+
+function normalizeBranch(branch?: string | null): string {
+  return (branch || '').trim().replace(/^-/, '').toUpperCase();
+}
+
+function dayKey(day: number, branch = ''): string {
+  const b = normalizeBranch(branch);
+  return `${day}|${b}`;
+}
+
+function formatDayRef(day: number, branch = ''): string {
+  const b = normalizeBranch(branch);
+  return `D${day}${b ? `-${b}` : ''}`;
+}
+
+function parseDayRef(raw: string): DayRef | null {
+  const m = raw.trim().match(/^[Dd](\d+)(?:-?([A-Za-z]))?$/);
+  if (!m) return null;
+  return { day: parseInt(m[1], 10), branch: normalizeBranch(m[2]) };
+}
+
+function sortDayRefs(a: DayRef, b: DayRef): number {
+  if (a.day !== b.day) return a.day - b.day;
+  return a.branch.localeCompare(b.branch);
+}
+
+// 解析一行 AI 輸出：D1 / D1-A 景點名稱 [| maps_url]
+function parseLine(line: string): { day: number; branch: string; name: string; mapsUrl?: string } | null {
+  const m = line.trim().match(/^[Dd](\d+)(?:-?([A-Za-z]))?\s+([^|]+?)(?:\s*\|\s*(https?:\/\/\S+))?$/);
   if (!m) return null;
   return {
     day: parseInt(m[1], 10),
-    name: m[2].trim(),
-    mapsUrl: m[3]?.trim(),
+    branch: normalizeBranch(m[2]),
+    name: m[3].trim(),
+    mapsUrl: m[4]?.trim(),
   };
 }
 
@@ -164,7 +192,7 @@ export class ItineraryAgent {
     if (!trip) return '目前沒有進行中的旅程，請先輸入「開始記帳」建立旅程 🗺️';
 
     const lines = text.split('\n');
-    const valid: { day: number; name: string; mapsUrl?: string }[] = [];
+    const valid: { day: number; branch: string; name: string; mapsUrl?: string }[] = [];
     const skipped: string[] = [];
 
     lines.forEach((line) => {
@@ -177,17 +205,18 @@ export class ItineraryAgent {
     if (valid.length === 0) return null;
 
     for (const spot of valid) {
-      await this.crud.addSpot(trip.id, spot.day, spot.name, spot.mapsUrl);
+      await this.crud.addSpot(trip.id, spot.day, spot.name, spot.mapsUrl, spot.branch);
     }
 
     const days = [...new Set(valid.map(v => v.day))].sort((a, b) => a - b);
+    const dayRefs = [...new Set(valid.map(v => formatDayRef(v.day, v.branch)))];
     const skippedNote = skipped.length > 0
       ? `\n\n⚠️ 以下 ${skipped.length} 行格式不符已略過：\n${skipped.slice(0, 5).map(l => `• ${l}`).join('\n')}${skipped.length > 5 ? '\n...' : ''}`
       : '';
 
     const successMsg: messagingApi.Message = {
       type: 'text',
-      text: `✅ 已匯入 ${valid.length} 個景點，共 ${days.length} 天${skippedNote}`,
+      text: `✅ 已匯入 ${valid.length} 個景點，共 ${days.length} 天${dayRefs.some(ref => ref.includes('-')) ? `（含 ${dayRefs.join('、')}）` : ''}${skippedNote}`,
     };
 
     // 補上住宿位置連結（有填寫 maps_url 才顯示）
@@ -213,7 +242,9 @@ export class ItineraryAgent {
   }
 
   // ─── 建立單天 bubble ──────────────────────────────────────────────────────
-  private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false): any {
+  private buildDayBubble(tripName: string, day: number, daySpots: ItinerarySpot[], forCarousel = false, branch = ''): any {
+    const branchLabel = formatDayRef(day, branch);
+    const branchSuffix = normalizeBranch(branch) ? `-${normalizeBranch(branch)}` : '';
     const palette = {
       sky: '#9ccfe8',
       skyDark: '#5f8fa8',
@@ -274,12 +305,12 @@ export class ItineraryAgent {
 
     const footerContents = forCarousel
       ? [
-          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}` }, style: 'secondary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}${branchSuffix}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: '🛍️', data: `cmd=購買清單 D${day}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: isDayDone ? '復原' : '完成', data: `${isDayDone ? 'cmd=復原行程' : 'cmd=完成行程'} D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: isDayDone ? '復原' : '完成', data: `${isDayDone ? 'cmd=復原行程' : 'cmd=完成行程'} D${day}${branchSuffix}` }, style: 'secondary', height: 'sm' }
         ]
       : [
-          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}${branchSuffix}` }, style: 'secondary', height: 'sm' }
         ];
 
     const headerContents: any[] = forCarousel
@@ -287,15 +318,15 @@ export class ItineraryAgent {
           type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
             {
               type: 'box', layout: 'vertical', flex: 1, spacing: 'xs', contents: [
-                { type: 'text', text: `DAY ${day}`, weight: 'bold', color: palette.passport, size: 'xs' },
+                { type: 'text', text: branchLabel.replace('D', 'DAY '), weight: 'bold', color: palette.passport, size: 'xs' },
                 { type: 'text', text: tripName, weight: 'bold', color: palette.ink, size: 'md', wrap: true }
               ]
             },
-            { type: 'button', action: { type: 'postback', label: '分組', data: `cmd=分組行程 D${day}` }, style: 'link', height: 'sm', flex: 0 }
+            ...(normalizeBranch(branch) ? [] : [{ type: 'button', action: { type: 'postback', label: '分組', data: `cmd=分組行程 D${day}` }, style: 'link', height: 'sm', flex: 0 }])
           ]
         }]
       : [
-          { type: 'text', text: `DAY ${day} 管理`, weight: 'bold', color: '#ffffff', size: 'xs' },
+          { type: 'text', text: `${branchLabel.replace('D', 'DAY ')} 管理`, weight: 'bold', color: '#ffffff', size: 'xs' },
           { type: 'text', text: '景點調整小木牌', weight: 'bold', color: '#ffffff', size: 'md', wrap: true }
         ];
 
@@ -317,33 +348,31 @@ export class ItineraryAgent {
   }
 
   // ─── 單天管理 bubble（帶刪除按鈕）────────────────────────────────────────
-  async showSingleDayManage(groupId: string, day: number): Promise<string | messagingApi.Message> {
+  async showSingleDayManage(groupId: string, day: number, branch = ''): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    const spots = await this.crud.getSpotsByDay(trip.id, day);
-    const bubble = this.buildDayBubble(trip.trip_name, day, spots, false);
-    return { type: 'flex', altText: `第 ${day} 天管理`, contents: bubble } as any;
+    const spots = await this.crud.getSpotsByDay(trip.id, day, branch);
+    const bubble = this.buildDayBubble(trip.trip_name, day, spots, false, branch);
+    return { type: 'flex', altText: `${formatDayRef(day, branch)} 管理`, contents: bubble } as any;
   }
 
-  async completeDay(groupId: string, day: number): Promise<string | messagingApi.Message> {
+  async completeDay(groupId: string, day: number, branch?: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    await this.crud.markDaySpotsDone(trip.id, day);
-    return await this.showDayItinerary(groupId);
+    await this.crud.markDaySpotsDone(trip.id, day, branch);
+    return await this.showDayItinerary(groupId, day, branch);
   }
 
-  async restoreDay(groupId: string, day: number): Promise<string | messagingApi.Message> {
+  async restoreDay(groupId: string, day: number, branch?: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    await this.crud.markDaySpotsPending(trip.id, day);
-    return await this.showDayItinerary(groupId);
+    await this.crud.markDaySpotsPending(trip.id, day, branch);
+    return await this.showDayItinerary(groupId, day, branch);
   }
 
   async showDayBranches(groupId: string, day: number): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
-    const spots = await this.crud.getSpotsByDay(trip.id, day);
-    if (spots.length === 0) return `D${day} 目前沒有景點可以分組。`;
 
     const palette = {
       cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328', muted: '#8f7a62', border: '#ead8b8',
@@ -370,18 +399,19 @@ export class ItineraryAgent {
             { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: branch.accent, flex: 0 },
             { type: 'text', text: s.name, size: 'sm', weight: 'bold', color: palette.ink, wrap: true, flex: 1 }
           ]
-        })) : [{ type: 'text', text: '（可作為自由活動路線）', size: 'sm', color: palette.muted }]
+        })) : [{ type: 'text', text: '（尚未新增分組景點）', size: 'sm', color: palette.muted }]
       },
       footer: {
         type: 'box', layout: 'horizontal', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
         contents: [
-          { type: 'button', action: { type: 'postback', label: '返回 D' + day, data: `cmd=行程資訊 D${day}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=新增景點 D${day}-${branch.key}` }, style: 'secondary', height: 'sm', flex: 1 },
+          { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}-${branch.key}` }, style: 'secondary', height: 'sm', flex: 1 }
         ]
       }
     });
 
-    const branchA = spots.filter((_, idx) => idx % 2 === 0);
-    const branchB = spots.filter((_, idx) => idx % 2 === 1);
+    const branchA = await this.crud.getSpotsByDay(trip.id, day, 'A');
+    const branchB = await this.crud.getSpotsByDay(trip.id, day, 'B');
     return {
       type: 'flex',
       altText: `D${day} 分組行程`,
@@ -412,7 +442,7 @@ export class ItineraryAgent {
   }
 
   // ─── 顯示所有天行程（carousel）────────────────────────────────────────────
-  async showDayItinerary(groupId: string, day?: number): Promise<string | messagingApi.Message> {
+  async showDayItinerary(groupId: string, day?: number, branch?: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
 
@@ -421,27 +451,39 @@ export class ItineraryAgent {
       return '目前沒有行程景點。\n\n輸入「新增旅遊行程」取得 AI 提示詞來匯入行程。';
     }
 
-    const byDay = new Map<number, ItinerarySpot[]>();
+    const byDay = new Map<string, { ref: DayRef; spots: ItinerarySpot[] }>();
     for (const s of spots) {
-      if (!byDay.has(s.day)) byDay.set(s.day, []);
-      byDay.get(s.day)!.push(s);
+      const ref = { day: s.day, branch: normalizeBranch(s.branch) };
+      const key = dayKey(ref.day, ref.branch);
+      if (!byDay.has(key)) byDay.set(key, { ref, spots: [] });
+      byDay.get(key)!.spots.push(s);
     }
 
-    let days = [...byDay.keys()].sort((a, b) => {
-      const aDone = byDay.get(a)!.every(s => s.status === 'done');
-      const bDone = byDay.get(b)!.every(s => s.status === 'done');
+    let refs = [...byDay.values()].map(group => group.ref).sort((a, b) => {
+      const aDone = byDay.get(dayKey(a.day, a.branch))!.spots.every(s => s.status === 'done');
+      const bDone = byDay.get(dayKey(b.day, b.branch))!.spots.every(s => s.status === 'done');
       if (aDone !== bDone) return aDone ? 1 : -1;
-      return a - b;
+      return sortDayRefs(a, b);
     });
-    if (day && byDay.has(day)) {
-      days = [day, ...days.filter(d => d !== day)];
+    if (day) {
+      const targetKey = dayKey(day, branch);
+      if (byDay.has(targetKey)) {
+        refs = [byDay.get(targetKey)!.ref, ...refs.filter(ref => dayKey(ref.day, ref.branch) !== targetKey)];
+      } else {
+        refs = refs.sort((a, b) => {
+          if (a.day === day && b.day !== day) return -1;
+          if (a.day !== day && b.day === day) return 1;
+          return sortDayRefs(a, b);
+        });
+      }
     }
 
-    if (days.length === 1) {
-      const bubble = this.buildDayBubble(trip.trip_name, days[0], byDay.get(days[0])!, true);
+    if (refs.length === 1) {
+      const ref = refs[0];
+      const bubble = this.buildDayBubble(trip.trip_name, ref.day, byDay.get(dayKey(ref.day, ref.branch))!.spots, true, ref.branch);
       return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: bubble } as any;
     }
-    const bubbles = days.map(d => this.buildDayBubble(trip.trip_name, d, byDay.get(d)!, true));
+    const bubbles = refs.map(ref => this.buildDayBubble(trip.trip_name, ref.day, byDay.get(dayKey(ref.day, ref.branch))!.spots, true, ref.branch));
     return { type: 'flex', altText: `${trip.trip_name} 行程`, contents: { type: 'carousel', contents: bubbles.slice(0, 10) } } as any;
   }
 
@@ -454,7 +496,7 @@ export class ItineraryAgent {
   async moveSpot(groupId: string, spotId: number, direction: 'up' | 'down'): Promise<messagingApi.Message | messagingApi.Message[] | string> {
     const spot = await this.crud.getSpotById(spotId);
     await this.crud.moveSpot(spotId, direction);
-    return spot ? await this.showSingleDayManage(groupId, spot.day) : await this.showDayItinerary(groupId);
+    return spot ? await this.showSingleDayManage(groupId, spot.day, spot.branch || '') : await this.showDayItinerary(groupId);
   }
 
   async deleteSpot(groupId: string, spotId: number): Promise<string | messagingApi.Message> {
@@ -462,7 +504,7 @@ export class ItineraryAgent {
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     const spot = await this.crud.getSpotById(spotId);
     await this.crud.deleteSpot(spotId);
-    return spot ? await this.showSingleDayManage(groupId, spot.day) : await this.showDayItinerary(groupId);
+    return spot ? await this.showSingleDayManage(groupId, spot.day, spot.branch || '') : await this.showDayItinerary(groupId);
   }
 
   private async getCurrentShoppingDay(tripId: number): Promise<number> {
@@ -579,24 +621,27 @@ export class ItineraryAgent {
   }
 
   // ─── 新增單筆景點：啟動 wizard ─────────────────────────────────────────────
-  async startAddSpotWizard(groupId: string, userId: string, day: number): Promise<messagingApi.Message> {
-    await this.crud.upsertSession(userId, groupId, 'AWAITING_SPOT_INPUT', JSON.stringify({ day }));
+  async startAddSpotWizard(groupId: string, userId: string, day: number, branch = ''): Promise<messagingApi.Message> {
+    const normalizedBranch = normalizeBranch(branch);
+    const ref = formatDayRef(day, normalizedBranch);
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_SPOT_INPUT', JSON.stringify({ day, branch: normalizedBranch }));
     return {
       type: 'text',
-      text: `請輸入第 ${day} 天新景點：\n\n格式：景點名稱 [| 地圖連結]\n\n範例：\n淺草寺\n新宿御苑 | https://maps.app.goo.gl/xxx`,
+      text: `請輸入 ${ref} 新景點：\n\n格式：景點名稱 [| 地圖連結]\n\n範例：\n淺草寺\n新宿御苑 | https://maps.app.goo.gl/xxx`,
       quickReply: getCancelQuickReply()
     };
   }
 
   // ─── 新增單筆景點：解析並儲存 ─────────────────────────────────────────────
-  async handleAddSpotInput(groupId: string, text: string, day: number): Promise<string | messagingApi.Message | messagingApi.Message[]> {
+  async handleAddSpotInput(groupId: string, text: string, day: number, branch = ''): Promise<string | messagingApi.Message | messagingApi.Message[]> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     const [name, mapsUrl] = text.split('|').map(s => s.trim());
     if (!name) return null as any;
-    await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined);
-    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增景點：${name}（第 ${day} 天）` };
-    const carousel = await this.showDayItinerary(groupId, day);
+    const normalizedBranch = normalizeBranch(branch);
+    await this.crud.addSpot(trip.id, day, name, mapsUrl || undefined, normalizedBranch);
+    const successMsg: messagingApi.Message = { type: 'text', text: `✅ 已新增景點：${name}（${formatDayRef(day, normalizedBranch)}）` };
+    const carousel = await this.showDayItinerary(groupId, day, normalizedBranch);
     return [successMsg, carousel as messagingApi.Message];
   }
 

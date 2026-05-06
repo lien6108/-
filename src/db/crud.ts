@@ -72,6 +72,7 @@ export interface ItinerarySpot {
   id: number;
   trip_id: number;
   day: number;
+  branch?: string | null;
   sort_order: number;
   name: string;
   maps_url?: string | null;
@@ -577,6 +578,7 @@ export class CRUD {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trip_id INTEGER NOT NULL,
       day INTEGER NOT NULL DEFAULT 1,
+      branch TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       name TEXT NOT NULL,
       maps_url TEXT,
@@ -612,26 +614,28 @@ export class CRUD {
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN day INTEGER NOT NULL DEFAULT 1`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE itinerary_spots ADD COLUMN branch TEXT NOT NULL DEFAULT ''`).run(); } catch {}
     // 新欄位 migration
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
   }
 
-  async addSpot(tripId: number, day: number, name: string, mapsUrl?: string): Promise<void> {
+  async addSpot(tripId: number, day: number, name: string, mapsUrl?: string, branch = ''): Promise<void> {
+    const normalizedBranch = (branch || '').toUpperCase();
     const res = await this.db.prepare(
-      `SELECT COALESCE(MAX(sort_order), 0) + 1 as next FROM itinerary_spots WHERE trip_id = ? AND day = ?`
-    ).bind(tripId, day).first<{ next: number }>();
+      `SELECT COALESCE(MAX(sort_order), 0) + 1 as next FROM itinerary_spots WHERE trip_id = ? AND day = ? AND COALESCE(branch, '') = ?`
+    ).bind(tripId, day, normalizedBranch).first<{ next: number }>();
     const order = res?.next ?? 1;
     await this.db.prepare(
-      `INSERT INTO itinerary_spots (trip_id, day, sort_order, name, maps_url) VALUES (?, ?, ?, ?, ?)`
-    ).bind(tripId, day, order, name, mapsUrl || null).run();
+      `INSERT INTO itinerary_spots (trip_id, day, branch, sort_order, name, maps_url) VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(tripId, day, normalizedBranch, order, name, mapsUrl || null).run();
   }
 
-  async getSpotsByDay(tripId: number, day: number): Promise<ItinerarySpot[]> {
+  async getSpotsByDay(tripId: number, day: number, branch = ''): Promise<ItinerarySpot[]> {
     const res = await this.db.prepare(
-      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? ORDER BY sort_order ASC`
-    ).bind(tripId, day).all<ItinerarySpot>();
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? AND COALESCE(branch, '') = ? ORDER BY sort_order ASC`
+    ).bind(tripId, day, (branch || '').toUpperCase()).all<ItinerarySpot>();
     return res.results || [];
   }
 
@@ -650,11 +654,19 @@ export class CRUD {
     await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE id = ?`).bind(spotId).run();
   }
 
-  async markDaySpotsDone(tripId: number, day: number): Promise<void> {
+  async markDaySpotsDone(tripId: number, day: number, branch?: string): Promise<void> {
+    if (branch !== undefined) {
+      await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE trip_id = ? AND day = ? AND COALESCE(branch, '') = ?`).bind(tripId, day, (branch || '').toUpperCase()).run();
+      return;
+    }
     await this.db.prepare(`UPDATE itinerary_spots SET status = 'done' WHERE trip_id = ? AND day = ?`).bind(tripId, day).run();
   }
 
-  async markDaySpotsPending(tripId: number, day: number): Promise<void> {
+  async markDaySpotsPending(tripId: number, day: number, branch?: string): Promise<void> {
+    if (branch !== undefined) {
+      await this.db.prepare(`UPDATE itinerary_spots SET status = 'pending' WHERE trip_id = ? AND day = ? AND COALESCE(branch, '') = ?`).bind(tripId, day, (branch || '').toUpperCase()).run();
+      return;
+    }
     await this.db.prepare(`UPDATE itinerary_spots SET status = 'pending' WHERE trip_id = ? AND day = ?`).bind(tripId, day).run();
   }
 
@@ -667,9 +679,10 @@ export class CRUD {
   async moveSpot(spotId: number, direction: 'up' | 'down'): Promise<void> {
     const spot = await this.db.prepare(`SELECT * FROM itinerary_spots WHERE id = ?`).bind(spotId).first<ItinerarySpot>();
     if (!spot) return;
+    const branch = (spot.branch || '').toUpperCase();
     const peers = (await this.db.prepare(
-      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? ORDER BY sort_order ASC`
-    ).bind(spot.trip_id, spot.day).all<ItinerarySpot>()).results || [];
+      `SELECT * FROM itinerary_spots WHERE trip_id = ? AND day = ? AND COALESCE(branch, '') = ? ORDER BY sort_order ASC`
+    ).bind(spot.trip_id, spot.day, branch).all<ItinerarySpot>()).results || [];
     const idx = peers.findIndex(p => p.id === spotId);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= peers.length) return;

@@ -237,7 +237,8 @@ export function getFollowQuickReply(): messagingApi.QuickReply {
   return {
     items: [
       qr('查看說明', '說明'),
-      qr('歷史紀錄', '歷史'),
+      qr('查看現有旅程', '查看現有旅程'),
+      qr('查看歷史旅程', '查看歷史旅程'),
     ]
   };
 }

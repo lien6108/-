@@ -104,13 +104,13 @@ export class LineEventHandler {
         return;
       }
 
-      if (t === '查看目前分帳' || t === '現有旅程') {
+      if (t === '查看現有旅程') {
         const msg = await this.buildCurrentFlex(userId);
         if (event.replyToken) await this.reply(event.replyToken, msg);
         return;
       }
 
-      if (t === '查看歷史分帳' || t === '歷史旅程' || t === '歷史') {
+      if (t === '查看歷史旅程') {
         const msg = await this.buildHistoryFlex(userId);
         if (event.replyToken) await this.reply(event.replyToken, msg);
         return;
@@ -303,8 +303,8 @@ export class LineEventHandler {
               { type: 'text', text: statusText, size: 'xs', color: statusColor, align: 'end', weight: 'bold' },
               {
                 type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: [
-                  { type: 'button', action: { type: 'postback', label: '查看行程資訊', data: `cmd=私訊行程 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 },
-                  { type: 'button', action: { type: 'postback', label: '查看清單', data: `cmd=私訊清單 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+                  { type: 'button', action: { type: 'postback', label: '🗺️', data: `cmd=私訊行程 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+                  { type: 'button', action: { type: 'postback', label: '🧾', data: `cmd=私訊清單 #${t.id}` }, style: 'secondary', height: 'sm', flex: 1 }
                 ]
               }
             ]
@@ -382,7 +382,7 @@ export class LineEventHandler {
         body: { type: 'box', layout: 'vertical', contents: rows, backgroundColor: DM_PALETTE.cream, paddingAll: 'md' },
         footer: {
           type: 'box', layout: 'horizontal', backgroundColor: DM_PALETTE.cream, paddingAll: 'md',
-          contents: [{ type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=查看歷史分帳' }, style: 'secondary', height: 'sm' }]
+          contents: [{ type: 'button', action: { type: 'postback', label: '返回歷史', data: 'cmd=查看歷史旅程' }, style: 'secondary', height: 'sm' }]
         }
       }
     } as any;
@@ -429,24 +429,29 @@ export class LineEventHandler {
     const spots = await this.crud.getAllSpots(tripId);
     if (spots.length === 0) return { type: 'text', text: `「${trip.trip_name}」沒有行程資訊。` };
 
-    const byDay = new Map<number, any[]>();
+    const byDay = new Map<string, { day: number; branch: string; spots: any[] }>();
     for (const spot of spots) {
-      if (!byDay.has(spot.day)) byDay.set(spot.day, []);
-      byDay.get(spot.day)!.push(spot);
+      const branch = (spot.branch || '').toUpperCase();
+      const key = `${spot.day}|${branch}`;
+      if (!byDay.has(key)) byDay.set(key, { day: spot.day, branch, spots: [] });
+      byDay.get(key)!.spots.push(spot);
     }
 
-    const bubbles = [...byDay.keys()].sort((a, b) => a - b).map(day => ({
+    const bubbles = [...byDay.values()].sort((a, b) => {
+      if (a.day !== b.day) return a.day - b.day;
+      return a.branch.localeCompare(b.branch);
+    }).map(group => ({
       type: 'bubble', size: 'kilo',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: DM_PALETTE.sky, paddingAll: 'md', spacing: 'xs',
         contents: [
-          { type: 'text', text: `DAY ${day}`, size: 'xs', color: DM_PALETTE.passport, weight: 'bold' },
+          { type: 'text', text: `DAY ${group.day}${group.branch ? `-${group.branch}` : ''}`, size: 'xs', color: DM_PALETTE.passport, weight: 'bold' },
           { type: 'text', text: trip.trip_name, size: 'md', color: DM_PALETTE.ink, weight: 'bold', wrap: true }
         ]
       },
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: DM_PALETTE.cream, paddingAll: 'md',
-        contents: byDay.get(day)!.map((s, idx) => {
+        contents: group.spots.map((s, idx) => {
           const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
           const contents: any[] = [
             { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: DM_PALETTE.woodDark, flex: 0 },
@@ -493,7 +498,8 @@ export class LineEventHandler {
       if (groupId === 'unknown') {
         const cmd = data.startsWith('cmd=') ? decodeURIComponent(data.substring(4)) : data;
         let dmReply: messagingApi.Message | null = null;
-        if (cmd === '查看歷史分帳' || cmd === '歷史旅程' || cmd === '歷史') dmReply = await this.buildHistoryFlex(userId);
+        if (cmd === '查看現有旅程') dmReply = await this.buildCurrentFlex(userId);
+        if (cmd === '查看歷史旅程') dmReply = await this.buildHistoryFlex(userId);
         const dmListMatch = cmd.match(/^私訊清單\s*#(\d+)$/);
         if (dmListMatch) dmReply = await this.buildTripDetailFlex(userId, parseInt(dmListMatch[1], 10));
         const dmItineraryMatch = cmd.match(/^私訊行程\s*#(\d+)$/);
