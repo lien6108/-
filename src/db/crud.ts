@@ -877,6 +877,15 @@ export class CRUD {
     return res.results ?? [];
   }
 
+  async getFoodItemsBySpot(tripId: number, spotId: number, assignee?: string): Promise<FoodItem[]> {
+    let sql = `SELECT * FROM food_items WHERE trip_id = ? AND spot_id = ?`;
+    const params: any[] = [tripId, spotId];
+    if (assignee) { sql += ` AND assignee = ?`; params.push(assignee); }
+    sql += ` ORDER BY created_at ASC`;
+    const res = await this.db.prepare(sql).bind(...params).all<FoodItem>();
+    return res.results ?? [];
+  }
+
   async getFoodItemById(itemId: number): Promise<FoodItem | null> {
     return this.db.prepare(`SELECT * FROM food_items WHERE id = ?`).bind(itemId).first<FoodItem>();
   }

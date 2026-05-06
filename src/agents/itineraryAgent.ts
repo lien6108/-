@@ -276,6 +276,7 @@ export class ItineraryAgent {
         if (validUrl) {
           contents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
         }
+        contents.push({ type: 'button', action: { type: 'postback', label: '🍜', data: `cmd=景點美食 #${s.id}` }, style: 'link', height: 'sm', flex: 0 });
         return {
           type: 'box', layout: 'horizontal', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
           backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
@@ -1113,6 +1114,72 @@ export class ItineraryAgent {
   }
 
   // ─── 美食清單：顯示 ──────────────────────────────────────────────────────────
+  async showSpotFoodList(groupId: string, spotId: number, displayName: string): Promise<string | messagingApi.Message> {
+    const trip = await this.crud.getCurrentTrip(groupId);
+    if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const spot = await this.crud.getSpotById(spotId);
+    if (!spot) return '找不到該景點。';
+    const palette = {
+      green: '#6aaa8c', cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328',
+      muted: '#8f7a62', border: '#ead8b8'
+    };
+    const items = await this.crud.getFoodItemsBySpot(trip.id, spotId, displayName);
+
+    if (items.length === 0) {
+      return {
+        type: 'text',
+        text: `🍜 「${spot.name}」還沒有美食記錄！\n\n要新增想吃的店嗎？`,
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'postback', label: '新增美食', data: `cmd=美食選景點 #${spotId}` } },
+            { type: 'action', action: { type: 'postback', label: '取消', data: 'cmd=取消' } },
+          ]
+        }
+      } as messagingApi.Message;
+    }
+
+    const rows = items.map(fi => {
+      const contents: any[] = [
+        { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true }
+      ];
+      if (!fi.is_eaten) {
+        contents.push({
+          type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
+            { type: 'button', action: { type: 'postback', label: '吃了', data: `cmd=美食吃了 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除美食 #${fi.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+          ]
+        });
+      }
+      return {
+        type: 'box', layout: 'vertical', margin: 'sm', paddingAll: 'sm',
+        backgroundColor: palette.paper, cornerRadius: 'md', borderColor: palette.border, borderWidth: '1px',
+        contents
+      };
+    });
+
+    const bubble: any = {
+      type: 'bubble', size: 'kilo',
+      header: {
+        type: 'box', layout: 'vertical', backgroundColor: palette.green, paddingAll: 'md', spacing: 'xs',
+        contents: [
+          { type: 'text', text: `DAY ${spot.day}`, size: 'xs', weight: 'bold', color: palette.cream },
+          { type: 'text', text: `🍜 ${spot.name}`, size: 'md', weight: 'bold', color: '#ffffff', wrap: true }
+        ]
+      },
+      body: {
+        type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+        contents: rows
+      },
+      footer: {
+        type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md',
+        contents: [
+          { type: 'button', action: { type: 'postback', label: '新增', data: `cmd=美食選景點 #${spotId}` }, style: 'secondary', height: 'sm' }
+        ]
+      }
+    };
+    return { type: 'flex', altText: `${spot.name} 美食清單`, contents: bubble } as any;
+  }
+
   async showFoodList(groupId: string, displayName: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
