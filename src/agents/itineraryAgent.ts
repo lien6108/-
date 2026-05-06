@@ -306,7 +306,7 @@ export class ItineraryAgent {
     const footerContents = forCarousel
       ? [
           { type: 'button', action: { type: 'postback', label: '管理', data: `cmd=管理行程 D${day}${branchSuffix}` }, style: 'secondary', height: 'sm' },
-          { type: 'button', action: { type: 'postback', label: '🛍️', data: `cmd=購買清單 D${day}` }, style: 'secondary', height: 'sm' },
+          { type: 'button', action: { type: 'postback', label: '🛍️', data: `cmd=購物車 D${day}` }, style: 'secondary', height: 'sm' },
           { type: 'button', action: { type: 'postback', label: isDayDone ? '復原' : '完成', data: `${isDayDone ? 'cmd=復原行程' : 'cmd=完成行程'} D${day}${branchSuffix}` }, style: 'secondary', height: 'sm' }
         ]
       : [
@@ -545,18 +545,18 @@ export class ItineraryAgent {
         type: 'bubble', size: 'kilo',
         header: { type: 'box', layout: 'vertical', backgroundColor: palette.wood, paddingAll: 'md', spacing: 'xs', contents: [
           { type: 'text', text: `DAY ${targetDay}`, size: 'xs', weight: 'bold', color: '#fff6df' },
-          { type: 'text', text: '購買清單', size: 'md', weight: 'bold', color: '#ffffff' }
+          { type: 'text', text: '購物車', size: 'md', weight: 'bold', color: '#ffffff' }
         ] },
         body: { type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md', contents: rows },
         footer: { type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md', contents: [
-          { type: 'button', action: { type: 'postback', label: '新增項目', data: `cmd=新增購買清單 D${targetDay}` }, style: 'secondary', height: 'sm' }
+          { type: 'button', action: { type: 'postback', label: '新增項目', data: `cmd=新增購物車 D${targetDay}` }, style: 'secondary', height: 'sm' }
         ] }
       };
     };
 
     if (day !== undefined) {
       const items = await this.crud.getShoppingItems(trip.id, day, displayName);
-      return { type: 'flex', altText: '購買清單', contents: buildShoppingBubble(day, items) } as any;
+      return { type: 'flex', altText: '購物車', contents: buildShoppingBubble(day, items) } as any;
     }
 
     const spots = await this.crud.getAllSpots(trip.id);
@@ -568,7 +568,7 @@ export class ItineraryAgent {
       allItems.filter(item => item.day === targetDay)
     ));
     return {
-      type: 'flex', altText: '購買清單',
+      type: 'flex', altText: '購物車',
       contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles }
     } as any;
   }

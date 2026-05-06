@@ -162,6 +162,7 @@ export function getMainMenuQuickReply(): messagingApi.QuickReply {
     items: [
       { type: 'action', action: { type: 'postback', label: '💰 記帳功能', data: 'action=menu_accounting' } },
       { type: 'action', action: { type: 'postback', label: '🗺️ 行程功能', data: 'action=menu_itinerary' } },
+      qr('🛍️ 購物車', '購物車'),
       qr('修改旅程名稱', '修改旅程名稱'),
       qr('查看成員', '成員'),
       qr('完整說明', '說明'),
@@ -196,7 +197,6 @@ export function getItineraryQuickReply(): messagingApi.QuickReply {
       qr('✈️ 班機資訊', '班機資訊'),
       qr('🏨 住宿資訊', '住宿資訊'),
       qr('🗺️ 行程資訊', '行程資訊'),
-      qr('🛍️ 購買清單', '購買清單'),
       qr('️ 清空行程', '清空行程'),
       { type: 'action', action: { type: 'postback', label: '⬅️ 返回主選單', data: 'action=menu_main' } },
       qr(CANCEL, CANCEL),

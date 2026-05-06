@@ -147,9 +147,9 @@ export class MainAgent {
             commandRow('管理行程 D2 / 新增景點 D2', '調整景點順序、刪除或新增景點。'),
             commandRow('分組行程 D1 / 新增景點 D1-A', '建立 D1-A、D1-B 分支路線，兵分兩路也能管理。')
           ]),
-          bubble('SHOPPING', '🛍️ 購買清單與私訊', '每日購買項目與旅程回顧。', [
-            commandRow('購買清單', '查看每天的購買清單，可左右滑動。'),
-            commandRow('購買清單 D2', '查看第 2 天購買清單。'),
+          bubble('SHOPPING', '🛍️ 購物車', '每日購買項目與旅程回顧。', [
+            commandRow('購物車', '查看每天的購物車，可左右滑動。'),
+            commandRow('購物車 D2', '查看第 2 天購物車。'),
             commandRow('新增購買 D2 伴手禮', '新增指定天數的購買項目。'),
             commandRow('買好了 #3 / 刪除購買 #3', '標記已購買後會鎖定不可再編輯。'),
             commandRow('私訊：查看現有旅程', '在一對一聊天室查看目前進行中的旅程。'),
@@ -185,10 +185,10 @@ export class MainAgent {
       }
 
       // ── 全域導航指令：無論有無 session，直接處理（清除殘留 session）──────────────
-      const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購買清單', '購買清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
+      const globalCmds = ['行程資訊', '行程', '班機資訊', '住宿資訊', '我的購物車', '購物車', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
       const normalizedForGlobal = input.replace(/＃/g, '#');
       const isDayItinCmd = /^行程資訊?\s*[Dd]\d+(?:-?[A-Za-z])?$/.test(normalizedForGlobal);
-      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增景點|新增購買清單|購買清單)\s*[Dd]?\d+(?:-?[A-Za-z])?|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
+      const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增景點|新增購物車|購物車)\s*[Dd]?\d+(?:-?[A-Za-z])?|^(上移景點|下移景點|刪除景點|買好了|刪除購買)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
       if (globalCmds.includes(input) || isDayItinCmd || isItineraryActionCmd) {
         if (session) await this.crud.deleteSession(userId);
         session = null;
@@ -414,12 +414,12 @@ export class MainAgent {
       if (input === '行程 轉換格式') return await this.itinerary.showConvertPrompt(groupId, userId);
       if (input === '清空行程') return await this.itinerary.promptClearAllSpots(groupId);
       if (input === '確認清空行程') return await this.itinerary.confirmClearAllSpots(groupId);
-      if (input === '我的購買清單' || input === '購買清單') return await this.itinerary.showMyShoppingList(groupId, displayName);
+      if (input === '我的購物車' || input === '購物車') return await this.itinerary.showMyShoppingList(groupId, displayName);
 
-      const shoppingDayMatch = normalizedInput.match(/^購買清單\s*[Dd](\d+)$/);
+      const shoppingDayMatch = normalizedInput.match(/^購物車\s*[Dd](\d+)$/);
       if (shoppingDayMatch) return await this.itinerary.showMyShoppingList(groupId, displayName, parseInt(shoppingDayMatch[1], 10));
 
-      const addShoppingWizardMatch = normalizedInput.match(/^新增購買清單(?:\s*[Dd](\d+))?$/);
+      const addShoppingWizardMatch = normalizedInput.match(/^新增購物車(?:\s*[Dd](\d+))?$/);
       if (addShoppingWizardMatch) return await this.itinerary.startShoppingWizard(groupId, userId, displayName, addShoppingWizardMatch[1] ? parseInt(addShoppingWizardMatch[1], 10) : undefined);
 
       const addShoppingDirectMatch = normalizedInput.match(/^新增購買\s*(?:[Dd](\d+)\s*)?(.+)$/);
