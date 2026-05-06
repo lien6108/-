@@ -190,21 +190,16 @@ export class CRUD {
 
   /** 回傳系統概況統計 */
   async getSystemStats(): Promise<{ groups: number; activeTrips: number; closedTrips: number; expenses: number; members: number; sessions: number }> {
-    const [groups, activeTrips, closedTrips, expenses, members, sessions] = await Promise.all([
-      this.db.prepare(`SELECT COUNT(*) AS c FROM groups`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM trips WHERE status = 'active'`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM trips WHERE status = 'closed'`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM expenses`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM group_members`).first<{ c: number }>(),
-      this.db.prepare(`SELECT COUNT(*) AS c FROM sessions`).first<{ c: number }>(),
-    ]);
+    const q = async (sql: string) => {
+      try { return (await this.db.prepare(sql).first<{ c: number }>())?.c ?? 0; } catch { return 0; }
+    };
     return {
-      groups: groups?.c ?? 0,
-      activeTrips: activeTrips?.c ?? 0,
-      closedTrips: closedTrips?.c ?? 0,
-      expenses: expenses?.c ?? 0,
-      members: members?.c ?? 0,
-      sessions: sessions?.c ?? 0,
+      groups:      await q(`SELECT COUNT(*) AS c FROM groups`),
+      activeTrips: await q(`SELECT COUNT(*) AS c FROM trips WHERE status = 'active'`),
+      closedTrips: await q(`SELECT COUNT(*) AS c FROM trips WHERE status = 'closed'`),
+      expenses:    await q(`SELECT COUNT(*) AS c FROM expenses`),
+      members:     await q(`SELECT COUNT(*) AS c FROM group_members`),
+      sessions:    await q(`SELECT COUNT(*) AS c FROM sessions`),
     };
   }
 
