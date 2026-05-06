@@ -86,6 +86,7 @@ export interface ShoppingItem {
   day: number;
   assignee: string;
   item: string;
+  url?: string | null;
   spot_id?: number | null;
   is_bought: number;
   created_at: string;
@@ -737,6 +738,7 @@ export class CRUD {
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN added_by_name TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN day INTEGER NOT NULL DEFAULT 1`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN url TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE itinerary_spots ADD COLUMN branch TEXT NOT NULL DEFAULT ''`).run(); } catch {}
     // 新欄位 migration
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
@@ -824,10 +826,10 @@ export class CRUD {
 
   // ─── Shopping ────────────────────────────────────────────────────────────────
 
-  async addShoppingItem(tripId: number, assignee: string, item: string, day = 1): Promise<void> {
+  async addShoppingItem(tripId: number, assignee: string, item: string, day = 1, url?: string): Promise<void> {
     await this.db.prepare(
-      `INSERT INTO shopping_items (trip_id, day, assignee, item) VALUES (?, ?, ?, ?)`
-    ).bind(tripId, day, assignee, item).run();
+      `INSERT INTO shopping_items (trip_id, day, assignee, item, url) VALUES (?, ?, ?, ?, ?)`
+    ).bind(tripId, day, assignee, item, url || null).run();
   }
 
   async getShoppingItems(tripId: number, day?: number, assignee?: string): Promise<ShoppingItem[]> {

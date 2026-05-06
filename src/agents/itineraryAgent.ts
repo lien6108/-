@@ -526,6 +526,12 @@ export class ItineraryAgent {
         const contents: any[] = [
           { type: 'text', text: `${item.is_bought ? '✅' : '🛍️'} ${item.item}`, size: 'sm', weight: 'bold', color: item.is_bought ? palette.muted : palette.ink, wrap: true }
         ];
+        if (item.url && typeof item.url === 'string' && item.url.startsWith('http')) {
+          contents.push({
+            type: 'button', action: { type: 'uri', label: '🔗 連結', uri: item.url },
+            style: 'link', height: 'sm', margin: 'none'
+          });
+        }
         if (!item.is_bought) {
           contents.push({
             type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
@@ -580,7 +586,7 @@ export class ItineraryAgent {
     await this.crud.upsertSession(userId, groupId, 'AWAITING_SHOPPING_INPUT', JSON.stringify({ day: targetDay, assignee: displayName }));
     return {
       type: 'text',
-      text: `請輸入第 ${targetDay} 天要買的東西，可一次多行：\n\n例：\n防曬乳\n伴手禮\nD2 明信片`,
+      text: `請輸入第 ${targetDay} 天要買的東西，可一次多行：\n\n例：\n防曬乳\n伴手禮\nD2 明信片\n餅乾 / https://example.com/image.jpg\n\n（加 / 連結 可附上圖片或商品連結）`,
       quickReply: getCancelQuickReply()
     };
   }
@@ -595,11 +601,27 @@ export class ItineraryAgent {
     let lastDay = fallbackDay;
     let count = 0;
     for (const line of lines) {
-      const match = line.match(/^[Dd](\d+)\s+(.+)$/);
-      const day = match ? parseInt(match[1], 10) : fallbackDay;
-      const item = (match ? match[2] : line).trim();
-      if (!item) continue;
-      await this.crud.addShoppingItem(trip.id, assignee, item, day);
+      // 支援格式：項目名稱 / 連結  或  D2 項目名稱 / 連結
+      const dayMatch = line.match(/^[Dd](\d+)\s+(.+)$/);
+      let restText = line;
+      let day = fallbackDay;
+      if (dayMatch) {
+        day = parseInt(dayMatch[1], 10);
+        restText = dayMatch[2];
+      }
+      // 切割 item 和 url（用 / 分隔）
+      const slashIdx = restText.lastIndexOf('/');
+      let itemName = restText.trim();
+      let url: string | undefined;
+      if (slashIdx > 0) {
+        const possibleUrl = restText.slice(slashIdx + 1).trim();
+        if (possibleUrl.startsWith('http')) {
+          itemName = restText.slice(0, slashIdx).trim();
+          url = possibleUrl;
+        }
+      }
+      if (!itemName) continue;
+      await this.crud.addShoppingItem(trip.id, assignee, itemName, day, url);
       lastDay = day;
       count++;
     }
