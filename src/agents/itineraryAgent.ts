@@ -218,19 +218,22 @@ export class ItineraryAgent {
       // carousel 模式：純文字（有地圖連結者可點） + 刪除（避免 LINE API 在 carousel 中拒絕 horizontal box）
       const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       if (forCarousel) {
+        // 建立基本的 text 元素（不含 color 或 action）
         const nameEl: any = {
           type: 'text',
           text: validUrl ? `${idx + 1}. ${s.name} »` : `${idx + 1}. ${s.name}`,
-          size: 'sm', wrap: true, weight: 'bold'
+          size: 'sm',
+          wrap: true,
+          weight: 'bold'
         };
-        // 有 action 的 text 元素不能有 color 屬性
+        // 有連結：加 action（不能有 color）
         if (validUrl) {
           nameEl.action = { type: 'uri', uri: validUrl };
         } else {
+          // 無連結：加 color（不能有 action）
           nameEl.color = '#333333';
         }
-        // Debug: 輸出 nameEl 結構
-        console.log(`[buildDayBubble] nameEl for spot ${idx}:`, JSON.stringify(nameEl));
+        console.log(`[buildDayBubble] spot ${idx}: validUrl=${validUrl ? 'YES' : 'NO'}, nameEl=`, JSON.stringify(nameEl));
         return {
           type: 'box', layout: 'vertical', margin: idx === 0 ? 'none' : 'md',
           contents: [
