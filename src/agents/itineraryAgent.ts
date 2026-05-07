@@ -1138,6 +1138,7 @@ export class ItineraryAgent {
     if (!trip) return '目前沒有進行中的旅程 🗺️';
     const spot = await this.crud.getSpotById(spotId);
     if (!spot) return '找不到該景點。';
+    const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(url);
     const palette = {
       green: '#6aaa8c', cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328',
       muted: '#8f7a62', border: '#ead8b8'
@@ -1158,14 +1159,32 @@ export class ItineraryAgent {
     }
 
     const rows = items.map(fi => {
-      const hasMaps = fi.maps_url && typeof fi.maps_url === 'string' && fi.maps_url.startsWith('http');
+      // 向後相容：parse URL from item text if maps_url is empty
+      let itemName = fi.item;
+      let itemUrl = fi.maps_url;
+      if (!itemUrl && typeof fi.item === 'string') {
+        const matches = [...fi.item.matchAll(/\/\s*(https?:\/\/[^\s]+)/gi)];
+        if (matches.length > 0) {
+          const lastMatch = matches[matches.length - 1];
+          itemName = fi.item.slice(0, lastMatch.index).trim();
+          itemUrl = lastMatch[1].trim();
+        }
+      }
+      const hasUrl = itemUrl && typeof itemUrl === 'string' && itemUrl.startsWith('http');
+      const isImg = hasUrl && isImageUrl(itemUrl);
       const titleRow: any = {
         type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
-          { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
-          ...(hasMaps ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: fi.maps_url }, style: 'link', height: 'sm', flex: 0 }] : [])
+          { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${itemName}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
+          ...(hasUrl && !isImg ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: itemUrl }, style: 'link', height: 'sm', flex: 0 }] : [])
         ]
       };
       const rowContents: any[] = [titleRow];
+      if (isImg) {
+        rowContents.push({
+          type: 'image', url: itemUrl, size: 'full', aspectMode: 'cover', aspectRatio: '20:13',
+          margin: 'sm', action: { type: 'uri', uri: itemUrl }
+        });
+      }
       if (!fi.is_eaten) {
         rowContents.push({
           type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
@@ -1207,6 +1226,7 @@ export class ItineraryAgent {
   async showFoodList(groupId: string, displayName: string): Promise<string | messagingApi.Message> {
     const trip = await this.crud.getCurrentTrip(groupId);
     if (!trip) return '目前沒有進行中的旅程 🗺️';
+    const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(url);
     const palette = {
       green: '#6aaa8c', cream: '#fff8e8', paper: '#fffdf5', ink: '#3f3328',
       muted: '#8f7a62', border: '#ead8b8'
@@ -1241,14 +1261,32 @@ export class ItineraryAgent {
       const spotId = spotItems[0].spot_id;
 
       const rows = spotItems.map(fi => {
-        const hasMaps = fi.maps_url && typeof fi.maps_url === 'string' && fi.maps_url.startsWith('http');
+        // 向後相容：parse URL from item text if maps_url is empty
+        let itemName = fi.item;
+        let itemUrl = fi.maps_url;
+        if (!itemUrl && typeof fi.item === 'string') {
+          const matches = [...fi.item.matchAll(/\/\s*(https?:\/\/[^\s]+)/gi)];
+          if (matches.length > 0) {
+            const lastMatch = matches[matches.length - 1];
+            itemName = fi.item.slice(0, lastMatch.index).trim();
+            itemUrl = lastMatch[1].trim();
+          }
+        }
+        const hasUrl = itemUrl && typeof itemUrl === 'string' && itemUrl.startsWith('http');
+        const isImg = hasUrl && isImageUrl(itemUrl);
         const titleRow: any = {
           type: 'box', layout: 'horizontal', spacing: 'sm', alignItems: 'center', contents: [
-            { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${fi.item}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
-            ...(hasMaps ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: fi.maps_url }, style: 'link', height: 'sm', flex: 0 }] : [])
+            { type: 'text', text: `${fi.is_eaten ? '✅' : '🍜'} ${itemName}`, size: 'sm', weight: 'bold', color: fi.is_eaten ? palette.muted : palette.ink, wrap: true, flex: 1 },
+            ...(hasUrl && !isImg ? [{ type: 'button', action: { type: 'uri', label: '🗺️', uri: itemUrl }, style: 'link', height: 'sm', flex: 0 }] : [])
           ]
         };
         const rowContents: any[] = [titleRow];
+        if (isImg) {
+          rowContents.push({
+            type: 'image', url: itemUrl, size: 'full', aspectMode: 'cover', aspectRatio: '20:13',
+            margin: 'sm', action: { type: 'uri', uri: itemUrl }
+          });
+        }
         if (!fi.is_eaten) {
           rowContents.push({
             type: 'box', layout: 'horizontal', spacing: 'sm', margin: 'xs', contents: [
