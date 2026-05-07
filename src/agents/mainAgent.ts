@@ -194,7 +194,7 @@ export class MainAgent {
       }
 
       // ── 全域導航指令：無論有無 session，直接處理（清除殘留 session）──────────────
-      const globalCmds = ['行程資訊', '行程', '班機資訊', '班機', '機票', '機票資訊', '住宿資訊', '我的購物車', '購物車', '美食清單', '我的美食清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
+      const globalCmds = ['行程資訊', '行程', '班機資訊', '班機', '機票', '機票資訊', '住宿資訊', '住宿', '我的購物車', '購物車', '美食清單', '我的美食清單', '行程功能', '結算', '清單', '成員', '說明', '開始記帳'];
       const normalizedForGlobal = input.replace(/＃/g, '#');
       const isDayItinCmd = /^行程資訊?\s*[Dd]\d+(?:-?[A-Za-z])?$/.test(normalizedForGlobal);
       const isItineraryActionCmd = /^(管理行程|完成行程|復原行程|分組行程|新增景點|新增購物車|購物車|新增住宿|新增美食|班機\s+[去回]程|新增旅遊行程)\s*[Dd]?\d+(?:-?[A-Za-z])?|^(上移景點|下移景點|刪除景點|景點備註|買好了|刪除購買|美食吃了|刪除美食|景點美食|刪除住宿|刪除班機)\s*#\d+|^新增購買\s+/.test(normalizedForGlobal);
@@ -510,7 +510,7 @@ export class MainAgent {
       const spotNotesMatch = normalizedInput.match(/^景點備註\s*#(\d+)$/);
       if (spotNotesMatch) return await this.itinerary.startSpotNotesWizard(groupId, userId, parseInt(spotNotesMatch[1], 10));
 
-      if (input === '住宿資訊') {
+      if (input === '住宿資訊' || input === '住宿') {
         const trip = await this.crud.getCurrentTrip(groupId);
         if (trip) {
           const accoms = await this.crud.getAccommodations(trip.id);
