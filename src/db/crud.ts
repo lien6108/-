@@ -76,6 +76,7 @@ export interface ItinerarySpot {
   sort_order: number;
   name: string;
   maps_url?: string | null;
+  notes?: string | null;
   status: 'pending' | 'done';
   created_at: string;
 }
@@ -742,6 +743,7 @@ export class CRUD {
     try { await this.db.prepare(`ALTER TABLE shopping_items ADD COLUMN url TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE itinerary_spots ADD COLUMN branch TEXT NOT NULL DEFAULT ''`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE food_items ADD COLUMN maps_url TEXT`).run(); } catch {}
+    try { await this.db.prepare(`ALTER TABLE itinerary_spots ADD COLUMN notes TEXT`).run(); } catch {}
     // 新欄位 migration
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN depart_airport TEXT`).run(); } catch {}
     try { await this.db.prepare(`ALTER TABLE flight_info ADD COLUMN arrive_airport TEXT`).run(); } catch {}
@@ -820,6 +822,10 @@ export class CRUD {
 
   async deleteSpot(spotId: number): Promise<void> {
     await this.db.prepare(`DELETE FROM itinerary_spots WHERE id = ?`).bind(spotId).run();
+  }
+
+  async updateSpotNotes(spotId: number, notes: string): Promise<void> {
+    await this.db.prepare(`UPDATE itinerary_spots SET notes = ? WHERE id = ?`).bind(notes || null, spotId).run();
   }
 
   async clearAllSpots(tripId: number): Promise<void> {

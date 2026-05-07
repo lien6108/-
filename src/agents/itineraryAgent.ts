@@ -264,15 +264,24 @@ export class ItineraryAgent {
       const validUrl = s.maps_url && typeof s.maps_url === 'string' && s.maps_url.startsWith('http') ? s.maps_url : null;
       if (forCarousel) {
         // carousel 模式：純瀏覽，只顯示名稱和地圖連結，不放刪除按鈕
-        const contents: any[] = [
-          {
-            type: 'box', layout: 'baseline', flex: 1, spacing: 'sm',
-            contents: [
-              { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: palette.woodDark, flex: 0 },
-              { type: 'text', text: s.name, size: 'sm', wrap: true, weight: 'bold', color: palette.ink, flex: 1 }
-            ]
-          }
-        ];
+        const titleBox: any = {
+          type: 'box', layout: 'vertical', flex: 1,
+          contents: [
+            {
+              type: 'box', layout: 'baseline', spacing: 'sm',
+              contents: [
+                { type: 'text', text: `${idx + 1}`, size: 'xs', weight: 'bold', color: palette.woodDark, flex: 0 },
+                { type: 'text', text: s.name, size: 'sm', wrap: true, weight: 'bold', color: palette.ink, flex: 1 }
+              ]
+            }
+          ]
+        };
+        if (s.notes) {
+          titleBox.contents.push({
+            type: 'text', text: s.notes, size: 'xxs', color: palette.muted, wrap: true, margin: 'xs'
+          });
+        }
+        const contents: any[] = [titleBox];
         if (validUrl) {
           contents.push({ type: 'button', action: { type: 'uri', label: '🗺️', uri: validUrl }, style: 'link', height: 'sm', flex: 0 });
         }
@@ -284,15 +293,31 @@ export class ItineraryAgent {
         };
       }
       // single bubble 管理模式：地點旁直接上下移動，刪除放在下方，不顯示地圖
+      const titleBox: any = {
+        type: 'box', layout: 'vertical', flex: 1,
+        contents: [
+          { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: palette.ink, weight: 'bold' }
+        ]
+      };
+      if (s.notes) {
+        titleBox.contents.push(
+          { type: 'text', text: s.notes, size: 'xxs', color: palette.muted, wrap: true, margin: 'xs' }
+        );
+      }
       const rowContents: any[] = [
         {
           type: 'box', layout: 'horizontal', spacing: 'xs', contents: [
-            { type: 'text', text: `${idx + 1}. ${s.name}`, size: 'sm', wrap: true, color: palette.ink, weight: 'bold', flex: 1 },
+            titleBox,
             { type: 'button', action: { type: 'postback', label: '↑', data: `cmd=上移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 },
             { type: 'button', action: { type: 'postback', label: '↓', data: `cmd=下移景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 0 }
           ]
         },
-        { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', margin: 'xs' }
+        {
+          type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs', contents: [
+            { type: 'button', action: { type: 'postback', label: '備註', data: `cmd=景點備註 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 },
+            { type: 'button', action: { type: 'postback', label: '刪除', data: `cmd=刪除景點 #${s.id}` }, style: 'secondary', height: 'sm', flex: 1 }
+          ]
+        }
       ];
       return {
         type: 'box', layout: 'vertical', spacing: 'xs', margin: idx === 0 ? 'none' : 'sm', paddingAll: 'sm',
@@ -506,6 +531,28 @@ export class ItineraryAgent {
     const spot = await this.crud.getSpotById(spotId);
     await this.crud.deleteSpot(spotId);
     return spot ? await this.showSingleDayManage(groupId, spot.day, spot.branch || '') : await this.showDayItinerary(groupId);
+  }
+
+  // ─── 景點備註：啟動 wizard ─────────────────────────────────────────────────────
+  async startSpotNotesWizard(groupId: string, userId: string, spotId: number): Promise<messagingApi.Message> {
+    const spot = await this.crud.getSpotById(spotId);
+    if (!spot) return { type: 'text', text: '找不到該景點。' };
+    await this.crud.upsertSession(userId, groupId, 'AWAITING_SPOT_NOTES', JSON.stringify({ spotId, day: spot.day, branch: spot.branch || '' }));
+    const currentNotes = spot.notes ? `\n\n目前備註：${spot.notes}` : '';
+    return {
+      type: 'text',
+      text: `請輸入「${spot.name}」的備註：${currentNotes}\n\n（輸入「清空」可刪除備註）`,
+      quickReply: getCancelQuickReply()
+    };
+  }
+
+  // ─── 景點備註：處理輸入 ───────────────────────────────────────────────────────
+  async handleSpotNotesInput(groupId: string, text: string, spotId: number, day: number, branch: string): Promise<string | messagingApi.Message> {
+    const spot = await this.crud.getSpotById(spotId);
+    if (!spot) return '找不到該景點。';
+    const notes = text.trim() === '清空' ? '' : text.trim();
+    await this.crud.updateSpotNotes(spotId, notes);
+    return await this.showSingleDayManage(groupId, day, branch);
   }
 
   private async getCurrentShoppingDay(tripId: number): Promise<number> {
