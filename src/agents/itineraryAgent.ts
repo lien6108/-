@@ -620,7 +620,7 @@ export class ItineraryAgent {
           { type: 'text', text: `DAY ${targetDay}`, size: 'xs', weight: 'bold', color: '#fff6df' },
           { type: 'text', text: '購物車', size: 'md', weight: 'bold', color: '#ffffff' }
         ] },
-        body: { type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md', contents: rows },
+        body: { type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md', height: '400px', overflow: 'scroll', contents: rows },
         footer: { type: 'box', layout: 'horizontal', backgroundColor: palette.cream, paddingAll: 'md', contents: [
           { type: 'button', action: { type: 'postback', label: '新增項目', data: `cmd=新增購物車 D${targetDay}` }, style: 'secondary', height: 'sm' }
         ] }
@@ -1258,6 +1258,7 @@ export class ItineraryAgent {
       },
       body: {
         type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+        height: '400px', overflow: 'scroll',
         contents: rows
       },
       footer: {
@@ -1360,6 +1361,7 @@ export class ItineraryAgent {
         },
         body: {
           type: 'box', layout: 'vertical', spacing: 'sm', backgroundColor: palette.cream, paddingAll: 'md',
+          height: '400px', overflow: 'scroll',
           contents: rows
         },
         footer: {
