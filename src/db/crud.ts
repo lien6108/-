@@ -915,7 +915,7 @@ export class CRUD {
   }
 
   async getFlights(tripId: number): Promise<FlightInfo[]> {
-    const res = await this.db.prepare(`SELECT * FROM flight_info WHERE trip_id = ? ORDER BY type ASC, created_at ASC`).bind(tripId).all<FlightInfo>();
+    const res = await this.db.prepare(`SELECT * FROM flight_info WHERE trip_id = ? ORDER BY type ASC, depart_date ASC, depart_time ASC`).bind(tripId).all<FlightInfo>();
     return res.results || [];
   }
 
